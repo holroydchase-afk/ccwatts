@@ -2,10 +2,12 @@
 
 **Estimate the electricity your Claude Code usage consumes.** Always as a range, with every assumption sourced.
 
-> Status: pre-build. Nothing to install yet.
+> Status: early build. It reads your logs and prints token totals today; electricity estimates come next.
 
 ```
-npx ccwatts        # coming soon
+npm install
+npm start          # token totals by model from your local Claude Code logs
+npm start -- --path <dir>
 ```
 
 - **Local only.** Your logs never leave your machine. No network calls, no telemetry, counts only.
