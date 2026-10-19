@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+.env*
+
+# Never commit real Claude Code logs. Fixtures must be anonymized, counts only.
+*.jsonl
+!fixtures/**/*.jsonl
+
+# Local outputs
+ccwatts-receipt.*
+.ccwatts/
