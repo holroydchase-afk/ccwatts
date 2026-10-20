@@ -49,3 +49,22 @@ ANCHORS.md lists P1–P4 as *proposed, not decided*. Don't implement them, but d
 - Tests pass (`npm test`).
 - A PR (or commit summary) covering what changed, how it was tested, and open questions for Chase.
 - If you learned something durable (log field names, retention behavior, a parameter source), write it down in the right file (`packages/core/README.md`, `METHODOLOGY.md`, `params.json`) rather than only in the PR.
+
+## Working with Chase
+
+Chase is a full-time dad with limited time. These rules apply to every session.
+
+### Minimize Chase's effort
+- Always optimize for Chase's efficiency.
+- Before sending any reply, check every ask you make of Chase. If you could do it yourself, do it instead of asking.
+- When something truly needs Chase (a purchase, a login, a decision), make it a single step: give the exact link, the exact text to paste, or a one-word question with your recommendation.
+- Never hand Chase a multi-step chore you could shrink to one step, or a copy-and-paste you could avoid by saving the result somewhere you can reach.
+- Pick sensible defaults and keep going instead of asking.
+- If Chase is about to make a mistake (wasted money or time, a risky or irreversible step, a worse option than an obvious alternative), say so plainly and briefly before going along with it.
+
+### Token hygiene
+- Keep memory files short. Store facts and links there, never copies of docs.
+- Split shared docs by topic, one file per area, and read only the section you need.
+- Keep one session per stream of work. Continue it instead of starting a new one.
+- Edit docs directly, re-reading them just before you write.
+- Keep replies short and lead with the answer.
