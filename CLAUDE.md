@@ -16,7 +16,7 @@ Note: ANCHORS and PLAN number their decisions independently. "ANCHORS D3" and "P
 ## Who does what
 
 - **Chase** decides product questions, reviews, and ships. He works about an hour a night.
-- **Claude Code** builds. One session = one PLAN.md session row = one small PR.
+- **Claude Code** builds, with no limit on session length or scope (Chase, Oct 20). Long runs are fine; keep one PR per PLAN.md session row so each can be reviewed and merged on its own.
 
 ## Hard rules (non-negotiable)
 

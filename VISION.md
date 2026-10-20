@@ -23,7 +23,6 @@ A free, open-source tool that shows developers how much electricity their AI cod
 1. **Honest over precise.** A range we can defend beats a precise number we can't.
 2. **Your logs stay yours.** If a feature needs a server, it isn't in this product.
 3. **Built for devs, legible to anyone.** Every screen has one line a non-developer gets.
-4. **Small, reviewable steps.** Builds can run overnight, but each PR stays small enough to review in one sitting.
 
 ## Who it's for
 

@@ -62,7 +62,7 @@ Anchors are the few things every feature gets checked against. **Chase hasn't na
 | C1 | **Honest over precise** | Always a range, never a bare number. Every parameter has a source, a date and a confidence label. If we can't bound it, we say so. | — |
 | C2 | **Your logs stay yours** | Nothing leaves the machine or the browser. No telemetry, no accounts, no content stored, only counts. Any future team or hosted feature must be opt-in and send counts only. | — |
 | C3 | **Built for devs, legible to anyone** | The tool meets developer standards. Every output also has one line a non-developer understands. | — |
-| C4 | **Small, reviewable steps** | Claude can build overnight, so work isn't capped at an hour. Each PR stays small enough for Chase to review in one sitting. | Revised by Chase, Oct 20 |
+| C4 | ~~Fits in an hour~~ | Dropped by Chase, Oct 20: no limit on how much Claude builds per run. Work is still split into one PR per PLAN session. | Dropped |
 
 ---
 
