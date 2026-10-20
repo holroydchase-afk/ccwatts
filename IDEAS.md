@@ -8,6 +8,17 @@ A running log. Add to the top of each section. Every entry starts with the probl
 
 ## Ideas
 
+### Easy LinkedIn sharing · 💡 idea
+- **Problem:** The launch depends on people posting their number, and a terminal screenshot doesn't look good in a feed.
+- **Ideas:**
+  - A receipt card sized for LinkedIn (1200×627), with the kWh range, a comparison line ("about X miles in an EV"), the method version and the repo link.
+  - A "Wrapped"-style recap of your month or year: total, trend, top project, and what drives your number.
+  - A share link that opens the playground with your totals in the part of the URL after `#`. Browsers never send that part to a server, so it stays private.
+  - A ready-to-paste post: two or three plain-English lines, plus a hashtag and the link.
+  - A "methodology" badge on the card, so skeptics can see the sources before they comment.
+- **Fits:** PLAN S5 (receipt) and S7 (playground). Only totals are shared, never logs.
+- **Source:** Chase, Oct 20, 2026.
+
 ### Claude Code plugin: `/watts`, status line, session-end summary · 🧪 proposed
 - **Problem:** Running a separate CLI is one more thing to remember. People see their usage where they work, inside Claude Code.
 - **Idea:** A plugin that wraps the same local core: a `/watts` command for the report, a status line showing this session's kWh range, and a one-line summary when a session ends.
