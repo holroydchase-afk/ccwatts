@@ -30,12 +30,12 @@ Note: ANCHORS and PLAN number their decisions independently. "ANCHORS D3" and "P
 
 ## Open proposals (don't act on them, don't block them)
 
-ANCHORS.md lists P1–P4 as *proposed, not decided*. Don't implement them, but don't make choices that would close them off:
+ANCHORS.md lists P1–P3 as *proposed, not decided* (P4 is decided). Don't implement them, but don't make choices that would close them off:
 
 - **P1 – name may change.** Don't hard-code "ccwatts" in a way that's painful to rename: keep the name in one constant and in package.json files. **Do not publish to npm or claim names** until Chase confirms the name.
 - **P2 – more providers later.** Ship Claude Code only, but put log parsing behind a small adapter interface (e.g. `adapters/claude-code.ts` returns normalized usage records), so another agent CLI can be added later without touching the energy model.
 - **P3 – possible hosted team tier later.** Keep `core` free of CLI/terminal assumptions so it could run elsewhere.
-- **P4 – license.** Add MIT only after Chase confirms.
+- **P4 – license (decided Oct 20).** MIT for code (`LICENSE`), CC BY 4.0 for METHODOLOGY.md and params.json.
 
 ## When to stop and ask Chase
 

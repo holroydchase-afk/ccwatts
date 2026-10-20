@@ -1,6 +1,6 @@
 # ccwatts: Story & Anchors
 
-**Owner:** Chase · **Started:** Oct 2026 · **Status:** pre-build · **Last updated:** Oct 18, 2026
+**Owner:** Chase · **Started:** Oct 2026 · **Status:** pre-build · **Last updated:** Oct 20, 2026
 
 This file explains why ccwatts exists, what it won't compromise on, and who it's for. `PLAN.md` explains how it gets built. When the two conflict, this file wins, and the conflict gets raised with Chase.
 
@@ -49,7 +49,7 @@ These came out of the Oct 18 naming and growth discussion. **None of them count 
 | P1 | **Final name.** Pick before S1, since the npm package, GitHub repo and domain must match. | Options so far: **ccwatts** (rides on ccusage, but "cc" ties it to Claude Code), **tokenwatts** (provider-neutral and self-describing, free on npm as of Oct 18), and **Wattson** (fun, but has conflicts with IBM Watson and the Apex Legends character; could be the voice on the receipt instead of the package name). Also free on npm as of Oct 18: agentwatts, promptwatts. | Open |
 | P2 | **Claude Code first, not Claude Code only.** The long-term ambition is to cover many providers, Poe-style. Ship v0.1 with Claude Code only, but build the parser as per-provider adapters so adding Codex CLI or Gemini CLI is a single session. | Only agent CLIs that write local logs fit D3/C2. Grok, ChatGPT and claude.ai web usage would need account connections. Non-Anthropic models don't disclose their sizes, so ranges will be wider; METHODOLOGY must say so. | Open |
 | P3 | **Open-core path if it takes off.** The CLI, methodology and parameters stay free and open forever. Possible later paid tier: a hosted team/org dashboard, org-level ingestion via provider admin/usage APIs, audit-ready reports (CSRD, GHG Protocol), SSO, retention. | Trigger: friend-beta or early users asking to run it across a team. Nothing gets built before that signal. | Open |
-| P4 | **License: MIT** (or similarly permissive) for the core and CLI. | Keeps adoption easy and leaves room for a separately licensed hosted product later. | Open |
+| P4 | **License: MIT** for the code, **CC BY 4.0** for METHODOLOGY.md and params.json. | MIT keeps adoption and acquirer diligence easy. CC BY means anyone reusing or citing the numbers credits the project. Avoid AGPL/source-available: they slow adoption. | **Decided Oct 20, 2026** |
 
 ---
 

@@ -12,3 +12,7 @@ npx ccwatts        # coming soon
 - **Honest numbers.** Low / central / high, with a public methodology (`METHODOLOGY.md`, coming in S2).
 
 See `ANCHORS.md` for why this exists and `PLAN.md` for how it's being built.
+
+## License
+
+Code: MIT (`LICENSE`). Methodology and parameters (`METHODOLOGY.md`, `methodology/params.json`): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), so reuse them freely with credit.
