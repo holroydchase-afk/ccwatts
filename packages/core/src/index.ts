@@ -22,3 +22,15 @@ export {
   type Tier,
   type ComparisonLine,
 } from "./energy.js";
+export {
+  HISTORY_SCHEMA,
+  rollup,
+  mergeHistory,
+  rollupRecords,
+  serializeHistory,
+  parseHistory,
+  weekly,
+  weekStart,
+  type RollupRow,
+  type Week,
+} from "./history.js";

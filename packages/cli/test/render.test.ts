@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { claudeCodeAdapter, defaultParams as params, estimate, parseSince } from "@ccwatts/core";
-import { breakdown, energy, json, method, num, summary } from "../src/render.js";
+import { breakdown, energy, history, json, method, num, sparkline, summary } from "../src/render.js";
 
 const sample = readFileSync(new URL("../../../fixtures/claude-code/sample.jsonl", import.meta.url), "utf8");
 const e = estimate(claudeCodeAdapter.parse(sample), params);
@@ -67,5 +67,14 @@ describe("parseSince", () => {
     expect(parseSince("2026-10-01", now)).toEqual({ start: "2026-10-01T00:00:00.000Z", label: "since 2026-10-01" });
     expect(parseSince("all", now).start).toBeNull();
     expect(() => parseSince("yesterday", now)).toThrow(/--since/);
+  });
+});
+
+describe("history", () => {
+  it("renders weeks, a trend and ranges", () => {
+    const out = history(e, params, window, 2);
+    expect(out).toMatchSnapshot();
+    expect(out).toContain("Trend");
+    expect(sparkline([0, 1, 2])).toBe("▁▅█");
   });
 });
