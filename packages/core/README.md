@@ -1,8 +1,8 @@
 # @ccwatts/core
 
-Pure functions shared by the CLI and the web page: log adapters, rollups and (from S2) the energy model. No file, network or terminal I/O lives here.
+Pure functions shared by the CLI and the web page: log adapters, rollups and (from M1.2) the energy model. No file, network or terminal I/O lives here.
 
-## Claude Code log format (S1 findings)
+## Claude Code log format (M1.1 findings)
 
 Claude Code writes one JSONL file per session under `<config dir>/projects/<encoded cwd>/<session id>.jsonl`. The config dir is `~/.claude` by default, `~/.config/claude` on some installs, and can be overridden with `CLAUDE_CONFIG_DIR` (comma-separated for several). Subagent logs can sit in nested folders, so the CLI searches recursively.
 
@@ -27,7 +27,7 @@ Also present but not used yet: `usage.cache_creation.ephemeral_5m_input_tokens` 
 
 ## Retention
 
-Claude Code deletes session logs older than `cleanupPeriodDays` (a `settings.json` key, documented default 30 days). This is why ccwatts keeps its own history from S4 onward. **Still to confirm on Chase's machine:** the actual value in `~/.claude/settings.json` and the oldest log date present.
+Claude Code deletes session logs older than `cleanupPeriodDays` (a `settings.json` key, documented default 30 days). This is why ccwatts keeps its own history from M1.4 onward. **Still to confirm on Chase's machine:** the actual value in `~/.claude/settings.json` and the oldest log date present.
 
 ## Where these findings came from
 

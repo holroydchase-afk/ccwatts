@@ -163,20 +163,37 @@ The problem: Claude Code prunes old session logs. The default retention is belie
 
 ---
 
-## Session plan (no time limit per session; one PR each)
+## Plan (no time limit per task; one PR each)
 
-| # | Session | Done when |
-|---|---|---|
-| S1 | **Scaffold + parse spike.** Set up the workspaces. Find Claude Code logs, read the JSONL, and confirm the fields (`message.usage` input/output/cache-creation/cache-read tokens, `model`, `timestamp`, `cwd`, ids) and log retention. Print tokens by model. | Real token totals print for Chase's logs, and field names are documented in `core/README.md`. **If the fields aren't there, stop and tell Chase.** |
-| S2 ✅ | **Energy model + params.json.** Seed parameters from EcoLogits and the research sources, then draft METHODOLOGY.md. | Unit tests pass, and the central estimate is within an explainable distance of the sanity checks |
-| S3 ✅ | **CLI summary**, `--by`, `--json`, `--method`. Fixture-based tests. | Output matches the mock layout. Snapshot tests pass. |
-| S4 ✅ | **History**: rollups, dedupe, `history`, CSV export. | Survives log deletion, and reruns produce identical totals |
-| S5 ✅ | **Receipt**: share line plus SVG card. | Chase would actually post the image |
-| S6 ✅ | **Web dashboard**: shared core build and `ccwatts dashboard`. | Opens offline with real history |
-| S7 ✅ | **Playground**: drop-file parsing, sample data, CSP, deploy. | Works on a phone, and the no-network test passes |
-| S8 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds |
-| S9 | **Friend beta fixes.** | Top 3 issues from beta feedback fixed |
-| S10 | **Methodology hardening** after an outside sanity check. | METHODOLOGY v0.2 tagged |
+IDs follow the studio standard (`docs/planning-ids.md` in holroydchase-afk/studio-agents): milestone `M1`, task `M1.1`, step `M1.1.1`. Across products this repo's code is `CCW` (for example `CCW-M2.1`). Status is todo, doing, blocked, done or dropped. The old S1–S10 labels map to these IDs in `HANDOFF.md`.
+
+### M1: v1, recruiter-demoable (M1.1–M1.8 done Oct 21, 2026)
+
+| ID | Task | Done when | Status | Branch |
+|---|---|---|---|---|
+| M1.1 | **Scaffold + parse spike.** Set up the workspaces. Find Claude Code logs, read the JSONL, and confirm the fields (`message.usage` input/output/cache-creation/cache-read tokens, `model`, `timestamp`, `cwd`, ids) and log retention. Print tokens by model. | Real token totals print for Chase's logs, and field names are documented in `core/README.md`. **If the fields aren't there, stop and tell Chase.** | done (real-log check moved to M2.1) | `s1-scaffold` |
+| M1.2 | **Energy model + params.json.** Seed parameters from EcoLogits and the research sources, then draft METHODOLOGY.md. | Unit tests pass, and the central estimate is within an explainable distance of the sanity checks | done | `s2-energy-model` |
+| M1.3 | **CLI summary**, `--by`, `--json`, `--method`. Fixture-based tests. | Output matches the mock layout. Snapshot tests pass. | done | `s3-cli` |
+| M1.4 | **History**: rollups, dedupe, `history`, CSV export. | Survives log deletion, and reruns produce identical totals | done | `s4-history` |
+| M1.5 | **Receipt**: share line plus SVG card. | Chase would actually post the image | done | `s5-receipt` |
+| M1.6 | **Web dashboard**: shared core build and `ccwatts dashboard`. | Opens offline with real history | done | `s6-dashboard` |
+| M1.7 | **Playground**: drop-file parsing, sample data, CSP, deploy. | Works on a phone, and the no-network test passes | done | `s7-playground` |
+| M1.8 | **v1 README** with screenshots from demo data. | A recruiter understands it from the README alone | done | `v1-readme` |
+| M1.9 | **Playground hosting** on GitHub Pages via Actions. | Playground is live at chaseholroyd.com/ccwatts | blocked (Chase: Pages source) | `playground-pages` |
+
+### M2: Friend beta
+
+| ID | Task | Done when | Status | Branch |
+|---|---|---|---|---|
+| M2.1 | **Real-log run** on Chase's laptop. | Totals look right and `cleanupPeriodDays` is recorded in `core/README.md` | todo (Chase) | n/a |
+| M2.2 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds | blocked (name, ANCHORS P1) | `m2.2-ship` |
+| M2.3 | **Friend beta fixes.** | Top 3 issues from beta feedback fixed | todo | `m2.3-beta-fixes` |
+
+### M3: Methodology v0.2
+
+| ID | Task | Done when | Status | Branch |
+|---|---|---|---|---|
+| M3.1 | **Methodology hardening** after an outside sanity check. | METHODOLOGY v0.2 tagged | todo | `m3.1-methodology` |
 
 ## Conventions for Claude Code
 
@@ -184,7 +201,7 @@ The problem: Claude Code prunes old session logs. The default retention is belie
 - Every number shown to a user comes with its range and the method version.
 - Never write prompt or response content anywhere. Counts only.
 - Never add network calls, telemetry, or analytics.
-- One PR per session. Each PR description says what changed, how it was tested, and any open question for Chase.
+- One PR per task (`M1.2`). Branch `m1.2-short-name`, PR title `M1.2: short name`. Each PR description says what changed, how it was tested, and any open question for Chase.
 - When unsure about a product decision, check ANCHORS.md, then ask. Don't guess.
 
 ## Definition of done (MVP)
