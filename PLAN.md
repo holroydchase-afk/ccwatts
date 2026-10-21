@@ -163,7 +163,7 @@ The problem: Claude Code prunes old session logs. The default retention is belie
 
 ---
 
-## Session plan (about 1 hour each)
+## Session plan (no time limit per session; one PR each)
 
 | # | Session | Done when |
 |---|---|---|
@@ -184,7 +184,7 @@ The problem: Claude Code prunes old session logs. The default retention is belie
 - Every number shown to a user comes with its range and the method version.
 - Never write prompt or response content anywhere. Counts only.
 - Never add network calls, telemetry, or analytics.
-- Use small PRs, one per session. Each PR description says what changed, how it was tested, and any open question for Chase.
+- One PR per session. Each PR description says what changed, how it was tested, and any open question for Chase.
 - When unsure about a product decision, check ANCHORS.md, then ask. Don't guess.
 
 ## Definition of done (MVP)
