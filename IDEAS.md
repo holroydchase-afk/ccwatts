@@ -8,6 +8,36 @@ A running log. Add to the top of each section. Every entry starts with the probl
 
 ## Ideas
 
+### Measure the token-type ratios ourselves ("ccwatts bench") · 💡 idea
+- **Problem:** The cache-read and output factors come from other people's estimates, and they disagree. Skeptics will ask where the ratios come from.
+- **Idea:** Rent an H100 for a few hours, run open models on vLLM, meter the GPU with NVML/Zeus, and publish measured input, output and cache-read ratios as METHODOLOGY v0.2.
+- **Fits:** PLAN S10 (methodology hardening). Separate `bench/` folder; nothing in the CLI changes.
+- **Open:** Chase to say whether "metric data" meant energy measurements like this or usage data.
+- **Source:** Atlas intake of the original chat "Gathering own data plan", Oct 18, 2026.
+
+### Keep output × context per message, before logs are pruned · 🧪 proposed
+- **Problem:** Output energy grows with how much context the model reads per token, but history only keeps daily totals. Claude Code deletes logs after about 30 days, so the detail is lost if we wait.
+- **Idea:** Store one extra count per day: the sum of output tokens times context size. Don't show it yet; use it once the energy model can price it.
+- **Open:** Chase to approve storing it (it is a count, not content).
+- **Source:** Atlas intake of the original chat "Environmental impact tracking agent", Oct 18, 2026.
+
+### Ask Hausfather or the EcoLogits maintainers for a sanity check · 💡 idea
+- **Problem:** Three published figures can't all be true (Hausfather's hand estimate, Microsoft's per-query number, price-based ratios). An outside check is the strongest answer to skeptics.
+- **Idea:** A short email with METHODOLOGY.md, our 8-week range next to Hausfather's, and one specific question about the cache-read factor.
+- **Fits:** PLAN S10. Chase sends it; Claude can draft it.
+- **Source:** Atlas intake, Oct 18, 2026; ANCHORS open questions.
+
+### Carbon comparisons, opt-in · 💡 idea
+- **Problem:** kWh means little to most people. On the US grid, 1 kWh and one gas-car mile emit about the same CO2, which is an easy picture.
+- **Idea:** An opt-in carbon line using a grid factor, kept off by default because PLAN D7 says kWh only for the MVP.
+- **Open:** Chase to choose opt-in carbon or kWh-only.
+- **Source:** Atlas intake, Oct 18, 2026.
+
+### Admin API path for solo devs · 💡 idea
+- **Problem:** People who use Claude outside Claude Code have no local logs to read.
+- **Idea:** Test whether a solo developer can pull their own usage from the Anthropic Admin API. Post-MVP (PLAN D1, ANCHORS D9); the test was never run.
+- **Source:** Atlas intake of the original chat "AI environmental impact tracker", Oct 16, 2026.
+
 ### Easy LinkedIn sharing · 💡 idea
 - **Problem:** The launch depends on people posting their number, and a terminal screenshot doesn't look good in a feed.
 - **Ideas:**
@@ -44,6 +74,14 @@ New user stories as we find them. The MVP stories are in `ANCHORS.md` (Stories).
 ## Experiences
 
 What actually happened when someone used it or when we built it: surprises, friction, quotes. These are the raw material for the case study.
+
+### One night shift built S2 to S7 · Oct 21, 2026
+- **What happened:** An unattended run starting at 2:15am built S2 through S7 plus the README as PRs #4 to #10, with 48 tests. Chase merged all of them the same day. Nothing is published or deployed.
+- **So what:** Chase's hour a night now goes to review and decisions, not building.
+
+### Building it cost about 186 Wh · Oct 17, 2026
+- **What happened:** An early sandbox build (before the repo existed) ran the estimator on its own build sessions: about 186 Wh, range 80 to 550.
+- **So what:** A ready-made hook for the launch post. The sandbox code was later replaced by the repo build.
 
 ### Cache reads dominate · Oct 19, 2026
 - **What happened:** The S1 parser ran on a real Claude Code log. About 93% of tokens were cache reads, matching what Hausfather reported (96%).

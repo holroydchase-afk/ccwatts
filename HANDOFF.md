@@ -3,6 +3,8 @@
 Live notes for whoever picks up the build next (human or Claude). Updated every push.
 
 ## Done
+All of S1 to S7, the README (PRs #1, #3 to #10) and the Pages workflow (PR #12) are merged to main as of Oct 21, 2026. Branch notes below are history.
+
 - S1 log parser (PR #1, draft, still needs a run on Chase's real logs).
 - S2 energy model: `packages/core/src/energy.ts`, `methodology/params.json`, `METHODOLOGY.md`, sanity-check tests. Branch `s2-energy-model`, stacked on `s1-scaffold`.
 
@@ -23,7 +25,9 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 - Nothing. Hardening if time allows.
 
 ## Exact next step
-- Chase: run S1 on real logs (`node packages/cli/dist/index.js` after `npm install && npm run build` on branch `v1-readme`), then merge the stack in order: #1, #3, #4, #5, #6, #7, #8, #9, then the README PR.
+- Chase: run S1 on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
+- Playground hosting (PR #12, Oct 21): workflow merged, but the first deploy failed ("Ensure GitHub Pages has been enabled"). Chase: set Settings → Pages → Source to "GitHub Actions" and re-run. Expected URL: chaseholroyd.com/ccwatts. Not live until confirmed.
+- Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
 
 ## Decisions to review
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
