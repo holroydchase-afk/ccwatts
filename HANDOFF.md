@@ -17,11 +17,13 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 
 - S7 playground: same page as the dashboard (opens on labeled sample data, folder/file pickers, drag and drop). `npm run check:browser` (Playwright, not a dependency) fails on any request, console error or sideways scroll. Hosting options in `docs/PLAYGROUND.md`; nothing deployed. Branch `s7-playground`.
 
+- v1 README for the portfolio with screenshots in `docs/images/` (all from synthetic demo data). Branch `v1-readme`, which also merges PR #3 (VISION, IDEAS, LICENSE). Also fixed: the dashboard showed the file picker (CSS overrode `hidden`), and web windows now cut days the same way as the CLI.
+
 ## In progress
-- Portfolio polish: README, screenshots.
+- Nothing. Hardening if time allows.
 
 ## Exact next step
-- Branch `v1-readme` from `s7-playground`; recruiter-readable README with screenshots in `docs/images/`.
+- Chase: run S1 on real logs (`node packages/cli/dist/index.js` after `npm install && npm run build` on branch `v1-readme`), then merge the stack in order: #1, #3, #4, #5, #6, #7, #8, #9, then the README PR.
 
 ## Decisions to review
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
