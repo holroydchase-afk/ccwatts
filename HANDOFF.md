@@ -52,6 +52,7 @@ All of S1 to S7, the README (PRs #1, #3 to #10) and the Pages workflow (PR #12) 
 - `npm test` builds the web page first (about 1 second) so the page tests check the real output.
 
 - Hosting: GitHub Pages through Actions (Chase, Oct 21). Live at https://holroydchase-afk.github.io/ccwatts/ once the workflow runs.
+- Shared studio agents are in `.claude/agents/` (source: holroydchase-afk/studio-agents; edit there, then sync).
 
 ## Blockers
 - S1 still needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
