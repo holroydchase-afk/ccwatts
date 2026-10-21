@@ -46,6 +46,8 @@ A running log. Add to the top of each section. Every entry starts with the probl
   - A share link that opens the playground with your totals in the part of the URL after `#`. Browsers never send that part to a server, so it stays private.
   - A ready-to-paste post: two or three plain-English lines, plus a hashtag and the link.
   - A "methodology" badge on the card, so skeptics can see the sources before they comment.
+  - A link preview, so a pasted playground link shows a proper card in the feed instead of a bare URL. Done Oct 21 (`packages/web/src/og.svg`).
+- **Status so far:** the receipt card, Save PNG and the ready-to-paste post shipped in M1.5 and M1.6. The post now links the playground first, since most LinkedIn readers won't open a repo.
 - **Fits:** PLAN M1.5 (receipt) and M1.7 (playground). Only totals are shared, never logs.
 - **Source:** Chase, Oct 20, 2026.
 

@@ -24,6 +24,7 @@ The repo now uses the studio planning IDs (milestone `M1`, task `M1.1`, step `M1
 ANCHORS/PLAN decisions (`D1`), proposals (`P1`) and IDEAS entries keep their own numbers.
 
 ## Done
+- 2026-10-21: link preview for the playground. `og:` and `twitter:` meta tags in `packages/web/src/template.html` point at `og.png`, a 1200×627 card rendered from `packages/web/src/og.svg` by `scripts/make-og-image.mjs` (Playwright, run by hand, commit both). The Pages workflow copies it next to `index.html`. The playground URL lives in `PLAYGROUND_URL` in `packages/core/src/meta.ts`; the LinkedIn post text now links it first and the repo second.
 - 2026-10-21: studio session rules installed: `.claude/settings.json` SessionStart hook prints this file into every Claude Code session, `.github/workflows/handoff-check.yml` fails a PR that changes files without updating this file, and CLAUDE.md has a "Session rules" section.
 All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pages workflow (M1.9, PR #12) are merged to main as of Oct 21, 2026. Branch notes below are history.
 
