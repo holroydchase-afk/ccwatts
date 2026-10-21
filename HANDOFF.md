@@ -3,6 +3,7 @@
 Live notes for whoever picks up the build next (human or Claude). Updated every push.
 
 ## Done
+- 2026-10-21: studio session rules installed: `.claude/settings.json` SessionStart hook prints this file into every Claude Code session, `.github/workflows/handoff-check.yml` fails a PR that changes files without updating this file, and CLAUDE.md has a "Session rules" section.
 All of S1 to S7, the README (PRs #1, #3 to #10) and the Pages workflow (PR #12) are merged to main as of Oct 21, 2026. Branch notes below are history.
 
 - S1 log parser (PR #1, draft, still needs a run on Chase's real logs).
