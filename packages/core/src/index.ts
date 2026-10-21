@@ -1,4 +1,5 @@
-export { APP_NAME } from "./meta.js";
+export { APP_NAME, APP_VERSION } from "./meta.js";
+export { parseSince, type Window } from "./window.js";
 export * from "./types.js";
 export { projectRef } from "./project.js";
 export { claudeCodeAdapter } from "./adapters/claude-code.js";
