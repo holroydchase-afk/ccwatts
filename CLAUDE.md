@@ -9,14 +9,14 @@ ccwatts (working name) is an open-source CLI that reads local Claude Code logs a
 ## Read before doing anything
 
 1. `ANCHORS.md`: why it exists, decisions, candidate anchors, open proposals. **It wins any conflict with PLAN.md.**
-2. `PLAN.md`: stack, repo layout, energy model, the three MVP surfaces, and the session plan (S1–S10).
+2. `PLAN.md`: stack, repo layout, energy model, the three MVP surfaces, and the plan (milestones M1–M3, tasks like M1.2; the old S1–S10 labels map to them in HANDOFF.md).
 
 Note: ANCHORS and PLAN number their decisions independently. "ANCHORS D3" and "PLAN D3" are different decisions, so always cite the file.
 
 ## Who does what
 
 - **Chase** decides product questions, reviews, and ships. He works about an hour a night.
-- **Claude Code** builds, with no limit on session length or scope (Chase, Oct 20). Long runs are fine; keep one PR per PLAN.md session row so each can be reviewed and merged on its own.
+- **Claude Code** builds, with no limit on session length or scope (Chase, Oct 20). Long runs are fine; keep one PR per PLAN.md task (M1.2) so each can be reviewed and merged on its own.
 
 ## Hard rules (non-negotiable)
 
@@ -40,7 +40,7 @@ ANCHORS.md lists P1–P3 as *proposed, not decided* (P4 is decided). Don't imple
 ## When to stop and ask Chase
 
 - Any product decision not covered by ANCHORS.md or PLAN.md.
-- The Claude Code log fields don't match what PLAN.md S1 expects.
+- The Claude Code log fields don't match what PLAN.md M1.1 expects.
 - A sanity check (PLAN.md, energy model section) lands far off and you can't explain why.
 - Anything that would touch the network, store content, or weaken the privacy story.
 

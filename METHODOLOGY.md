@@ -35,7 +35,7 @@ energy (Wh) = Σ over token types:  tokens × output_wh_per_1k[tier] / 1000 × r
 
 ### Why cache reads get their own parameter
 
-In agentic sessions, most tokens are cache reads: context the model has already processed and reuses on the next turn. Zeke Hausfather found cache reads were about 96% of his tokens, and ccwatts' own S1 test log showed about 93%. Reading from the cache skips most of the work of processing those tokens again, so each one costs much less than fresh input. How much less is the single biggest uncertainty in the whole estimate. ccwatts uses 10% of fresh input (Hausfather's central case and Anthropic's price ratio), bounded at 1% and 25%.
+In agentic sessions, most tokens are cache reads: context the model has already processed and reuses on the next turn. Zeke Hausfather found cache reads were about 96% of his tokens, and ccwatts' own M1.1 test log showed about 93%. Reading from the cache skips most of the work of processing those tokens again, so each one costs much less than fresh input. How much less is the single biggest uncertainty in the whole estimate. ccwatts uses 10% of fresh input (Hausfather's central case and Anthropic's price ratio), bounded at 1% and 25%.
 
 ## Parameters (v0.1.0)
 
