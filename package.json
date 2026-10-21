@@ -1,0 +1,25 @@
+{
+  "name": "ccwatts-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "packages/cli",
+    "packages/web"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build -w packages/core -w packages/cli",
+    "typecheck": "tsc -p packages/core && tsc -p packages/cli",
+    "test": "vitest run",
+    "start": "npm run build && node packages/cli/dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

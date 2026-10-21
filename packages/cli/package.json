@@ -1,0 +1,19 @@
+{
+  "name": "ccwatts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Estimate the electricity your Claude Code usage consumes.",
+  "type": "module",
+  "bin": {
+    "ccwatts": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@ccwatts/core": "0.0.0"
+  }
+}
