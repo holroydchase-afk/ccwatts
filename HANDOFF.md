@@ -3,6 +3,9 @@
 Live notes for whoever picks up the build next (human or Claude). Updated every push.
 
 ## Done
+- 2026-10-21: studio session rules installed: `.claude/settings.json` SessionStart hook prints this file into every Claude Code session, `.github/workflows/handoff-check.yml` fails a PR that changes files without updating this file, and CLAUDE.md has a "Session rules" section.
+All of S1 to S7, the README (PRs #1, #3 to #10) and the Pages workflow (PR #12) are merged to main as of Oct 21, 2026. Branch notes below are history.
+
 - S1 log parser (PR #1, draft, still needs a run on Chase's real logs).
 - S2 energy model: `packages/core/src/energy.ts`, `methodology/params.json`, `METHODOLOGY.md`, sanity-check tests. Branch `s2-energy-model`, stacked on `s1-scaffold`.
 
@@ -15,15 +18,19 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 
 - S6 dashboard: `packages/web` (template.html + app.ts, built by build.mjs with esbuild into one file, hash-pinned CSP). `ccwatts dashboard [--no-open]` writes `~/.ccwatts/dashboard.html`. Page has headline, daily stacked chart, by model/project, explainer, share card with Save PNG/SVG and copy buttons, method table. Branch `s6-dashboard`.
 
-- S7 playground: same page as the dashboard (opens on labeled sample data, folder/file pickers, drag and drop). `npm run check:browser` (Playwright, not a dependency) fails on any request, console error or sideways scroll. Hosting options in `docs/PLAYGROUND.md`; nothing deployed. Branch `s7-playground`.
+- S7 playground: same page as the dashboard (opens on labeled sample data, folder/file pickers, drag and drop). `npm run check:browser` (Playwright, not a dependency) fails on any request, console error or sideways scroll. Hosted on GitHub Pages via `.github/workflows/pages.yml` (Chase picked Actions, Oct 21). Branch `s7-playground`.
 
 - v1 README for the portfolio with screenshots in `docs/images/` (all from synthetic demo data). Branch `v1-readme`, which also merges PR #3 (VISION, IDEAS, LICENSE). Also fixed: the dashboard showed the file picker (CSS overrode `hidden`), and web windows now cut days the same way as the CLI.
+
+- License audit (2026-10-21): LICENSE (MIT) and CC BY 4.0 notices were already in place; added a not-affiliated-with-Anthropic trademark line to the README.
 
 ## In progress
 - Nothing. Hardening if time allows.
 
 ## Exact next step
-- Chase: run S1 on real logs (`node packages/cli/dist/index.js` after `npm install && npm run build` on branch `v1-readme`), then merge the stack in order: #1, #3, #4, #5, #6, #7, #8, #9, then the README PR.
+- Chase: run S1 on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
+- Playground hosting (PR #12, Oct 21): workflow merged, but the first deploy failed ("Ensure GitHub Pages has been enabled"). Chase: set Settings → Pages → Source to "GitHub Actions" and re-run. Expected URL: chaseholroyd.com/ccwatts. Not live until confirmed.
+- Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
 
 ## Decisions to review
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
@@ -44,8 +51,8 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 - Sample windows count back from the last day in the sample; real history counts back from today.
 - `npm test` builds the web page first (about 1 second) so the page tests check the real output.
 
-- Not deployed. Hosting is Chase's call (see docs/PLAYGROUND.md for three options).
-- **Shared studio agents (branch `studio-agents`):** adds six generic agents to `.claude/agents/` (staff-pm, qa-tdd, engineer, privacy-security, ux-reviewer, positioning). Each one reads this repo's `CLAUDE.md` and `HANDOFF.md` for its rules. They don't change any code. Merge or close.
+- Hosting: GitHub Pages through Actions (Chase, Oct 21). Live at https://holroydchase-afk.github.io/ccwatts/ once the workflow runs.
+- Shared studio agents are in `.claude/agents/` (source: holroydchase-afk/studio-agents; edit there, then sync).
 
 ## Blockers
 - S1 still needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
