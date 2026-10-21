@@ -179,14 +179,14 @@ IDs follow the studio standard (`docs/planning-ids.md` in holroydchase-afk/studi
 | M1.6 | **Web dashboard**: shared core build and `ccwatts dashboard`. | Opens offline with real history | done | `s6-dashboard` |
 | M1.7 | **Playground**: drop-file parsing, sample data, CSP, deploy. | Works on a phone, and the no-network test passes | done | `s7-playground` |
 | M1.8 | **v1 README** with screenshots from demo data. | A recruiter understands it from the README alone | done | `v1-readme` |
-| M1.9 | **Playground hosting** on GitHub Pages via Actions. | Playground is live at chaseholroyd.com/ccwatts | blocked (Chase: Pages source) | `playground-pages` |
+| M1.9 | **Playground hosting** on GitHub Pages via Actions. | Playground is live at chaseholroyd.com/ccwatts | done (Chase, Oct 21) | `playground-pages` |
 
 ### M2: Friend beta
 
 | ID | Task | Done when | Status | Branch |
 |---|---|---|---|---|
 | M2.1 | **Real-log run** on Chase's laptop. | Totals look right and `cleanupPeriodDays` is recorded in `core/README.md` | todo (Chase) | n/a |
-| M2.2 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds | blocked (name, ANCHORS P1) | `m2.2-ship` |
+| M2.2 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds | doing: clean-install test passes from a packed tarball; publish blocked on name (ANCHORS P1) | `m2.2-ship` |
 | M2.3 | **Friend beta fixes.** | Top 3 issues from beta feedback fixed | todo | `m2.3-beta-fixes` |
 
 ### M3: Methodology v0.2

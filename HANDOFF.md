@@ -46,11 +46,13 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - License audit (2026-10-21): LICENSE (MIT) and CC BY 4.0 notices were already in place; added a not-affiliated-with-Anthropic trademark line to the README.
 
 ## In progress
-- Nothing. Hardening if time allows.
+- M2.2 ship prep (everything except the npm publish). Done so far: fixed a packaging bug (the CLI listed the unpublished `@ccwatts/core` as a runtime dependency, so `npm install` of the tarball failed with a 404; it is bundled anyway, so it is now a devDependency), added a test that the CLI has no runtime dependencies, and ran a clean install of `npm pack` output into an empty project with an empty HOME: install took under a second, the summary and `dashboard` worked on the demo fixture.
+- Still to do in M2.2: README install GIF, then `npm publish` once the name is final.
 
 ## Exact next step
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
-- M1.9 playground hosting (PR #12, Oct 21): workflow merged, but the first deploy failed ("Ensure GitHub Pages has been enabled"). Chase: set Settings → Pages → Source to "GitHub Actions" and re-run. Expected URL: chaseholroyd.com/ccwatts. Not live until confirmed.
+- M1.9 playground hosting: done. Chase enabled Pages on Oct 21; live at chaseholroyd.com/ccwatts/.
+- Chase: pick the final name (ANCHORS P1). It is the only blocker on M2.2's publish.
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
 
 ## Decisions to review
