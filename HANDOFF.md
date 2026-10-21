@@ -19,11 +19,13 @@ The repo now uses the studio planning IDs (milestone `M1`, task `M1.1`, step `M1
 | S1 real-log check | CCW-M2.1 | Real-log run on Chase's laptop |
 | S8 | CCW-M2.2 | Ship (npm, clean-machine test) |
 | S9 | CCW-M2.3 | Friend beta fixes |
+| (new, Oct 21) | CCW-M2.4 | Claude Code plugin (`/ccwatts`, status line) |
 | S10 | CCW-M3.1 | Methodology hardening (v0.2) |
 
 ANCHORS/PLAN decisions (`D1`), proposals (`P1`) and IDEAS entries keep their own numbers.
 
 ## Done
+- 2026-10-21: Claude Code plugin (CCW-M2.4, Chase picked it Oct 21). Marketplace at `.claude-plugin/marketplace.json`, plugin in `plugins/ccwatts`: `/ccwatts` skill runs the bundled CLI (`bin/ccwatts.js`, copied from `packages/cli/dist` by `scripts/build-plugin.mjs` on `npm run build`, committed because installed plugins can't reach `packages/`), `/ccwatts:statusline` skill sets up the status line, new CLI command `ccwatts statusline` (reads the transcript path from stdin, never writes history, prints a quiet line on any error). New `.github/workflows/ci.yml` builds, typechecks and tests every PR and fails if the committed bundle is stale. Tested: `claude plugin validate`, and headless `claude -p "/ccwatts:ccwatts ..." --plugin-dir ./plugins/ccwatts` ran the CLI. Bare `/ccwatts` didn't resolve in headless `-p` mode; check it in the interactive picker.
 - 2026-10-21: link preview for the playground. `og:` and `twitter:` meta tags in `packages/web/src/template.html` point at `og.png`, a 1200×627 card rendered from `packages/web/src/og.svg` by `scripts/make-og-image.mjs` (Playwright, run by hand, commit both). The Pages workflow copies it next to `index.html`. The playground URL lives in `PLAYGROUND_URL` in `packages/core/src/meta.ts`; the LinkedIn post text now links it first and the repo second.
 - 2026-10-21: studio session rules installed: `.claude/settings.json` SessionStart hook prints this file into every Claude Code session, `.github/workflows/handoff-check.yml` fails a PR that changes files without updating this file, and CLAUDE.md has a "Session rules" section.
 All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pages workflow (M1.9, PR #12) are merged to main as of Oct 21, 2026. Branch notes below are history.
@@ -50,6 +52,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Nothing. Hardening if time allows.
 
 ## Exact next step
+- M2.4, Chase: on your laptop, `/plugin marketplace add holroydchase-afk/ccwatts`, `/plugin install ccwatts@ccwatts`, then `/ccwatts` and `/ccwatts:statusline`. This doubles as the M2.1 real-log run.
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
 - M1.9 playground hosting (PR #12, Oct 21): workflow merged, but the first deploy failed ("Ensure GitHub Pages has been enabled"). Chase: set Settings → Pages → Source to "GitHub Actions" and re-run. Expected URL: chaseholroyd.com/ccwatts. Not live until confirmed.
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.

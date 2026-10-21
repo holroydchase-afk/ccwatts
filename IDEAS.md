@@ -51,11 +51,12 @@ A running log. Add to the top of each section. Every entry starts with the probl
 - **Fits:** PLAN M1.5 (receipt) and M1.7 (playground). Only totals are shared, never logs.
 - **Source:** Chase, Oct 20, 2026.
 
-### Claude Code plugin: `/watts`, status line, session-end summary · 🧪 proposed
+### Claude Code plugin: `/ccwatts`, status line, session-end summary · ✅ adopted (Chase, Oct 21; command named `/ccwatts`)
 - **Problem:** Running a separate CLI is one more thing to remember. People see their usage where they work, inside Claude Code.
 - **Idea:** A plugin that wraps the same local core: a `/watts` command for the report, a status line showing this session's kWh range, and a one-line summary when a session ends.
 - **Why it fits:** It reads the same local data, so no server and no new privacy risk. A connector (MCP server) fits less well because it means running a service.
-- **When:** After the CLI ships (around M2.2), as one small session. Chase liked the mockup (Oct 20).
+- **When:** Chase picked it as the next build on Oct 21, ahead of npm, because a plugin installs from this repo and doesn't need the final name on npm.
+- **Status:** `/ccwatts` and the status line are built (`plugins/ccwatts`). The session-end summary is left out for now: plugin SessionEnd hooks get about 1.5 seconds and their output may not show to the user, so it needs a test on a real install first.
 - **Source:** project chat, Oct 20, 2026.
 
 ### No servers, ever, for the core product · ✅ already decided (PLAN D3, ANCHORS C2 candidate)

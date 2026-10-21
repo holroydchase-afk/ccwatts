@@ -199,3 +199,10 @@ export function historyCsv(rows: readonly RollupRow[], params: Params): string {
   });
   return [head, ...body].map((cells) => cells.map(csvCell).join(",")).join("\n");
 }
+
+/** One short line for the Claude Code status line: this session's energy, its range and the method version. */
+export function statusLine(e: Estimate, params: Params): string {
+  if (e.responses === 0) return `⚡ ${APP_NAME}: no usage yet this session`;
+  const t = formatEnergy(e.total);
+  return `⚡ ~${t.central} this session (range ${t.range}) · method v${params.version}`;
+}
