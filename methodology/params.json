@@ -1,0 +1,71 @@
+{
+  "version": "0.1.0",
+  "as_of": "2026-10-21",
+  "license": "CC BY 4.0",
+  "boundary": "comprehensive: accelerators, host CPU and memory, idle capacity, and data-center overhead (PUE)",
+  "interval": "low and high are each parameter's plausible bounds, treated as a ~90% interval",
+  "params": {
+    "output_wh_per_1k.opus": {
+      "value": 1.2, "low": 0.4, "high": 3.0, "unit": "Wh per 1k output tokens", "label": "MODELED",
+      "source": "https://www.theclimatebrink.com/p/the-real-energy-use-of-agentic-ai",
+      "as_of": "2026-10-21",
+      "note": "Largest tier. Scaled up from the Sonnet value; Anthropic does not disclose model size or energy. Bounds cover published per-token estimates for frontier models."
+    },
+    "output_wh_per_1k.sonnet": {
+      "value": 0.6, "low": 0.25, "high": 1.5, "unit": "Wh per 1k output tokens", "label": "MODELED",
+      "source": "https://arxiv.org/abs/2508.15734",
+      "as_of": "2026-10-21",
+      "note": "Anchored so a typical chat query (about 1k input, 400 output tokens) lands near Google's measured 0.24 Wh median Gemini prompt and the 0.34 Wh median frontier query (IQR 0.18-0.67). Third-party estimates for Claude output run 0.4-2 Wh per 1k."
+    },
+    "output_wh_per_1k.haiku": {
+      "value": 0.25, "low": 0.08, "high": 0.6, "unit": "Wh per 1k output tokens", "label": "GUESS",
+      "source": "https://www.anthropic.com/pricing",
+      "as_of": "2026-10-21",
+      "note": "Smallest tier. Scaled down from Sonnet roughly in line with the price gap between tiers, which is a weak proxy for compute."
+    },
+    "input_vs_output": {
+      "value": 0.3, "low": 0.15, "high": 0.5, "unit": "ratio", "label": "MODELED",
+      "source": "https://www.anthropic.com/pricing",
+      "as_of": "2026-10-21",
+      "note": "Energy of one fresh input token relative to one output token. Input is processed in parallel (prefill), so it costs less per token. Anthropic prices input at 1/5 of output; a Watershed-based estimate uses about 1/3."
+    },
+    "cache_write_vs_input": {
+      "value": 1.0, "low": 0.8, "high": 1.25, "unit": "ratio", "label": "MODELED",
+      "source": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching",
+      "as_of": "2026-10-21",
+      "note": "Writing to the cache means processing the tokens fresh, then storing the result. Priced at 1.25x input."
+    },
+    "cache_read_vs_input": {
+      "value": 0.1, "low": 0.01, "high": 0.25, "unit": "ratio", "label": "MODELED",
+      "source": "https://www.theclimatebrink.com/p/the-real-energy-use-of-agentic-ai",
+      "as_of": "2026-10-21",
+      "note": "The parameter that matters most for agents, where cache reads are 90%+ of tokens. Hausfather's central case is 10% of fresh input, tested at 1% and 25%. Anthropic prices cache reads at 0.1x input."
+    }
+  },
+  "tiers": {
+    "opus": ["opus"],
+    "sonnet": ["sonnet"],
+    "haiku": ["haiku"],
+    "fallback": "sonnet"
+  },
+  "comparisons": {
+    "ev_kwh_per_mile": {
+      "value": 0.3, "unit": "kWh per mile", "label": "MEASURED",
+      "source": "https://www.fueleconomy.gov/feg/evsbs.shtml",
+      "as_of": "2026-10-21",
+      "note": "Typical EV uses 25-35 kWh per 100 miles (EPA)."
+    },
+    "fridge_kwh_per_day": {
+      "value": 1.5, "unit": "kWh per day", "label": "MEASURED",
+      "source": "https://www.energystar.gov/products/refrigerators",
+      "as_of": "2026-10-21",
+      "note": "A typical US refrigerator uses about 400-600 kWh a year."
+    },
+    "us_home_kwh_per_day": {
+      "value": 29, "unit": "kWh per day", "label": "MEASURED",
+      "source": "https://www.eia.gov/tools/faqs/faq.php?id=97&t=3",
+      "as_of": "2026-10-21",
+      "note": "Average US household used about 10,800 kWh in a year (EIA)."
+    }
+  }
+}
