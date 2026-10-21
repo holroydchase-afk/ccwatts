@@ -2,6 +2,10 @@ import {
   APP_NAME,
   APP_VERSION,
   comparisons,
+  energyForCounts,
+  tierFor,
+  weekly,
+  type RollupRow,
   projectName,
   TOKEN_TYPES,
   type Breakdown,
@@ -171,4 +175,56 @@ export function json(e: Estimate, params: Params, window: Window): string {
     null,
     2,
   );
+}
+
+const BARS = "▁▂▃▄▅▆▇█";
+
+/** Terminal sparkline, one character per value, scaled to the largest. */
+export function sparkline(values: number[]): string {
+  const max = Math.max(...values, 0);
+  return values.map((v) => (max === 0 ? BARS[0] : BARS[Math.min(7, Math.round((v / max) * 7))])).join("");
+}
+
+export function history(e: Estimate, params: Params, window: Window, storedDays: number): string {
+  if (e.responses === 0) return `${header(params, window)}\n\n  No history yet. Run ${APP_NAME} once to start recording.`;
+  const weeks = weekly(e.byDay);
+  const unit = energy(e.total).unit;
+  const scale = unit === "kWh" ? 1000 : 1;
+  const rows = weeks.map((w) => [
+    `week of ${w.start}`,
+    num(w.central / scale),
+    `${num(w.low / scale)} – ${num(w.high / scale)}`,
+    "█".repeat(Math.round((w.central / Math.max(...weeks.map((x) => x.central), 1e-9)) * 20)),
+  ]);
+  const active = weeks.filter((w) => w.central > 0);
+  const best = active.reduce((a, b) => (b.central < a.central ? b : a), active[0]!);
+  const worst = active.reduce((a, b) => (b.central > a.central ? b : a), active[0]!);
+  const total = energy(e.total);
+  const lines = [
+    header(params, window),
+    "",
+    table(["week", unit, "range", ""], rows),
+    "",
+    `  Trend         ${sparkline(weeks.map((w) => w.central))}`,
+    `  Total         ${total.central}   (range ${total.range})`,
+    `  Lightest week ${best.start}   ${energy(best).central} (range ${energy(best).range})`,
+    `  Heaviest week ${worst.start}   ${energy(worst).central} (range ${energy(worst).range})`,
+    `  Recorded      ${storedDays} days, kept in your local history even after Claude Code deletes old logs`,
+    "",
+    `  Energy is recalculated from stored token counts with method v${params.version}.`,
+  ];
+  return lines.join("\n");
+}
+
+const csvCell = (v: string | number) => (typeof v === "number" ? String(v) : /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+
+/** Daily rows as CSV, with energy recomputed under the current method. */
+export function historyCsv(rows: readonly RollupRow[], params: Params): string {
+  const head = ["date", "model", "project", "responses", "input", "cache_write", "cache_read", "output", "wh_low", "wh_central", "wh_high", "method_version"];
+  const round = (n: number) => Math.round(n * 1000) / 1000;
+  const body = rows.map((r) => {
+    const wh = energyForCounts(r.tokens, tierFor(r.model, params).tier, params);
+    return [r.date, r.model, r.projectName ?? "", r.responses, r.tokens.input, r.tokens.cacheWrite, r.tokens.cacheRead, r.tokens.output, round(wh.low), round(wh.central), round(wh.high), params.version];
+  });
+  return [head, ...body].map((cells) => cells.map(csvCell).join(",")).join("\n");
 }

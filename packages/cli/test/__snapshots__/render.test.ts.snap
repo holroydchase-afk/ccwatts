@@ -42,6 +42,22 @@ input             20   0.006   0.002 – 0.02      0%
 total         57,020     9.1     2.3 – 27.5    100%"
 `;
 
+exports[`history > renders weeks, a trend and ranges 1`] = `
+"ccwatts v0.1.0 · method v0.1.0 · all time
+
+week                  Wh        range
+------------------   ---   ----------   --------------------
+week of 2026-09-28   9.1   2.3 – 27.5   ████████████████████
+
+  Trend         █
+  Total         9.1 Wh   (range 2.3 – 27.5)
+  Lightest week 2026-09-28   9.1 Wh (range 2.3 – 27.5)
+  Heaviest week 2026-09-28   9.1 Wh (range 2.3 – 27.5)
+  Recorded      2 days, kept in your local history even after Claude Code deletes old logs
+
+  Energy is recalculated from stored token counts with method v0.1.0."
+`;
+
 exports[`summary > matches the PLAN.md layout 1`] = `
 "ccwatts v0.1.0 · method v0.1.0 · all time
 

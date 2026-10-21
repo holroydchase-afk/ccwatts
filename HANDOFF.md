@@ -9,11 +9,13 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 - S3 CLI: summary, `--since`, `--by`, `--json`, `--method` (`packages/cli/src/render.ts`, snapshot tests). Branch `s3-cli`.
 - Demo data: `scripts/make-demo-fixture.mjs` writes `fixtures/claude-code/demo.jsonl` (synthetic, counts only, 30 days). Try `npm run build && node packages/cli/dist/index.js --path fixtures/claude-code --since all`.
 
+- S4 history: core `history.ts` (rollup, merge, weekly), CLI `store.ts` (`~/.ccwatts/history.jsonl`, `CCWATTS_HOME` override), `ccwatts history`, `--export csv`, `--no-history`. Branch `s4-history`.
+
 ## In progress
-- S4 history.
+- S5 receipt.
 
 ## Exact next step
-- Branch `s4-history` from `s3-cli`; add rollups in core and `~/.ccwatts/history.jsonl` I/O in the CLI.
+- Branch `s5-receipt` from `s4-history`; pure SVG builder in core (so web can reuse it), `ccwatts receipt` writes SVG in the CLI.
 
 ## Decisions to review
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
@@ -23,6 +25,9 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 
 - Comparison line picks the first two everyday equivalents that are at least 1 (EV miles, fridge days, phone charges, home days), else the biggest one.
 - Added an EPA phone-charge comparison (0.019 kWh) so small totals still get a picture.
+
+- History merge keeps, per day/model/project, the row with more tokens. Claude Code only adds to a day's logs and then deletes whole old files, so this can't double-count or shrink. No per-message IDs are stored.
+- Every run of the CLI updates history (opt out with `--no-history`). Summaries read from history, so a 30-day window still works after cleanup.
 
 ## Blockers
 - S1 still needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
