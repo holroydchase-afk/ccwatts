@@ -28,6 +28,7 @@ _Updated 2026-10-21._
 - **Portfolio page:** https://chaseholroyd.com/ccwatts.html (source: `tools/build.py` in `holroydchase-afk.github.io`). It links the playground and this repo.
 - **Live playground:** https://chaseholroyd.com/ccwatts/, deployed from this repo's `main` by `.github/workflows/pages.yml`. Deploys have succeeded since Oct 21, so CCW-M1.9 is live.
 - **Demo data:** the playground opens on labeled synthetic sample data. Visitors can pick their own `.jsonl` files, which are parsed in the browser and never uploaded.
+- **Studio-wide status** (portfolio, domain, every demo, what's waiting on Chase): https://github.com/holroydchase-afk/pm-tools/blob/main/STUDIO-STATUS.md
 - 2026-10-21: the portfolio home page lists ccwatts under "Since Jan 2026: independent product work" with a "Live playground" tag.
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
@@ -80,7 +81,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Sample windows count back from the last day in the sample; real history counts back from today.
 - `npm test` builds the web page first (about 1 second) so the page tests check the real output.
 
-- Hosting: GitHub Pages through Actions (Chase, Oct 21). Live at https://holroydchase-afk.github.io/ccwatts/ once the workflow runs.
+- Hosting: GitHub Pages through Actions (Chase, Oct 21). Live at https://chaseholroyd.com/ccwatts/ (deploys succeed since Oct 21).
 - Shared studio agents are in `.claude/agents/` (source: holroydchase-afk/studio-agents; edit there, then sync).
 
 ## Blockers
