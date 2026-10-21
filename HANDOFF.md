@@ -21,6 +21,8 @@ All of S1 to S7, the README (PRs #1, #3 to #10) and the Pages workflow (PR #12) 
 
 - v1 README for the portfolio with screenshots in `docs/images/` (all from synthetic demo data). Branch `v1-readme`, which also merges PR #3 (VISION, IDEAS, LICENSE). Also fixed: the dashboard showed the file picker (CSS overrode `hidden`), and web windows now cut days the same way as the CLI.
 
+- License audit (2026-10-21): LICENSE (MIT) and CC BY 4.0 notices were already in place; added a not-affiliated-with-Anthropic trademark line to the README.
+
 ## In progress
 - Nothing. Hardening if time allows.
 

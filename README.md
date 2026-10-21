@@ -70,3 +70,5 @@ v0.1, pre-release. Next steps: run it on real logs from a few developers (friend
 Code: MIT ([LICENSE](LICENSE)). Methodology and parameters (`METHODOLOGY.md`, `methodology/params.json`): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), so reuse them freely, with credit.
 
 Built by [Chase Holroyd](https://chaseholroyd.com), with Claude Code.
+
+ccwatts is an independent project and is not affiliated with or endorsed by Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.
