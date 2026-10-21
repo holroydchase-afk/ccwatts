@@ -1,5 +1,11 @@
 import {
   APP_NAME,
+  TYPE_LABELS,
+  everyday,
+  formatEnergy,
+  int,
+  num,
+  shortModel,
   APP_VERSION,
   comparisons,
   energyForCounts,
@@ -18,36 +24,9 @@ import {
   type Window,
 } from "@ccwatts/core";
 
-export const TYPE_LABELS: Record<TokenType, string> = {
-  input: "input",
-  cacheWrite: "cache write",
-  cacheRead: "cache read",
-  output: "output",
-};
-
-const int = (n: number) => Math.round(n).toLocaleString("en-US");
-
-/** Rounds to a sensible number of digits for its size. */
-export function num(n: number): string {
-  if (n >= 100) return int(n);
-  if (n >= 1) return (Math.round(n * 10) / 10).toString();
-  if (n >= 0.01) return (Math.round(n * 100) / 100).toString();
-  return n === 0 ? "0" : n.toPrecision(1);
-}
-
-/** Picks Wh or kWh from the central value and uses it for the whole range. */
-export function energy(range: Range): { central: string; range: string; unit: string } {
-  const kwh = range.central >= 1000;
-  const scale = kwh ? 1000 : 1;
-  const unit = kwh ? "kWh" : "Wh";
-  return {
-    central: `${num(range.central / scale)} ${unit}`,
-    range: `${num(range.low / scale)} – ${num(range.high / scale)}`,
-    unit,
-  };
-}
-
-export const shortModel = (model: string) => model.replace(/^claude-/, "");
+/** Kept as the CLI's name for the shared formatter. */
+export const energy = formatEnergy;
+export { num };
 
 const totalTokens = (t: TokenCounts) => TOKEN_TYPES.reduce((s, k) => s + t[k], 0);
 
@@ -57,14 +36,6 @@ function shares(rows: Breakdown[], total: number, label: (key: string) => string
   const rest = rows.slice(max).reduce((s, r) => s + r.energy.central, 0);
   if (rest > 0) shown.push(`other ${Math.round((rest / total) * 100)}%`);
   return shown.join("   ");
-}
-
-/** Up to two comparisons big enough to picture (at least 1 of the thing), else the largest one. */
-export function everyday(kwh: number, params: Params): string {
-  const all = comparisons(kwh, params);
-  const big = all.filter((c) => c.amount >= 1).slice(0, 2);
-  const fallback = [...all].sort((a, b) => b.amount - a.amount).slice(0, 1);
-  return (big.length ? big : fallback).map((c) => c.text).join(" · ");
 }
 
 export function header(params: Params, window: Window): string {

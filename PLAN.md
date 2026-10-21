@@ -171,7 +171,7 @@ The problem: Claude Code prunes old session logs. The default retention is belie
 | S2 ✅ | **Energy model + params.json.** Seed parameters from EcoLogits and the research sources, then draft METHODOLOGY.md. | Unit tests pass, and the central estimate is within an explainable distance of the sanity checks |
 | S3 ✅ | **CLI summary**, `--by`, `--json`, `--method`. Fixture-based tests. | Output matches the mock layout. Snapshot tests pass. |
 | S4 ✅ | **History**: rollups, dedupe, `history`, CSV export. | Survives log deletion, and reruns produce identical totals |
-| S5 | **Receipt**: share line plus SVG card. | Chase would actually post the image |
+| S5 ✅ | **Receipt**: share line plus SVG card. | Chase would actually post the image |
 | S6 | **Web dashboard**: shared core build and `ccwatts dashboard`. | Opens offline with real history |
 | S7 | **Playground**: drop-file parsing, sample data, CSP, deploy. | Works on a phone, and the no-network test passes |
 | S8 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds |
