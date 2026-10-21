@@ -45,6 +45,7 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 - `npm test` builds the web page first (about 1 second) so the page tests check the real output.
 
 - Not deployed. Hosting is Chase's call (see docs/PLAYGROUND.md for three options).
+- **Shared studio agents (branch `studio-agents`):** adds six generic agents to `.claude/agents/` (staff-pm, qa-tdd, engineer, privacy-security, ux-reviewer, positioning). Each one reads this repo's `CLAUDE.md` and `HANDOFF.md` for its rules. They don't change any code. Merge or close.
 
 ## Blockers
 - S1 still needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
