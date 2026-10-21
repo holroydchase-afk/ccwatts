@@ -32,6 +32,7 @@ jobs:
         run: |
           mkdir -p site
           cp packages/web/dist/ccwatts.html site/index.html
+          cp packages/web/public/og.png site/og.png
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { defaultParams, rollup, claudeCodeAdapter } from "@ccwatts/core";
+import { defaultParams, rollup, claudeCodeAdapter, PLAYGROUND_URL } from "@ccwatts/core";
 import { DATA_MARKER, injectData, safeJson } from "../src/inject.js";
 
 // Built by `npm test` (node packages/web/build.mjs) before vitest runs.
@@ -29,6 +29,16 @@ describe("playground page: no network", () => {
     expect(html).toContain('id="ccwatts-sample"');
     expect(html).not.toContain("/home/demo");
     expect(html.includes(`version:"${defaultParams.version}"`) || html.includes(`"version":"${defaultParams.version}"`)).toBe(true);
+  });
+});
+
+describe("link preview", () => {
+  it("points crawlers at the hosted image, and the page itself loads nothing", () => {
+    expect(html).toContain(`<meta property="og:image" content="${PLAYGROUND_URL}og.png">`);
+    expect(html).not.toContain("__PLAYGROUND_URL__");
+    // The only absolute URLs outside the script are in meta tags, which browsers don't fetch.
+    const outsideMeta = html.replace(/<meta [^>]*>/g, "").replace(/<script[\s\S]*?<\/script>/g, "");
+    expect(outsideMeta).not.toMatch(/https?:\/\//);
   });
 });
 

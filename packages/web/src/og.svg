@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="627" viewBox="0 0 1200 627">
+  <!-- Link preview card for the hosted playground. Render to public/og.png with scripts/make-og-image.mjs. -->
+  <rect width="1200" height="627" fill="#f4f2ea"/>
+  <g font-family="Helvetica Neue, Helvetica, Arial, Liberation Sans, sans-serif" fill="#1f2a24">
+    <text x="72" y="118" font-family="SF Mono, Menlo, DejaVu Sans Mono, monospace" font-size="34" font-weight="700">cc<tspan fill="#2f6b4f">watts</tspan></text>
+    <text x="72" y="236" font-size="64" font-weight="700" letter-spacing="-1">How much electricity</text>
+    <text x="72" y="314" font-size="64" font-weight="700" letter-spacing="-1">does your Claude</text>
+    <text x="72" y="392" font-size="64" font-weight="700" letter-spacing="-1">Code use?</text>
+    <text x="72" y="470" font-size="28" fill="#5e6b63">A sourced kWh range from your own logs.</text>
+    <text x="72" y="512" font-size="28" fill="#5e6b63">Runs in your browser. Your logs never leave it.</text>
+    <text x="72" y="576" font-family="SF Mono, Menlo, DejaVu Sans Mono, monospace" font-size="20" fill="#2f6b4f">Free and open source · chaseholroyd.com/ccwatts</text>
+  </g>
+  <!-- A till-receipt slip, echoing the share card. No real numbers on purpose. -->
+  <g transform="translate(860 70)">
+    <path d="M0 0 H268 V430 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 l-13.4 14 l-13.4 -14 Z" fill="#fbfaf6" stroke="#d9ddd3" stroke-width="2"/>
+    <g font-family="SF Mono, Menlo, DejaVu Sans Mono, monospace" font-size="15" fill="#5e6b63">
+      <text x="134" y="44" text-anchor="middle" font-weight="700" fill="#1f2a24">ELECTRICITY RECEIPT</text>
+      <line x1="24" y1="64" x2="244" y2="64" stroke="#d9ddd3" stroke-dasharray="4 4"/>
+      <text x="24" y="98">Cache reads</text><text x="244" y="98" text-anchor="end">kWh</text>
+      <text x="24" y="128">Cache writes</text><text x="244" y="128" text-anchor="end">kWh</text>
+      <text x="24" y="158">Output</text><text x="244" y="158" text-anchor="end">kWh</text>
+      <text x="24" y="188">Input</text><text x="244" y="188" text-anchor="end">kWh</text>
+      <line x1="24" y1="210" x2="244" y2="210" stroke="#d9ddd3" stroke-dasharray="4 4"/>
+      <text x="24" y="244" font-weight="700" fill="#1f2a24">TOTAL</text><text x="244" y="244" text-anchor="end" font-weight="700" fill="#2f6b4f">low–high</text>
+      <text x="24" y="274">every number is a range</text>
+    </g>
+    <g fill="#1f2a24">
+      <rect x="24" y="306" width="4" height="70"/><rect x="32" y="306" width="2" height="70"/><rect x="38" y="306" width="6" height="70"/>
+      <rect x="48" y="306" width="2" height="70"/><rect x="54" y="306" width="4" height="70"/><rect x="62" y="306" width="8" height="70"/>
+      <rect x="74" y="306" width="2" height="70"/><rect x="80" y="306" width="4" height="70"/><rect x="88" y="306" width="2" height="70"/>
+      <rect x="94" y="306" width="6" height="70"/><rect x="104" y="306" width="2" height="70"/><rect x="110" y="306" width="4" height="70"/>
+      <rect x="118" y="306" width="8" height="70"/><rect x="130" y="306" width="2" height="70"/><rect x="136" y="306" width="4" height="70"/>
+      <rect x="144" y="306" width="2" height="70"/><rect x="150" y="306" width="6" height="70"/><rect x="160" y="306" width="4" height="70"/>
+      <rect x="168" y="306" width="2" height="70"/><rect x="174" y="306" width="8" height="70"/><rect x="186" y="306" width="2" height="70"/>
+      <rect x="192" y="306" width="4" height="70"/><rect x="200" y="306" width="6" height="70"/><rect x="210" y="306" width="2" height="70"/>
+      <rect x="216" y="306" width="4" height="70"/><rect x="224" y="306" width="2" height="70"/><rect x="230" y="306" width="6" height="70"/>
+      <rect x="240" y="306" width="4" height="70"/>
+    </g>
+    <text x="134" y="404" text-anchor="middle" font-family="SF Mono, Menlo, DejaVu Sans Mono, monospace" font-size="13" fill="#5e6b63">method and sources public</text>
+  </g>
+</svg>

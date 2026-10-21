@@ -1,6 +1,6 @@
 import { comparisons, type Estimate } from "./energy.js";
 import { formatEnergy, int, num, shortModel, TYPE_LABELS } from "./format.js";
-import { APP_NAME, REPO_URL } from "./meta.js";
+import { APP_NAME, PLAYGROUND_URL, REPO_URL } from "./meta.js";
 import type { Params } from "./params.js";
 import { TOKEN_TYPES, type TokenType } from "./types.js";
 
@@ -47,7 +47,8 @@ export function linkedInPost(input: ReceiptInput): string {
     "",
     `It's a range because nobody outside the AI labs knows the real energy per token. Every assumption is sourced, and the tool runs entirely on my laptop, so no logs leave it.`,
     "",
-    `Try it on yours: ${REPO_URL}`,
+    `Try it in your browser: ${PLAYGROUND_URL}`,
+    `Code and method: ${REPO_URL}`,
   ].join("\n");
 }
 
