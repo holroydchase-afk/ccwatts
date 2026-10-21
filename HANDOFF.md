@@ -15,11 +15,13 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 
 - S6 dashboard: `packages/web` (template.html + app.ts, built by build.mjs with esbuild into one file, hash-pinned CSP). `ccwatts dashboard [--no-open]` writes `~/.ccwatts/dashboard.html`. Page has headline, daily stacked chart, by model/project, explainer, share card with Save PNG/SVG and copy buttons, method table. Branch `s6-dashboard`.
 
+- S7 playground: same page as the dashboard (opens on labeled sample data, folder/file pickers, drag and drop). `npm run check:browser` (Playwright, not a dependency) fails on any request, console error or sideways scroll. Hosting options in `docs/PLAYGROUND.md`; nothing deployed. Branch `s7-playground`.
+
 ## In progress
-- S7 playground.
+- Portfolio polish: README, screenshots.
 
 ## Exact next step
-- Branch `s7-playground` from `s6-dashboard`; add a browser no-network check script, hosting notes (no deploy), screenshots.
+- Branch `v1-readme` from `s7-playground`; recruiter-readable README with screenshots in `docs/images/`.
 
 ## Decisions to review
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
@@ -39,6 +41,8 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 - Playground and dashboard are the same file; playground opens on sample data (clearly labeled) so the first view is never empty.
 - Sample windows count back from the last day in the sample; real history counts back from today.
 - `npm test` builds the web page first (about 1 second) so the page tests check the real output.
+
+- Not deployed. Hosting is Chase's call (see docs/PLAYGROUND.md for three options).
 
 ## Blockers
 - S1 still needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
