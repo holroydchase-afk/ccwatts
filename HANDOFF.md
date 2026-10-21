@@ -17,7 +17,7 @@ All of S1 to S7 plus the README (PRs #1, #3 to #10) are merged to main as of Oct
 
 - S6 dashboard: `packages/web` (template.html + app.ts, built by build.mjs with esbuild into one file, hash-pinned CSP). `ccwatts dashboard [--no-open]` writes `~/.ccwatts/dashboard.html`. Page has headline, daily stacked chart, by model/project, explainer, share card with Save PNG/SVG and copy buttons, method table. Branch `s6-dashboard`.
 
-- S7 playground: same page as the dashboard (opens on labeled sample data, folder/file pickers, drag and drop). `npm run check:browser` (Playwright, not a dependency) fails on any request, console error or sideways scroll. Hosting options in `docs/PLAYGROUND.md`; nothing deployed. Branch `s7-playground`.
+- S7 playground: same page as the dashboard (opens on labeled sample data, folder/file pickers, drag and drop). `npm run check:browser` (Playwright, not a dependency) fails on any request, console error or sideways scroll. Hosted on GitHub Pages via `.github/workflows/pages.yml` (Chase picked Actions, Oct 21). Branch `s7-playground`.
 
 - v1 README for the portfolio with screenshots in `docs/images/` (all from synthetic demo data). Branch `v1-readme`, which also merges PR #3 (VISION, IDEAS, LICENSE). Also fixed: the dashboard showed the file picker (CSS overrode `hidden`), and web windows now cut days the same way as the CLI.
 
@@ -48,7 +48,7 @@ All of S1 to S7 plus the README (PRs #1, #3 to #10) are merged to main as of Oct
 - Sample windows count back from the last day in the sample; real history counts back from today.
 - `npm test` builds the web page first (about 1 second) so the page tests check the real output.
 
-- Not deployed. Hosting is Chase's call (see docs/PLAYGROUND.md for three options).
+- Hosting: GitHub Pages through Actions (Chase, Oct 21). Live at https://holroydchase-afk.github.io/ccwatts/ once the workflow runs.
 
 ## Blockers
 - S1 still needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
