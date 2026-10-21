@@ -11,9 +11,9 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build -w packages/core -w packages/cli",
-    "typecheck": "tsc -p packages/core && tsc -p packages/cli",
-    "test": "vitest run",
+    "build": "npm run build -w packages/core -w packages/web -w packages/cli",
+    "typecheck": "tsc -p packages/core && tsc -p packages/web && tsc -p packages/cli",
+    "test": "node packages/web/build.mjs && vitest run",
     "start": "npm run build && node packages/cli/dist/index.js"
   },
   "devDependencies": {
