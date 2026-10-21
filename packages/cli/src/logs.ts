@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { claudeCodeAdapter, dedupe, type UsageRecord } from "@ccwatts/core";
@@ -11,6 +11,8 @@ export function defaultLogRoots(): string[] {
 }
 
 async function findJsonl(dir: string): Promise<string[]> {
+  // --path may point straight at one log file.
+  if (dir.endsWith(".jsonl") && (await stat(dir).catch(() => null))?.isFile()) return [dir];
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true, recursive: true });

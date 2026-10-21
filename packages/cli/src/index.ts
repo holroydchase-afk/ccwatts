@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import {
   APP_NAME,
@@ -7,7 +9,10 @@ import {
   mergeHistory,
   parseSince,
   rollup,
+  linkedInPost,
+  receiptSvg,
   rollupRecords,
+  shareLine,
   since,
   type Dimension,
 } from "@ccwatts/core";
@@ -23,7 +28,7 @@ Reads local logs only. Nothing leaves your machine.
 Commands:
   (none)            Summary for the time window
   history           Weekly trend, all-time total, best and worst weeks
-  receipt           Share line and image (coming soon)
+  receipt           Share line, LinkedIn post text and a 1200×627 card (SVG)
 
 Options:
   --since <when>    7d, 12h, 4w, 2026-10-01 or all (default 30d; history defaults to all)
@@ -31,12 +36,13 @@ Options:
   --json            Machine-readable output, same numbers, in Wh
   --method          Parameters, sources and method version
   --export csv      With history: daily rows as CSV on stdout
+  --out <file>      With receipt: where to write the card (default ./${APP_NAME}-receipt.svg)
   --path <dir>      Read logs from this folder instead
   --no-history      Don't read or update ~/.${APP_NAME}/history.jsonl
   -h, --help        Show this help`;
 
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
-const COMMANDS = ["summary", "history"];
+const COMMANDS = ["summary", "history", "receipt"];
 
 async function main(): Promise<void> {
   const { values, positionals } = parseArgs({
@@ -47,6 +53,7 @@ async function main(): Promise<void> {
       json: { type: "boolean" },
       method: { type: "boolean" },
       export: { type: "string" },
+      out: { type: "string" },
       path: { type: "string" },
       "no-history": { type: "boolean" },
       help: { type: "boolean", short: "h" },
@@ -94,6 +101,15 @@ async function main(): Promise<void> {
     if (values.export) return void console.log(historyCsv(inWindow, params));
     if (values.json) return void console.log(json(e, params, window));
     return void console.log(history(e, params, window, new Set(rows.map((r) => r.date)).size));
+  }
+  if (command === "receipt") {
+    const input = { estimate: e, params, windowLabel: window.label };
+    const out = resolve(values.out ?? `${APP_NAME}-receipt.svg`);
+    await writeFile(out, receiptSvg(input));
+    console.log(shareLine(input));
+    console.log(`\nCard written to ${out} (1200×627, LinkedIn size). Open ${APP_NAME} dashboard to save it as PNG.`);
+    console.log(`\nReady-to-paste post:\n\n${linkedInPost(input)}`);
+    return;
   }
   if (values.json) console.log(json(e, params, window));
   else if (by) console.log(breakdown(e, params, window, by));
