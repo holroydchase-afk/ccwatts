@@ -57,9 +57,10 @@ function windowRows(rows: RollupRow[], id: WindowId): RollupRow[] {
   if (id === "all" || rows.length === 0) return rows;
   const days = id === "7d" ? 7 : 30;
   const last = rows.reduce((m, r) => (r.date > m ? r.date : m), "0000-00-00");
-  const anchor = state.source === "history" ? new Date() : new Date(`${last}T23:59:59Z`);
-  const start = new Date(anchor.getTime() - days * 86_400_000).toISOString().slice(0, 10);
-  return rows.filter((r) => r.date > start);
+  // Same cut as the CLI: keep days on or after the start date.
+  const anchor = state.source === "history" ? Date.now() : Date.parse(`${last}T00:00:00Z`) + 86_400_000;
+  const start = new Date(anchor - days * 86_400_000).toISOString().slice(0, 10);
+  return rows.filter((r) => r.date >= start);
 }
 
 function estimateFor(rows: RollupRow[]): Estimate {
