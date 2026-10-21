@@ -16,6 +16,7 @@ import {
   since,
   type Dimension,
 } from "@ccwatts/core";
+import { openFile, writeDashboard } from "./dashboard.js";
 import { defaultLogRoots, loadLogs } from "./logs.js";
 import { breakdown, history, historyCsv, json, method, summary } from "./render.js";
 import { readHistory, writeHistory } from "./store.js";
@@ -28,6 +29,7 @@ Reads local logs only. Nothing leaves your machine.
 Commands:
   (none)            Summary for the time window
   history           Weekly trend, all-time total, best and worst weeks
+  dashboard         Write an offline HTML dashboard of your history and open it
   receipt           Share line, LinkedIn post text and a 1200×627 card (SVG)
 
 Options:
@@ -38,11 +40,12 @@ Options:
   --export csv      With history: daily rows as CSV on stdout
   --out <file>      With receipt: where to write the card (default ./${APP_NAME}-receipt.svg)
   --path <dir>      Read logs from this folder instead
+  --no-open         With dashboard: write the file but don't open it
   --no-history      Don't read or update ~/.${APP_NAME}/history.jsonl
   -h, --help        Show this help`;
 
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
-const COMMANDS = ["summary", "history", "receipt"];
+const COMMANDS = ["summary", "history", "receipt", "dashboard"];
 
 async function main(): Promise<void> {
   const { values, positionals } = parseArgs({
@@ -56,6 +59,7 @@ async function main(): Promise<void> {
       out: { type: "string" },
       path: { type: "string" },
       "no-history": { type: "boolean" },
+      "no-open": { type: "boolean" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -85,6 +89,13 @@ async function main(): Promise<void> {
   if (rows.length === 0) {
     console.log(`No Claude Code logs found. Looked in:\n${logs.roots.map((r) => `  ${r}`).join("\n")}`);
     console.log(`Point ${APP_NAME} at another folder with --path <dir>.`);
+    return;
+  }
+
+  if (command === "dashboard") {
+    const path = await writeDashboard(rows);
+    console.log(`Dashboard written to ${path}. It works offline and makes no network requests.`);
+    if (!values["no-open"]) openFile(path);
     return;
   }
 

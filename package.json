@@ -11,13 +11,14 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build -w packages/core -w packages/cli",
-    "typecheck": "tsc -p packages/core && tsc -p packages/cli",
-    "test": "vitest run",
+    "build": "npm run build -w packages/core -w packages/web -w packages/cli",
+    "typecheck": "tsc -p packages/core && tsc -p packages/web && tsc -p packages/cli",
+    "test": "node packages/web/build.mjs && vitest run",
     "start": "npm run build && node packages/cli/dist/index.js"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "esbuild": "^0.27.7",
     "tsup": "^8.3.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

@@ -13,11 +13,13 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 
 - S5 receipt: core `receipt.ts` (share line, LinkedIn post text, 1200×627 SVG card), shared formatting in core `format.ts`, `ccwatts receipt [--out file]`. Sample card at `docs/images/receipt-sample.png` (synthetic demo data). Branch `s5-receipt`.
 
+- S6 dashboard: `packages/web` (template.html + app.ts, built by build.mjs with esbuild into one file, hash-pinned CSP). `ccwatts dashboard [--no-open]` writes `~/.ccwatts/dashboard.html`. Page has headline, daily stacked chart, by model/project, explainer, share card with Save PNG/SVG and copy buttons, method table. Branch `s6-dashboard`.
+
 ## In progress
-- S6 local dashboard.
+- S7 playground.
 
 ## Exact next step
-- Branch `s6-dashboard` from `s5-receipt`; `packages/web` builds one static HTML file (esbuild bundle of core + page script, inlined); `ccwatts dashboard` writes `~/.ccwatts/dashboard.html` with rollups embedded.
+- Branch `s7-playground` from `s6-dashboard`; add a browser no-network check script, hosting notes (no deploy), screenshots.
 
 ## Decisions to review
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
@@ -33,6 +35,10 @@ Live notes for whoever picks up the build next (human or Claude). Updated every 
 
 - The CLI writes SVG only; LinkedIn needs PNG, so the dashboard (S6) gets a "Save PNG" button that rasterizes the same SVG in the browser. No native image dependency.
 - `--path` accepts a single .jsonl file as well as a folder.
+
+- Playground and dashboard are the same file; playground opens on sample data (clearly labeled) so the first view is never empty.
+- Sample windows count back from the last day in the sample; real history counts back from today.
+- `npm test` builds the web page first (about 1 second) so the page tests check the real output.
 
 ## Blockers
 - S1 still needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
