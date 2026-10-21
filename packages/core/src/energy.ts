@@ -201,7 +201,7 @@ export interface ComparisonLine {
   text: string;
 }
 
-/** Everyday equivalents for a kWh amount, always from the central value. */
+/** Everyday equivalents for a kWh amount, always from the central value, in display order. */
 export function comparisons(kwh: number, params: Params): ComparisonLine[] {
   const c = params.comparisons;
   const out: ComparisonLine[] = [];
@@ -213,6 +213,10 @@ export function comparisons(kwh: number, params: Params): ComparisonLine[] {
   if (c.fridge_kwh_per_day) {
     const days = kwh / c.fridge_kwh_per_day.value;
     out.push({ id: "fridge", amount: days, text: `running a fridge about ${round(days)} days` });
+  }
+  if (c.phone_charge_kwh) {
+    const charges = kwh / c.phone_charge_kwh.value;
+    out.push({ id: "phone", amount: charges, text: `charging a phone about ${round(charges)} times` });
   }
   if (c.us_home_kwh_per_day) {
     const days = kwh / c.us_home_kwh_per_day.value;

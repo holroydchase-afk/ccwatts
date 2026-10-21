@@ -1,0 +1,57 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`breakdown > --by day 1`] = `
+"ccwatts v0.1.0 · method v0.1.0 · all time
+
+day          tokens    Wh        range   share
+----------   ------   ---   ----------   -----
+2026-10-01   40,934   8.6   2.2 – 25.7     95%
+2026-10-02   16,086   0.5    0.1 – 1.7      5%
+total        57,020   9.1   2.3 – 27.5    100%"
+`;
+
+exports[`breakdown > --by model 1`] = `
+"ccwatts v0.1.0 · method v0.1.0 · all time
+
+model        tokens    Wh        range   share
+----------   ------   ---   ----------   -----
+opus-4-6     40,934   8.6   2.2 – 25.7     95%
+sonnet-4-6   16,086   0.5    0.1 – 1.7      5%
+total        57,020   9.1   2.3 – 27.5    100%"
+`;
+
+exports[`breakdown > --by project 1`] = `
+"ccwatts v0.1.0 · method v0.1.0 · all time
+
+project   tokens    Wh        range   share
+-------   ------   ---   ----------   -----
+alpha     40,934   8.6   2.2 – 25.7     95%
+beta      16,086   0.5    0.1 – 1.7      5%
+total     57,020   9.1   2.3 – 27.5    100%"
+`;
+
+exports[`breakdown > --by type 1`] = `
+"ccwatts v0.1.0 · method v0.1.0 · all time
+
+type          tokens      Wh          range   share
+-----------   ------   -----   ------------   -----
+cache write   21,500     7.6       2 – 22.1     83%
+cache read    35,000    0.99       0.07 – 4     11%
+output           500    0.55     0.19 – 1.4      6%
+input             20   0.006   0.002 – 0.02      0%
+total         57,020     9.1     2.3 – 27.5    100%"
+`;
+
+exports[`summary > matches the PLAN.md layout 1`] = `
+"ccwatts v0.1.0 · method v0.1.0 · all time
+
+  Electricity   9.1 Wh   (range 2.3 – 27.5)
+  ≈ charging a phone about 0.5 times
+
+  By model      opus-4-6 95%   sonnet-4-6 5%
+  By type       cache write 83%   cache read 11%   output 6%   input 0%
+  Top project   alpha   8.6 Wh (range 2.2 – 25.7)
+  Based on      3 responses, 57,020 tokens · 2026-10-01 to 2026-10-02
+
+  How this is estimated: ccwatts --method   ·   Share: ccwatts receipt"
+`;
