@@ -168,7 +168,7 @@ The problem: Claude Code prunes old session logs. The default retention is belie
 | # | Session | Done when |
 |---|---|---|
 | S1 | **Scaffold + parse spike.** Set up the workspaces. Find Claude Code logs, read the JSONL, and confirm the fields (`message.usage` input/output/cache-creation/cache-read tokens, `model`, `timestamp`, `cwd`, ids) and log retention. Print tokens by model. | Real token totals print for Chase's logs, and field names are documented in `core/README.md`. **If the fields aren't there, stop and tell Chase.** |
-| S2 | **Energy model + params.json.** Seed parameters from EcoLogits and the research sources, then draft METHODOLOGY.md. | Unit tests pass, and the central estimate is within an explainable distance of the sanity checks |
+| S2 ✅ | **Energy model + params.json.** Seed parameters from EcoLogits and the research sources, then draft METHODOLOGY.md. | Unit tests pass, and the central estimate is within an explainable distance of the sanity checks |
 | S3 | **CLI summary**, `--by`, `--json`, `--method`. Fixture-based tests. | Output matches the mock layout. Snapshot tests pass. |
 | S4 | **History**: rollups, dedupe, `history`, CSV export. | Survives log deletion, and reruns produce identical totals |
 | S5 | **Receipt**: share line plus SVG card. | Chase would actually post the image |
