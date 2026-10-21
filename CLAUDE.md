@@ -49,3 +49,9 @@ ANCHORS.md lists P1–P3 as *proposed, not decided* (P4 is decided). Don't imple
 - Tests pass (`npm test`).
 - A PR (or commit summary) covering what changed, how it was tested, and open questions for Chase.
 - If you learned something durable (log field names, retention behavior, a parameter source), write it down in the right file (`packages/core/README.md`, `METHODOLOGY.md`, `params.json`) rather than only in the PR.
+
+## Session rules (studio-wide)
+
+- Before starting: read this file and `HANDOFF.md` (a SessionStart hook prints it), then the doc this file points to for the task. Check open PRs and branches and resume, never redo.
+- Every commit or PR that makes progress updates `HANDOFF.md` in the same commit or PR: done, in progress, exact next step, decisions to review, blockers. The `handoff-check` PR workflow enforces it; use `[skip handoff]` in the PR title only for changes that do not move the work.
+- Full rules: `docs/session-rules.md` in holroydchase-afk/studio-agents.
