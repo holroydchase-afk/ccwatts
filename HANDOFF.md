@@ -3,7 +3,7 @@
 Live notes for whoever picks up the build next (human or Claude). Updated every push.
 
 ## Done
-All of S1 to S7 plus the README (PRs #1, #3 to #10) are merged to main as of Oct 21, 2026. Branch notes below are history.
+All of S1 to S7, the README and Pages hosting (PRs #1, #3 to #10, #12) are merged to main as of Oct 21, 2026. Branch notes below are history.
 
 - S1 log parser (PR #1, draft, still needs a run on Chase's real logs).
 - S2 energy model: `packages/core/src/energy.ts`, `methodology/params.json`, `METHODOLOGY.md`, sanity-check tests. Branch `s2-energy-model`, stacked on `s1-scaffold`.
@@ -26,7 +26,7 @@ All of S1 to S7 plus the README (PRs #1, #3 to #10) are merged to main as of Oct
 
 ## Exact next step
 - Chase: run S1 on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
-- Chase: say which service hosts chaseholroyd.com, so the playground can go to chaseholroyd.com/ccwatts (GitHub Pages is the free fallback). Deploy only on his go.
+- Playground hosting is done (PR #12, Oct 21): GitHub Pages via Actions, with Chase's custom domain and DNS set up. Next: confirm the live page loads on a phone and passes the no-network check.
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
 
 ## Decisions to review
