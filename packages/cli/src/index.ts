@@ -84,7 +84,12 @@ async function main(): Promise<void> {
   let rows = rollup(logs.records);
   if (!values["no-history"]) {
     rows = mergeHistory(await readHistory(), rows);
-    if (logs.records.length > 0) await writeHistory(rows);
+    // History is a convenience: a read-only home folder shouldn't stop the estimate.
+    if (logs.records.length > 0) {
+      await writeHistory(rows).catch((error: unknown) =>
+        console.error(`Couldn't save history (${error instanceof Error ? error.message : String(error)}). Continuing without it.`),
+      );
+    }
   }
   if (rows.length === 0) {
     console.log(`No Claude Code logs found. Looked in:\n${logs.roots.map((r) => `  ${r}`).join("\n")}`);
