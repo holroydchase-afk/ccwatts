@@ -2,9 +2,11 @@
 
 **See how much electricity your AI coding uses.** ccwatts reads the logs Claude Code already keeps on your machine and turns token counts into an electricity estimate. The estimate is always a range, and every assumption is sourced.
 
+**[Try it in your browser](https://chaseholroyd.com/ccwatts/)**: it opens on sample data, needs no install or sign-in, and your own logs never leave the page.
+
 ![ccwatts summary in the terminal](docs/images/cli-summary.png)
 
-> Screenshots use synthetic sample data (`fixtures/claude-code/demo.jsonl`), not anyone's real usage.
+> Screenshots use synthetic sample data (`fixtures/claude-code/demo.jsonl`), not anyone's real usage. The `npx ccwatts` command shown works once ccwatts is on npm; until then, run it from a clone (see [Try it](#try-it)).
 
 ## Why it exists
 
@@ -25,9 +27,9 @@ Developers run AI agents all day, and almost nobody can see what that costs in e
 - **`ccwatts receipt`**: a share line, a ready-to-paste LinkedIn post, and a 1200×627 card.
 - **`ccwatts dashboard`**: an offline HTML dashboard of your history, with "Save PNG for LinkedIn".
 
-| Dashboard | Share card | Playground on a phone |
+| Playground on a laptop | Share card | Playground on a phone |
 |---|---|---|
-| ![Dashboard](docs/images/dashboard.png) | ![Receipt card](docs/images/receipt-sample.png) | ![Playground on a phone](docs/images/playground-phone.png) |
+| ![Playground on a laptop, showing sample data](docs/images/playground-laptop.png) | ![Receipt card](docs/images/receipt-sample.png) | ![Playground on a phone, showing sample data](docs/images/playground-phone.png) |
 
 ## How the estimate works
 
