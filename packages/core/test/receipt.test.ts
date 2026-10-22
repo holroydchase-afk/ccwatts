@@ -31,4 +31,28 @@ describe("receipt", () => {
     const svg = receiptSvg({ ...input, windowLabel: "<b>&" });
     expect(svg).not.toContain("<b>&");
   });
+
+  describe("on sample data (recruiter-ready RR-4)", () => {
+    const sample = { ...input, sample: true };
+
+    it("card says sample and never claims a real measurement", () => {
+      const svg = receiptSvg(sample);
+      expect(svg).toContain("SAMPLE DATA");
+      expect(svg).toContain("not a real measurement");
+      expect(svg).not.toContain("my laptop");
+    });
+
+    it("post and share line start by saying it's sample data and drop the first person", () => {
+      const post = linkedInPost(sample);
+      expect(post.startsWith("(Sample data)")).toBe(true);
+      expect(post).not.toMatch(/\bI measured\b|\bmy\b/i);
+      expect(shareLine(sample).startsWith("(Sample data)")).toBe(true);
+    });
+
+    it("real data keeps its first-person wording", () => {
+      expect(receiptSvg(input)).toContain("Estimated on my laptop.");
+      expect(linkedInPost(input).startsWith("I measured")).toBe(true);
+      expect(receiptSvg(input)).not.toContain("SAMPLE DATA");
+    });
+  });
 });

@@ -185,7 +185,7 @@ let currentLine = "";
 let currentPost = "";
 
 function renderShare(e: Estimate, label: string) {
-  const input = { estimate: e, params, windowLabel: label };
+  const input = { estimate: e, params, windowLabel: label, sample: state.source === "sample" };
   currentSvg = receiptSvg(input);
   currentLine = shareLine(input);
   currentPost = linkedInPost(input);
