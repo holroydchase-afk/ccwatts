@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { claudeCodeAdapter, defaultParams as params, estimate, linkedInPost, receiptSvg, shareLine } from "../src/index.js";
+import { claudeCodeAdapter, defaultParams as params, estimate, formatEnergy, linkedInPost, receiptSvg, shareLine } from "../src/index.js";
 
 const demo = readFileSync(new URL("../../../fixtures/claude-code/demo.jsonl", import.meta.url), "utf8");
 const input = { estimate: estimate(claudeCodeAdapter.parse(demo), params), params, windowLabel: "last 30 days" };
@@ -51,8 +51,25 @@ describe("receipt", () => {
 
     it("real data keeps its first-person wording", () => {
       expect(receiptSvg(input)).toContain("Estimated on my laptop.");
-      expect(linkedInPost(input).startsWith("I measured")).toBe(true);
+      expect(linkedInPost(input).startsWith("I estimated")).toBe(true);
       expect(receiptSvg(input)).not.toContain("SAMPLE DATA");
+    });
+  });
+
+  describe("round 2 (recruiter-ready RR-15, RR-17)", () => {
+    it("says estimated, not measured, and only calls a big cache share a surprise", () => {
+      const post = linkedInPost(input);
+      expect(post).not.toContain("I measured");
+      expect(post).toContain("The surprise:");
+      const small = { ...input, estimate: estimate(claudeCodeAdapter.parse(readFileSync(new URL("../../../fixtures/claude-code/sample.jsonl", import.meta.url), "utf8")), params) };
+      expect(linkedInPost(small)).not.toContain("The surprise:");
+    });
+
+    it("picks the range unit from the high bound so a row never reads 88.5 – 2,155 Wh", () => {
+      const t = formatEnergy({ low: 88.5, central: 618, high: 2155 });
+      expect(t.unit).toBe("kWh");
+      expect(t.range).toBe("0.09 – 2.2");
+      expect(formatEnergy({ low: 2.3, central: 9.1, high: 27.5 }).unit).toBe("Wh");
     });
   });
 });

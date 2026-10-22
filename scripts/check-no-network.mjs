@@ -51,8 +51,11 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.setInputFiles("#pick-files", log);
   await page.waitForFunction(() => document.querySelector("#source-pill")?.textContent === "Your files");
   if ((await page.textContent("#hero-big")) === sampleHeadline) problems.push("headline did not change after loading a file");
+  // The lede follows the data source (recruiter-ready RR-16).
+  if ((await page.textContent("#lede")).includes("sample data")) problems.push("lede still says sample data after loading a file");
   await page.click("#w-7d");
   await page.click("#use-sample");
+  if (!(await page.textContent("#lede")).includes("sample data")) problems.push("lede lost its sample-data note after Use sample data");
 
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   if (width > viewport.width) problems.push(`horizontal scroll at ${viewport.width}px (${width}px wide)`);
