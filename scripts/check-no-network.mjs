@@ -34,6 +34,9 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   // Tap targets: every button 44px tall or more (RR-9).
   const short = await page.$$eval("button, label.btn", (els) => els.filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).map((e) => e.id || e.textContent.trim()));
+  // Chart labels stay readable on a phone: drawn at the screen's pixel width, not scaled down (RR-8).
+  const label = await page.$eval("#chart text", (t) => t.getBoundingClientRect().height);
+  if (label < 11) problems.push(`chart labels ${label.toFixed(1)}px tall at ${viewport.width}px (want 11+)`);
   if (short.length) problems.push(`buttons under 44px at ${viewport.width}px: ${short.join(", ")}`);
   const sampleHeadline = await page.textContent("#hero-big");
   await page.setInputFiles("#pick-files", log);
