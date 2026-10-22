@@ -35,6 +35,7 @@ _Updated 2026-10-21._
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-22: Recruiter-ready stack merged to main in order (#22 to #29, merge commits; tests and typecheck passed at every step and on main, 62 tests). Stale PR #2 (old CLAUDE.md rules) closed. Pages deploy of #29 started 18:30 UTC.
 - 2026-10-22: Round 2 (RR-15 to RR-19): lede follows the data source, post says "I estimated" and only calls a 50%+ cache share a surprise, ranges pick kWh from the high bound, method labels explained, and `docs/images/receipt-sample.png` is now the labeled sample card (new `scripts/make-readme-images.mjs` re-shoots all three README playground images).
 - 2026-10-22: RR-7, RR-14: README links the live playground in its second paragraph, says `npx ccwatts` works once it's on npm, and its screenshots are the current playground on sample data (`docs/images/playground-laptop.png` replaces `dashboard.png`; `playground-phone.png` re-shot). `packages/web/test/readme.test.ts` guards all three.
 - 2026-10-22: RR-10, RR-11, RR-13: method-table source links name their site (e.g. theclimatebrink.com) and are 44px tall; under 600px the table becomes one card per parameter (no sideways scroll); phones see "On a phone? Claude Code keeps its logs on your computer…" under the pickers. All three are in `check:browser`.
@@ -66,10 +67,10 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - License audit (2026-10-21): LICENSE (MIT) and CC BY 4.0 notices were already in place; added a not-affiliated-with-Anthropic trademark line to the README.
 
 ## In progress
-- Nothing. Recruiter-Ready Sprint v2 finished Oct 22 (PRs #22 to #29, drafts awaiting review).
+- Nothing.
 
 ## Exact next step
-- Recruiter-ready sprint is done (3 rounds, verdict Ready). Chase: review and merge the stack in order #22 → #29 (each PR's base is the one before it). Then paste the RR-2 INTAKE (in `docs/reviews/2026-10-22-recruiter-ready.md`) into Product Studio.
+- Recruiter-ready stack is merged. Chase: paste the RR-2 INTAKE (in `docs/reviews/2026-10-22-recruiter-ready.md`) into Product Studio if not done.
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
@@ -77,7 +78,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 ## Decisions to review
 - Recruiter-ready (Oct 22): range units now come from the high bound (a 618 Wh central with a 2,155 Wh high shows as 0.62 kWh, range 0.09 – 2.2 kWh). Share text on your own data says "I estimated", not "I measured".
 - QA-2: `npm run check:browser` (the only real-browser test) still runs by hand. Running it in CI means installing Playwright in the workflow; not done without your OK.
-- Final product name (P1) still undecided; it blocks the npm publish (M2.2) and the `npx ccwatts` line on the portfolio.
+- Final product name (P1): Chase leaned to `ccwatts` on Oct 22 and asked for an availability check before locking it. Oct 22 check: `ccwatts`, `@ccwatts/core`, `@ccwatts/cli` are unclaimed on npm (registry 404), also free on PyPI and crates.io; no product, repo or trademark found by web search. Not yet locked; publish (M2.2) waits on Chase's go.
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
 - No separate PUE/overhead parameter: per-token values are set at the comprehensive boundary directly, since the sources report at that boundary.
 - Unknown models fall back to the Sonnet tier with a warning.
@@ -100,5 +101,5 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Shared studio agents are in `.claude/agents/` (source: holroydchase-afk/studio-agents; edit there, then sync).
 
 ## Blockers
-- chaseholroyd.com is not on the cloud environment's allowed hosts, so the live playground was never loaded during the Oct 22 review; all checks ran on the local build that Pages deploys.
+- Oct 22: chaseholroyd.com was added to the cloud env's allowed hosts, but from the container the TLS handshake returns GitHub's `*.github.io` certificate, which doesn't cover chaseholroyd.com, so the page still can't be loaded with verification on. Chase to confirm in a real browser that https://chaseholroyd.com/ccwatts/ has no certificate warning (if it does: Pages settings, re-save the custom domain and tick Enforce HTTPS).
 - M2.1 needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
