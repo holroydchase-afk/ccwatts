@@ -35,6 +35,7 @@ _Updated 2026-10-21._
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-22: PR #18 (M2.2 prep, CLI installable) merged after a main merge; 64 tests, typecheck and build pass, and a packed tarball installs and runs in an empty project with an empty HOME.
 - 2026-10-22: Recruiter-ready stack merged to main in order (#22 to #29, merge commits; tests and typecheck passed at every step and on main, 62 tests). Stale PR #2 (old CLAUDE.md rules) closed. Pages deploy of #29 started 18:30 UTC.
 - 2026-10-22: Round 2 (RR-15 to RR-19): lede follows the data source, post says "I estimated" and only calls a 50%+ cache share a surprise, ranges pick kWh from the high bound, method labels explained, and `docs/images/receipt-sample.png` is now the labeled sample card (new `scripts/make-readme-images.mjs` re-shoots all three README playground images).
 - 2026-10-22: RR-7, RR-14: README links the live playground in its second paragraph, says `npx ccwatts` works once it's on npm, and its screenshots are the current playground on sample data (`docs/images/playground-laptop.png` replaces `dashboard.png`; `playground-phone.png` re-shot). `packages/web/test/readme.test.ts` guards all three.
@@ -75,9 +76,10 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
 - Chase: lock the final name (ANCHORS P1; availability check Oct 22 came back clear for `ccwatts`). It is the only blocker on M2.2's publish.
-- Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
+- Waiting on Chase (from the Atlas intake, logged in IDEAS.md): what "metric data" meant for the bench idea.
 
 ## Decisions to review
+- Chase, Oct 22: store output × context per day in history (ANCHORS D12, counts only, not shown yet), and v1 is kWh only, with carbon as a possible later opt-in (ANCHORS D13).
 - Plugin order (Chase, Oct 22; ANCHORS D11): the Claude Code plugin (PR #21) ships after the npm release (M2.2). #21 carries its own bundled copy of the CLI, so npm doesn't depend on it. Two things to know: PR #18 (removes the unpublished `@ccwatts/core` runtime dependency) must merge before any publish, and #21's new `ccwatts statusline` command won't be in the first npm version unless #21 lands first. When #21 is picked up again, it needs a base merge (HANDOFF/README moved on) and could call the published package instead of the 986-line bundle.
 - Recruiter-ready (Oct 22): range units now come from the high bound (a 618 Wh central with a 2,155 Wh high shows as 0.62 kWh, range 0.09 – 2.2 kWh). Share text on your own data says "I estimated", not "I measured".
 - QA-2: `npm run check:browser` (the only real-browser test) still runs by hand. Running it in CI means installing Playwright in the workflow; not done without your OK.

@@ -15,10 +15,10 @@ A running log. Add to the top of each section. Every entry starts with the probl
 - **Open:** Chase to say whether "metric data" meant energy measurements like this or usage data.
 - **Source:** Atlas intake of the original chat "Gathering own data plan", Oct 18, 2026.
 
-### Keep output × context per message, before logs are pruned · 🧪 proposed
+### Keep output × context per message, before logs are pruned · ✅ adopted (ANCHORS D12)
 - **Problem:** Output energy grows with how much context the model reads per token, but history only keeps daily totals. Claude Code deletes logs after about 30 days, so the detail is lost if we wait.
 - **Idea:** Store one extra count per day: the sum of output tokens times context size. Don't show it yet; use it once the energy model can price it.
-- **Open:** Chase to approve storing it (it is a count, not content).
+- **Decided:** Chase approved storing it, Oct 22, 2026 (ANCHORS D12).
 - **Source:** Atlas intake of the original chat "Environmental impact tracking agent", Oct 18, 2026.
 
 ### Ask Hausfather or the EcoLogits maintainers for a sanity check · 💡 idea
@@ -27,10 +27,10 @@ A running log. Add to the top of each section. Every entry starts with the probl
 - **Fits:** PLAN M3.1. Chase sends it; Claude can draft it.
 - **Source:** Atlas intake, Oct 18, 2026; ANCHORS open questions.
 
-### Carbon comparisons, opt-in · 💡 idea
+### Carbon comparisons, opt-in · 💡 idea (later; v1 is kWh only, ANCHORS D13)
 - **Problem:** kWh means little to most people. On the US grid, 1 kWh and one gas-car mile emit about the same CO2, which is an easy picture.
 - **Idea:** An opt-in carbon line using a grid factor, kept off by default because PLAN D7 says kWh only for the MVP.
-- **Open:** Chase to choose opt-in carbon or kWh-only.
+- **Decided:** kWh only for v1 (Chase, Oct 22, 2026; ANCHORS D13). Carbon stays a possible opt-in after v1.
 - **Source:** Atlas intake, Oct 18, 2026.
 
 ### Admin API path for solo devs · 💡 idea
