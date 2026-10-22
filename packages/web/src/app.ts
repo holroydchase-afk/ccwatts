@@ -196,12 +196,21 @@ function renderShare(e: Estimate, label: string) {
   $("share-status").textContent = state.source === "sample" ? "This card shows sample data. Load your own logs to make yours." : "";
 }
 
+/** "theclimatebrink.com" from a source URL, so each link names where it goes. */
+function sourceName(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "source";
+  }
+}
+
 function renderMethod() {
   $("method-intro").textContent = `Energy = tokens × energy per token, by model family and token type. Each parameter below has a low and high bound, and they combine into the range you see. The boundary is ${params.boundary}. Method v${params.version}, parameters as of ${params.as_of}, licensed ${params.license}.`;
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>
-        `<tr><td><code>${esc(id)}</code><div class="meta">${esc(p.note)}</div></td><td class="num">${p.value}</td><td class="num">${p.low} – ${p.high}</td><td>${esc(p.unit)}</td><td><span class="label">${esc(p.label)}</span></td><td><a href="${esc(p.source)}" rel="noopener noreferrer">source</a></td></tr>`,
+        `<tr><td data-label="Parameter"><code>${esc(id)}</code><div class="meta">${esc(p.note)}</div></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
     )
     .join("");
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
