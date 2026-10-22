@@ -59,6 +59,22 @@ describe("first screen (recruiter-ready RR-1, RR-3)", () => {
   });
 });
 
+describe("accessibility (recruiter-ready RR-5, RR-6, RR-9, RR-12)", () => {
+  it("keeps the file pickers in the tab order (visually hidden, not hidden)", () => {
+    for (const id of ["pick-folder", "pick-files"]) {
+      const tag = new RegExp(`<input[^>]*id="${id}"[^>]*>`).exec(html)?.[0] ?? "";
+      expect(tag, id).not.toMatch(/\shidden[\s>]/);
+      expect(tag, id).toContain('class="vh"');
+    }
+  });
+
+  it("gives buttons a 44px minimum height and the sample pill readable amber", () => {
+    expect(html).toMatch(/button,\.btn\{[^}]*min-height:44px/);
+    expect(html).toContain(".pill.sample{border-color:var(--sample);color:var(--sample)}");
+    expect(html).toContain("--sample:#8a5a12");
+  });
+});
+
 describe("injectData", () => {
   it("replaces the data slot and can't be broken out of", () => {
     const rows = rollup(claudeCodeAdapter.parse(readFileSync(new URL("../../../fixtures/claude-code/sample.jsonl", import.meta.url), "utf8")));

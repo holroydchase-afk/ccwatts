@@ -23,6 +23,18 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.goto(pathToFileURL(page_).href);
 
   if ((await page.textContent("#source-pill")) !== "Sample data") problems.push("did not open on sample data");
+
+  // Keyboard: Tab must reach both file pickers (recruiter-ready RR-5).
+  const reached = new Set();
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press("Tab");
+    reached.add(await page.evaluate(() => document.activeElement?.id));
+  }
+  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
+
+  // Tap targets: every button 44px tall or more (RR-9).
+  const short = await page.$$eval("button, label.btn", (els) => els.filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).map((e) => e.id || e.textContent.trim()));
+  if (short.length) problems.push(`buttons under 44px at ${viewport.width}px: ${short.join(", ")}`);
   const sampleHeadline = await page.textContent("#hero-big");
   await page.setInputFiles("#pick-files", log);
   await page.waitForFunction(() => document.querySelector("#source-pill")?.textContent === "Your files");
