@@ -37,6 +37,15 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // Chart labels stay readable on a phone: drawn at the screen's pixel width, not scaled down (RR-8).
   const label = await page.$eval("#chart text", (t) => t.getBoundingClientRect().height);
   if (label < 11) problems.push(`chart labels ${label.toFixed(1)}px tall at ${viewport.width}px (want 11+)`);
+  // Method table: no sideways scroll inside it on a phone, distinct source links 44px tall (RR-10, RR-11).
+  const table = await page.$eval(".tablewrap", (t) => ({ over: t.scrollWidth - t.clientWidth }));
+  if (table.over > 1) problems.push(`method table scrolls sideways by ${table.over}px at ${viewport.width}px`);
+  const links = await page.$$eval("#params a", (as) => as.map((a) => ({ t: a.textContent.trim(), h: a.getBoundingClientRect().height })));
+  if (links.some((l) => l.t === "source")) problems.push("source links don't name their source");
+  if (links.some((l) => l.h < 44)) problems.push(`source links under 44px at ${viewport.width}px`);
+  // Phones get a hint that logs live on a computer (RR-13).
+  const hint = await page.$eval("#phone-hint", (h) => h.getBoundingClientRect().height > 0).catch(() => null);
+  if (hint !== viewport.width < 600) problems.push(`phone hint ${hint ? "shown" : "missing"} at ${viewport.width}px`);
   if (short.length) problems.push(`buttons under 44px at ${viewport.width}px: ${short.join(", ")}`);
   const sampleHeadline = await page.textContent("#hero-big");
   await page.setInputFiles("#pick-files", log);
