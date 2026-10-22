@@ -28,6 +28,7 @@ export {
   HISTORY_SCHEMA,
   rollup,
   mergeHistory,
+  outputContext,
   rollupRecords,
   serializeHistory,
   parseHistory,
