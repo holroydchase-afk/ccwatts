@@ -66,3 +66,9 @@ INTAKE from ccwatts (Recruiter-Ready Sprint v2, 2026-10-22), for holroydchase-af
 - **Round 0 (review), 03:30–04:00Z:** 14 UX + 2 QA findings, 1 P0 in this repo, 1 P0 for the portfolio.
 - **Round 1 (fixes), 03:30–03:42Z:** RR-1, RR-3 to RR-14 and QA-1 fixed in stacked draft PRs #23 to #28, each with a failing test first. Suites 3× green after the round (59/59; `check:browser` 3× pass).
 - **Round 2 (re-review), 03:42–03:55Z:** a fresh ux-reviewer pass (showcase mode, 390/1280/320 px, light and dark, loaded state) confirmed every round-1 fix and found 5 new items (RR-15 to RR-19: 2 P1, 3 P2), all fixed in #29.
+- **Round 3 (re-review), 03:47–03:52Z:** ux-reviewer confirmed RR-15 to RR-19 and every earlier fix (no console errors or requests, no sideways scroll at 320/390/1280, no button under 44px, pickers reachable by Tab). **Nothing new at P2 or above: verdict Ready.** Suites 3× green (62/62). One sub-P2 note kept for later: the share post reads "roughly driving an EV about 28 miles · running a fridge…".
+
+## Left
+- RR-2 (P0, portfolio repo): INTAKE above, for Product Studio.
+- QA-2 (decision): run `check:browser` in CI (needs Playwright in CI).
+- The live site (chaseholroyd.com) was never loaded from this environment; after merge, open https://chaseholroyd.com/ccwatts/ once on a phone to confirm.
