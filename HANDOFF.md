@@ -31,9 +31,11 @@ _Updated 2026-10-21._
 - **Studio-wide status** (portfolio, domain, every demo, what's waiting on Chase): https://github.com/holroydchase-afk/pm-tools/blob/main/STUDIO-STATUS.md
 - 2026-10-21: the portfolio home page lists ccwatts under "Since Jan 2026: independent product work" with a "Live playground" tag.
 - 2026-10-22: playground gains an H1 ("How much electricity does your AI coding use?"), a lede, and a "← Chase Holroyd's portfolio" link to https://chaseholroyd.com/ccwatts.html. Portfolio fix for `npx ccwatts` (RR-2) sent as an INTAKE block for Product Studio.
+- 2026-10-22: README now links the live playground near the top, and its screenshots show the current playground on sample data (new H1 and back link). If the portfolio reuses README images, use `docs/images/playground-laptop.png` / `playground-phone.png`.
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-22: RR-7, RR-14: README links the live playground in its second paragraph, says `npx ccwatts` works once it's on npm, and its screenshots are the current playground on sample data (`docs/images/playground-laptop.png` replaces `dashboard.png`; `playground-phone.png` re-shot). `packages/web/test/readme.test.ts` guards all three.
 - 2026-10-22: RR-10, RR-11, RR-13: method-table source links name their site (e.g. theclimatebrink.com) and are 44px tall; under 600px the table becomes one card per parameter (no sideways scroll); phones see "On a phone? Claude Code keeps its logs on your computer…" under the pickers. All three are in `check:browser`.
 - 2026-10-22: RR-8: the daily chart is drawn at its on-screen width (320 to 720 px) and redrawn on resize, so axis labels are 13px tall on a 390px phone instead of 7px. `check:browser` fails if they drop under 11px.
 - 2026-10-22: RR-5, RR-6, RR-9, RR-12: file pickers are reachable by Tab (visually hidden inputs, focus ring on the label), the light-mode "Sample data" pill is 5.27:1, buttons are at least 44px tall with 3:1 borders (`--control`). `npm run check:browser` now also fails on unreachable pickers or buttons under 44px.
@@ -66,7 +68,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Recruiter-Ready Sprint v2 (Oct 22): review doc `docs/reviews/2026-10-22-recruiter-ready.md`, fix PRs stacked on `claude/project-thread-ofwrnk*`.
 
 ## Exact next step
-- Recruiter-ready fix loop: RR-7 README playground link and RR-14 fresh README screenshots (`docs/images/dashboard.png`, `playground-phone.png`), stacked on the latest `claude/project-thread-ofwrnk-*` branch; then a full re-review round.
+- Recruiter-ready fix loop: full re-review round of the playground on the top branch (`claude/project-thread-ofwrnk-readme`): re-screenshot, ux-reviewer showcase pass, suites 3x; log new rows in the review doc.
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
