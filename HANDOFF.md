@@ -76,6 +76,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
 
 ## Decisions to review
+- Plugin order (Chase, Oct 22; ANCHORS D11): the Claude Code plugin (PR #21) ships after the npm release (M2.2). #21 carries its own bundled copy of the CLI, so npm doesn't depend on it. Two things to know: PR #18 (removes the unpublished `@ccwatts/core` runtime dependency) must merge before any publish, and #21's new `ccwatts statusline` command won't be in the first npm version unless #21 lands first. When #21 is picked up again, it needs a base merge (HANDOFF/README moved on) and could call the published package instead of the 986-line bundle.
 - Recruiter-ready (Oct 22): range units now come from the high bound (a 618 Wh central with a 2,155 Wh high shows as 0.62 kWh, range 0.09 – 2.2 kWh). Share text on your own data says "I estimated", not "I measured".
 - QA-2: `npm run check:browser` (the only real-browser test) still runs by hand. Running it in CI means installing Playwright in the workflow; not done without your OK.
 - Final product name (P1): Chase leaned to `ccwatts` on Oct 22 and asked for an availability check before locking it. Oct 22 check: `ccwatts`, `@ccwatts/core`, `@ccwatts/cli` are unclaimed on npm (registry 404), also free on PyPI and crates.io; no product, repo or trademark found by web search. Not yet locked; publish (M2.2) waits on Chase's go.

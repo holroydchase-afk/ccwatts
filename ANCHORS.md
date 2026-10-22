@@ -39,6 +39,7 @@ Chase comes to this from climate and product. He has about 10 years of product m
 | D8 | A static browser playground (no accounts, processed locally) is the "version folks can play with." | Decided |
 | D9 | Not doing yet: account connections, other providers, enterprise dashboard, carbon/water. | Decided · revision proposed in P2 |
 | D10 | Sequence: estimator → friend beta → share output + playground → case study → LinkedIn. No public post before the friend beta. | Decided |
+| D11 | The Claude Code plugin (`/ccwatts` and the session status line, PR #21) ships after the npm release (PLAN M2.2), not before. | Decided Oct 22, 2026 |
 
 ## Proposed, not yet decided (Oct 18, 2026)
 
