@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { defaultParams, rollup, claudeCodeAdapter, PLAYGROUND_URL } from "@ccwatts/core";
+import { defaultParams, rollup, claudeCodeAdapter, PLAYGROUND_URL, PORTFOLIO_URL } from "@ccwatts/core";
 import { DATA_MARKER, injectData, safeJson } from "../src/inject.js";
 
 // Built by `npm test` (node packages/web/build.mjs) before vitest runs.
@@ -39,6 +39,23 @@ describe("link preview", () => {
     // The only absolute URLs outside the script are in meta tags, which browsers don't fetch.
     const outsideMeta = html.replace(/<meta [^>]*>/g, "").replace(/<script[\s\S]*?<\/script>/g, "");
     expect(outsideMeta).not.toMatch(/https?:\/\//);
+  });
+});
+
+describe("first screen (recruiter-ready RR-1, RR-3)", () => {
+  it("says what ccwatts is in one heading and a plain lede", () => {
+    expect(html.match(/<h1[ >]/g)?.length).toBe(1);
+    expect(html.match(/<main[ >]/g)?.length).toBe(1);
+    expect(html).toContain("How much electricity does your AI coding use?");
+    expect(html).toMatch(/id="lede"[^>]*>[^<]*AI coding agent/);
+  });
+
+  it("links back to the portfolio, from the header and the footer", () => {
+    expect(PORTFOLIO_URL).toBe("https://chaseholroyd.com/ccwatts.html");
+    expect(html).toContain('id="back-link"');
+    expect(html).toContain('id="built-by"');
+    // The href is set by the script (like the repo link), so the page source holds no absolute URLs outside meta tags.
+    expect(html).toContain(PORTFOLIO_URL);
   });
 });
 
