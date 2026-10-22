@@ -23,6 +23,15 @@ The repo now uses the studio planning IDs (milestone `M1`, task `M1.1`, step `M1
 
 ANCHORS/PLAN decisions (`D1`), proposals (`P1`) and IDEAS entries keep their own numbers.
 
+## Portfolio / public presence
+_Updated 2026-10-21._
+- **Portfolio page:** https://chaseholroyd.com/ccwatts.html (source: `tools/build.py` in `holroydchase-afk.github.io`). It links the playground and this repo.
+- **Live playground:** https://chaseholroyd.com/ccwatts/, deployed from this repo's `main` by `.github/workflows/pages.yml`. Deploys have succeeded since Oct 21, so CCW-M1.9 is live.
+- **Demo data:** the playground opens on labeled synthetic sample data. Visitors can pick their own `.jsonl` files, which are parsed in the browser and never uploaded.
+- **Studio-wide status** (portfolio, domain, every demo, what's waiting on Chase): https://github.com/holroydchase-afk/pm-tools/blob/main/STUDIO-STATUS.md
+- 2026-10-21: the portfolio home page lists ccwatts under "Since Jan 2026: independent product work" with a "Live playground" tag.
+- **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
+
 ## Done
 - 2026-10-21: link preview for the playground. `og:` and `twitter:` meta tags in `packages/web/src/template.html` point at `og.png`, a 1200×627 card rendered from `packages/web/src/og.svg` by `scripts/make-og-image.mjs` (Playwright, run by hand, commit both). The Pages workflow copies it next to `index.html`. The playground URL lives in `PLAYGROUND_URL` in `packages/core/src/meta.ts`; the LinkedIn post text now links it first and the repo second.
 - 2026-10-21: studio session rules installed: `.claude/settings.json` SessionStart hook prints this file into every Claude Code session, `.github/workflows/handoff-check.yml` fails a PR that changes files without updating this file, and CLAUDE.md has a "Session rules" section.
@@ -51,7 +60,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 
 ## Exact next step
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
-- M1.9 playground hosting (PR #12, Oct 21): workflow merged, but the first deploy failed ("Ensure GitHub Pages has been enabled"). Chase: set Settings → Pages → Source to "GitHub Actions" and re-run. Expected URL: chaseholroyd.com/ccwatts. Not live until confirmed.
+- M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
 
 ## Decisions to review
@@ -73,7 +82,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Sample windows count back from the last day in the sample; real history counts back from today.
 - `npm test` builds the web page first (about 1 second) so the page tests check the real output.
 
-- Hosting: GitHub Pages through Actions (Chase, Oct 21). Live at https://holroydchase-afk.github.io/ccwatts/ once the workflow runs.
+- Hosting: GitHub Pages through Actions (Chase, Oct 21). Live at https://chaseholroyd.com/ccwatts/ (deploys succeed since Oct 21).
 - Shared studio agents are in `.claude/agents/` (source: holroydchase-afk/studio-agents; edit there, then sync).
 
 ## Blockers
