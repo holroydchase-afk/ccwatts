@@ -76,7 +76,7 @@ function renderHero(e: Estimate, label: string) {
   $("hero-eyebrow").textContent = `Claude Code electricity · ${label}`;
   $("hero-big").innerHTML = e.responses ? `${esc(value ?? "")}<small>${esc(unit ?? "")}</small>` : "–";
   $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}, from the bounds on every assumption.` : "No usage in this window.";
-  $("hero-compare").textContent = e.responses ? `About the same as ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
+  $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
   const span = e.span ? ` · ${e.span.from} to ${e.span.to}` : "";
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   $("hero-meta").textContent = `${int(e.responses)} responses · ${int(tokens)} tokens${span} · method v${params.version}`;
@@ -206,7 +206,7 @@ function sourceName(url: string): string {
 }
 
 function renderMethod() {
-  $("method-intro").textContent = `Energy = tokens × energy per token, by model family and token type. Each parameter below has a low and high bound, and they combine into the range you see. The boundary is ${params.boundary}. Method v${params.version}, parameters as of ${params.as_of}, licensed ${params.license}.`;
+  $("method-intro").textContent = `Energy = tokens × energy per token, by model family and token type. Each parameter below has a low and high bound, and they combine into the range you see. The boundary is ${params.boundary}. Labels say how solid each number is: MODELED is derived from published figures, GUESS is a best estimate with wide bounds. Method v${params.version}, parameters as of ${params.as_of}, licensed ${params.license}.`;
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>
@@ -215,6 +215,12 @@ function renderMethod() {
     .join("");
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
 }
+
+const LEDE: Record<typeof state.source, string> = {
+  sample: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. You're looking at sample data; try your own logs below.",
+  files: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. You're looking at the files you loaded; nothing was uploaded.",
+  history: "ccwatts estimates the electricity behind your Claude Code use from the token counts in its local logs, as a range with every assumption sourced.",
+};
 
 let lastEstimate: Estimate | null = null;
 
@@ -227,6 +233,7 @@ function render() {
   const pill = $("source-pill");
   pill.textContent = state.source === "sample" ? "Sample data" : state.source === "history" ? "Your history" : "Your files";
   pill.classList.toggle("sample", state.source === "sample");
+  $("lede").textContent = LEDE[state.source];
   renderHero(e, label);
   renderChart(e);
   renderRank("by-model", e.byModel, shortModel, e);
@@ -350,8 +357,6 @@ function wire() {
     const back = $<HTMLAnchorElement>("back-link");
     back.href = PORTFOLIO_URL;
     back.hidden = false;
-  } else {
-    $("lede").textContent = "ccwatts estimates the electricity behind your Claude Code use from the token counts in its local logs, as a range with every assumption sourced.";
   }
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;

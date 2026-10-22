@@ -75,6 +75,13 @@ describe("accessibility (recruiter-ready RR-5, RR-6, RR-9, RR-12)", () => {
   });
 });
 
+describe("method labels explained (recruiter-ready RR-18)", () => {
+  it("says what MODELED and GUESS mean", () => {
+    expect(html).toContain("MODELED is derived from published figures");
+    expect(html).toContain("GUESS is a best estimate with wide bounds");
+  });
+});
+
 describe("injectData", () => {
   it("replaces the data slot and can't be broken out of", () => {
     const rows = rollup(claudeCodeAdapter.parse(readFileSync(new URL("../../../fixtures/claude-code/sample.jsonl", import.meta.url), "utf8")));

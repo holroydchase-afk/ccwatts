@@ -60,9 +60,9 @@ export function linkedInPost(input: ReceiptInput): string {
     ].join("\n");
   }
   return [
-    `I measured the electricity behind my AI coding. ${whose(windowLabel)}: about ${t.central} (range ${t.range} ${t.unit}), roughly ${everyday(e.total.central / 1000, params)}.`,
+    `I estimated the electricity behind my AI coding. ${whose(windowLabel)}: about ${t.central} (range ${t.range} ${t.unit}), roughly ${everyday(e.total.central / 1000, params)}.`,
     "",
-    `The surprise: ${cacheShare}% of it came from the agent re-reading context it had already seen.`,
+    `${cacheShare >= 50 ? "The surprise: " : ""}${cacheShare}% of it came from the agent re-reading context it had already seen.`,
     "",
     `It's a range because nobody outside the AI labs knows the real energy per token. Every assumption is sourced, and the tool runs entirely on my laptop, so no logs leave it.`,
     "",

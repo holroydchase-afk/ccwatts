@@ -35,7 +35,12 @@ Priority: P0 blocks showing it, P1 hurts the impression, P2 polish. Status is up
 | RR-12 | P2 | Buttons | Button borders are 1.23:1 against the page (light) and 1.5:1 (dark); WCAG 1.4.11 asks 3:1 for control boundaries. | A separate `--control` border token at ≥ 3:1. | Button border ≥ 3:1 in both themes. | fixed (#25) |
 | RR-13 | P2 | Pickers on a phone | "Choose folder" is the primary button on a phone, where no Claude Code logs live (iOS ignores folder picking). | On narrow screens, add "Your logs are on your computer, so open this page there." | Hint visible at 390, hidden at 1280. | fixed (#27) |
 | RR-14 | P2 | README screenshots | `dashboard.png` shows a "Your history" pill on synthetic data. The caption under the first image covers it, but the image alone reads as real. | Re-shoot the dashboard screenshot with the new header and the sample label. | README images match the current page and say sample. | fixed (#28) |
-| QA-1 | P2 | Tests | No automated check for keyboard reach, the back link or sample labeling. | Add with RR-1, RR-4, RR-5. | Tests exist and fail before the fix. | open |
+| RR-15 | P2 | LinkedIn post, real data | Post opened "I measured…" though the tool estimates, and called an 11% cache share "The surprise". (Round 2, measured.) | "I estimated…"; "The surprise:" only when the cache share is 50% or more. | Core tests. | fixed (#29) |
+| RR-16 | P1 | Lede after loading your own files | Pill said "Your files" but the lede still said "You're looking at sample data" (Nielsen 1, honest demo). (Round 2, measured.) | Lede set from the data source on every render. | `check:browser` asserts the lede after loading a file and after "Use sample data". | fixed (#29) |
+| RR-17 | P2 | By model, haiku row; hero comparison | "range 88.5 – 2,155 Wh" next to kWh rows; hero said "About the same as driving an EV about 28 miles". (Round 2, seen.) | Unit picked from the high bound ("0.09 – 2.2 kWh"); hero reads "That's like driving an EV about 28 miles, or…". | Core test on `formatEnergy`. | fixed (#29) |
+| RR-18 | P2 | Method table labels | MODELED and GUESS badges never explained; "GUESS" alone can read as weak (Nielsen 10). (Round 2, inferred; confirm with a real user.) | One sentence in the method intro explaining both. | Page test. | fixed (#29) |
+| RR-19 | P1 | README `receipt-sample.png` | Synthetic card still said "Estimated on my laptop. No logs left it." with no sample label, between two sample screenshots. (Round 2, seen.) | Re-rendered from the playground's sample card by new `scripts/make-readme-images.mjs`, which refuses to write a card without "SAMPLE DATA". | Script check; image re-shot. | fixed (#29) |
+| QA-1 | P2 | Tests | No automated check for keyboard reach, the back link or sample labeling. | Add with RR-1, RR-4, RR-5. | Tests exist and fail before the fix. | fixed (#23–#29) |
 | QA-2 | P2 | CI | `check:browser` (the only real-browser test) runs by hand, not in CI. | Decision for Chase (needs Playwright in CI). | Logged under Decisions to review. | decision |
 
 Not findings: zero network requests, zero console errors, no sideways page scroll at 390, bad inputs get clear messages ("Those files had no Claude Code usage in them.", "No .jsonl files found there…"), reload returns to sample data (nothing is stored, which is right for privacy). No TODO, placeholder, lorem or "coming soon" text in the page, README or docs.
@@ -59,3 +64,11 @@ INTAKE from ccwatts (Recruiter-Ready Sprint v2, 2026-10-22), for holroydchase-af
 
 ## Rounds
 - **Round 0 (review), 03:30–04:00Z:** 14 UX + 2 QA findings, 1 P0 in this repo, 1 P0 for the portfolio.
+- **Round 1 (fixes), 03:30–03:42Z:** RR-1, RR-3 to RR-14 and QA-1 fixed in stacked draft PRs #23 to #28, each with a failing test first. Suites 3× green after the round (59/59; `check:browser` 3× pass).
+- **Round 2 (re-review), 03:42–03:55Z:** a fresh ux-reviewer pass (showcase mode, 390/1280/320 px, light and dark, loaded state) confirmed every round-1 fix and found 5 new items (RR-15 to RR-19: 2 P1, 3 P2), all fixed in #29.
+- **Round 3 (re-review), 03:47–03:52Z:** ux-reviewer confirmed RR-15 to RR-19 and every earlier fix (no console errors or requests, no sideways scroll at 320/390/1280, no button under 44px, pickers reachable by Tab). **Nothing new at P2 or above: verdict Ready.** Suites 3× green (62/62). One sub-P2 note kept for later: the share post reads "roughly driving an EV about 28 miles · running a fridge…".
+
+## Left
+- RR-2 (P0, portfolio repo): INTAKE above, for Product Studio.
+- QA-2 (decision): run `check:browser` in CI (needs Playwright in CI).
+- The live site (chaseholroyd.com) was never loaded from this environment; after merge, open https://chaseholroyd.com/ccwatts/ once on a phone to confirm.
