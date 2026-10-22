@@ -32,3 +32,7 @@ Claude Code deletes session logs older than `cleanupPeriodDays` (a `settings.jso
 ## Where these findings came from
 
 Field names were confirmed on a real Claude Code log from a cloud session (Oct 19, 2026, Claude Code on the web), not yet on Chase's laptop. Run `npm start` locally to confirm the totals look sane there.
+
+## History rows
+
+Each history row is one day × source × model × project with token counts and a response count. Since Oct 22, 2026 (ANCHORS D12) it also carries `outputContext`: the sum over responses of output tokens × context size (input + cache write + cache read). It's a count, never content, and nothing shows or prices it yet. It exists because output energy grows with context and logs are pruned after about 30 days. Rows written before then don't have it. When a day's token totals tie, the merge prefers the row that has it.

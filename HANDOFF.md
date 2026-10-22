@@ -36,6 +36,7 @@ _Updated 2026-10-21._
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-22: D12 built: history rows carry `outputContext` (sum of output × context per day/model/project). Counts only, not shown or priced yet; old rows without it still parse, and fresh logs fill it in. See `packages/core/README.md`.
 - 2026-10-22: PR #18 (M2.2 prep, CLI installable) merged after a main merge; 64 tests, typecheck and build pass, and a packed tarball installs and runs in an empty project with an empty HOME.
 - 2026-10-22: Recruiter-ready stack merged to main in order (#22 to #29, merge commits; tests and typecheck passed at every step and on main, 62 tests). Stale PR #2 (old CLAUDE.md rules) closed. Pages deploy of #29 started 18:30 UTC.
 - 2026-10-22: M2.2 README GIF: the README now opens with `docs/images/cli-demo.gif`, an 8-second terminal recording of the real CLI on the demo fixture (`npx ccwatts --path demo.jsonl --since all`). `scripts/make-readme-gif.mjs` re-records it (Playwright + ffmpeg, run by hand) and refreshes the still `docs/images/cli-summary.png` (no longer in the README; kept for the portfolio). `readme.test.ts` checks the GIF is linked near the top and exists.

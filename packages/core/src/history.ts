@@ -14,12 +14,22 @@ export interface RollupRow {
   projectName: string | null;
   responses: number;
   tokens: TokenCounts;
+  /**
+   * Sum over responses of output tokens × context size (input + cache write + cache read).
+   * Output energy grows with context, and logs are pruned after about 30 days, so we keep this
+   * count now and price it once the energy model can (ANCHORS D12). Missing on rows written
+   * before it existed.
+   */
+  outputContext?: number;
 }
 
 const rowKey = (r: Pick<RollupRow, "date" | "source" | "model" | "projectId">) =>
   `${r.date}|${r.source}|${r.model}|${r.projectId ?? ""}`;
 
 const sum = (t: TokenCounts) => TOKEN_TYPES.reduce((s, k) => s + t[k], 0);
+
+/** One response's output tokens × the context it read them against. */
+export const outputContext = (t: TokenCounts) => t.output * (t.input + t.cacheWrite + t.cacheRead);
 
 /** Rolls deduped usage records up into daily rows. */
 export function rollup(records: readonly UsageRecord[]): RollupRow[] {
@@ -34,9 +44,10 @@ export function rollup(records: readonly UsageRecord[]): RollupRow[] {
     };
     const key = rowKey(base);
     let row = rows.get(key);
-    if (!row) rows.set(key, (row = { ...base, responses: 0, tokens: { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 } }));
+    if (!row) rows.set(key, (row = { ...base, responses: 0, tokens: { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 }, outputContext: 0 }));
     row.responses += 1;
     for (const t of TOKEN_TYPES) row.tokens[t] += r.tokens[t];
+    row.outputContext! += outputContext(r.tokens);
   }
   return sortRows([...rows.values()]);
 }
@@ -57,12 +68,16 @@ export function mergeHistory(stored: readonly RollupRow[], fresh: readonly Rollu
   for (const row of [...stored, ...fresh]) {
     const key = rowKey(row);
     const prev = rows.get(key);
-    if (!prev || sum(row.tokens) > sum(prev.tokens) || (sum(row.tokens) === sum(prev.tokens) && row.responses > prev.responses)) {
+    if (!prev || sum(row.tokens) > sum(prev.tokens) || (sum(row.tokens) === sum(prev.tokens) && moreComplete(row, prev))) {
       rows.set(key, row);
     }
   }
   return sortRows([...rows.values()]);
 }
+
+/** Same token total: more responses wins, then a row that carries outputContext over an older one without it. */
+const moreComplete = (row: RollupRow, prev: RollupRow) =>
+  row.responses > prev.responses || (row.responses === prev.responses && row.outputContext !== undefined && prev.outputContext === undefined);
 
 /** Turns rollup rows back into records so `estimate` can price them. One record per row. */
 export function rollupRecords(rows: readonly RollupRow[]): UsageRecord[] {
@@ -106,7 +121,8 @@ function isRow(v: unknown): v is RollupRow {
     typeof r.source === "string" &&
     typeof r.responses === "number" &&
     !!r.tokens &&
-    TOKEN_TYPES.every((t) => typeof r.tokens![t] === "number")
+    TOKEN_TYPES.every((t) => typeof r.tokens![t] === "number") &&
+    (r.outputContext === undefined || typeof r.outputContext === "number")
   );
 }
 
