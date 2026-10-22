@@ -34,6 +34,7 @@ _Updated 2026-10-21._
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-22: RR-8: the daily chart is drawn at its on-screen width (320 to 720 px) and redrawn on resize, so axis labels are 13px tall on a 390px phone instead of 7px. `check:browser` fails if they drop under 11px.
 - 2026-10-22: RR-5, RR-6, RR-9, RR-12: file pickers are reachable by Tab (visually hidden inputs, focus ring on the label), the light-mode "Sample data" pill is 5.27:1, buttons are at least 44px tall with 3:1 borders (`--control`). `npm run check:browser` now also fails on unreachable pickers or buttons under 44px.
 - 2026-10-22: RR-4: on sample data the share card says "SAMPLE DATA" and "Sample data, not a real measurement.", and the share line and LinkedIn post start with "(Sample data)" with no first person (`sample` flag on `ReceiptInput`). Real-data output is unchanged.
 - 2026-10-22: recruiter-ready review saved to `docs/reviews/2026-10-22-recruiter-ready.md` (2 P0, 7 P1, 7 P2). Fixed RR-1 and RR-3: the playground now opens with an H1 and a plain lede, links back to the portfolio (`PORTFOLIO_URL` in `packages/core/src/meta.ts`) from the header, and every page says "Built by Chase Holroyd" in the footer.
@@ -64,7 +65,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Recruiter-Ready Sprint v2 (Oct 22): review doc `docs/reviews/2026-10-22-recruiter-ready.md`, fix PRs stacked on `claude/project-thread-ofwrnk*`.
 
 ## Exact next step
-- Recruiter-ready fix loop: take the next `open` row in `docs/reviews/2026-10-22-recruiter-ready.md` (RR-8 phone chart, then RR-7 README), failing test first, stacked on the latest `claude/project-thread-ofwrnk-*` branch.
+- Recruiter-ready fix loop: take the next `open` row in `docs/reviews/2026-10-22-recruiter-ready.md` (RR-7 README playground link, RR-14 fresh README screenshots), stacked on the latest `claude/project-thread-ofwrnk-*` branch.
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.

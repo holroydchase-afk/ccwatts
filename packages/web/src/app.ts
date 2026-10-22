@@ -85,8 +85,10 @@ function renderHero(e: Estimate, label: string) {
 
 function renderChart(e: Estimate) {
   const svg = $("chart");
-  const W = 720;
+  // Draw at the chart's on-screen width (320 to 720 px) so labels keep their size on a phone.
+  const W = Math.round(Math.min(720, Math.max(320, svg.getBoundingClientRect().width || 720)));
   const H = 240;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   const pad = { l: 44, r: 8, t: 22, b: 28 };
   const days = e.byDay;
   $("legend").innerHTML = (["cacheRead", "cacheWrite", "output", "input"] as TokenType[]).map((t) => `<span><i style="background:var(--t-${t})"></i>${TYPE_LABELS[t]}</span>`).join("");
@@ -205,10 +207,13 @@ function renderMethod() {
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
 }
 
+let lastEstimate: Estimate | null = null;
+
 function render() {
   const rows = windowRows(state.rows, state.window);
   buildDayTypeCache(rows);
   const e = estimateFor(rows);
+  lastEstimate = e;
   const label = WINDOW_LABEL[state.window];
   const pill = $("source-pill");
   pill.textContent = state.source === "sample" ? "Sample data" : state.source === "history" ? "Your history" : "Your files";
@@ -318,6 +323,17 @@ function wire() {
       if (e.dataTransfer?.files) void loadFiles(e.dataTransfer.files);
     });
   }
+
+  let resizeTimer = 0;
+  let chartWidth = $("chart").getBoundingClientRect().width;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      const w = $("chart").getBoundingClientRect().width;
+      if (lastEstimate && Math.round(w) !== Math.round(chartWidth)) renderChart(lastEstimate);
+      chartWidth = w;
+    }, 150);
+  });
 
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;
   ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
