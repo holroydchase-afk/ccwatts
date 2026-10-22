@@ -66,15 +66,18 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - License audit (2026-10-21): LICENSE (MIT) and CC BY 4.0 notices were already in place; added a not-affiliated-with-Anthropic trademark line to the README.
 
 ## In progress
-- Recruiter-Ready Sprint v2 (Oct 22): review doc `docs/reviews/2026-10-22-recruiter-ready.md`, fix PRs stacked on `claude/project-thread-ofwrnk*`.
+- Nothing. Recruiter-Ready Sprint v2 finished Oct 22 (PRs #22 to #29, drafts awaiting review).
 
 ## Exact next step
-- Recruiter-ready fix loop: round 3 re-review of the top branch (`claude/project-thread-ofwrnk-round2`); if it finds nothing at P2+, the loop is done and only the portfolio INTAKE (RR-2) and QA-2 decision remain.
+- Recruiter-ready sprint is done (3 rounds, verdict Ready). Chase: review and merge the stack in order #22 → #29 (each PR's base is the one before it). Then paste the RR-2 INTAKE (in `docs/reviews/2026-10-22-recruiter-ready.md`) into Product Studio.
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
 
 ## Decisions to review
+- Recruiter-ready (Oct 22): range units now come from the high bound (a 618 Wh central with a 2,155 Wh high shows as 0.62 kWh, range 0.09 – 2.2 kWh). Share text on your own data says "I estimated", not "I measured".
+- QA-2: `npm run check:browser` (the only real-browser test) still runs by hand. Running it in CI means installing Playwright in the workflow; not done without your OK.
+- Final product name (P1) still undecided; it blocks the npm publish (M2.2) and the `npx ccwatts` line on the portfolio.
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
 - No separate PUE/overhead parameter: per-token values are set at the comprehensive boundary directly, since the sources report at that boundary.
 - Unknown models fall back to the Sonnet tier with a warning.
@@ -97,4 +100,5 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Shared studio agents are in `.claude/agents/` (source: holroydchase-afk/studio-agents; edit there, then sync).
 
 ## Blockers
+- chaseholroyd.com is not on the cloud environment's allowed hosts, so the live playground was never loaded during the Oct 22 review; all checks ran on the local build that Pages deploys.
 - M2.1 needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
