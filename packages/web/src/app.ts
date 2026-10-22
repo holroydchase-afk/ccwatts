@@ -1,6 +1,7 @@
 import {
   APP_NAME,
   APP_VERSION,
+  PORTFOLIO_URL,
   REPO_URL,
   TOKEN_TYPES,
   TYPE_LABELS,
@@ -319,6 +320,14 @@ function wire() {
   }
 
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;
+  ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
+  if (payload.mode === "playground") {
+    const back = $<HTMLAnchorElement>("back-link");
+    back.href = PORTFOLIO_URL;
+    back.hidden = false;
+  } else {
+    $("lede").textContent = "ccwatts estimates the electricity behind your Claude Code use from the token counts in its local logs, as a range with every assumption sourced.";
+  }
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;
   document.title = payload.mode === "dashboard" ? `${APP_NAME} dashboard` : `${APP_NAME} playground`;

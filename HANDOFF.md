@@ -30,9 +30,11 @@ _Updated 2026-10-21._
 - **Demo data:** the playground opens on labeled synthetic sample data. Visitors can pick their own `.jsonl` files, which are parsed in the browser and never uploaded.
 - **Studio-wide status** (portfolio, domain, every demo, what's waiting on Chase): https://github.com/holroydchase-afk/pm-tools/blob/main/STUDIO-STATUS.md
 - 2026-10-21: the portfolio home page lists ccwatts under "Since Jan 2026: independent product work" with a "Live playground" tag.
+- 2026-10-22: playground gains an H1 ("How much electricity does your AI coding use?"), a lede, and a "← Chase Holroyd's portfolio" link to https://chaseholroyd.com/ccwatts.html. Portfolio fix for `npx ccwatts` (RR-2) sent as an INTAKE block for Product Studio.
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-22: recruiter-ready review saved to `docs/reviews/2026-10-22-recruiter-ready.md` (2 P0, 7 P1, 7 P2). Fixed RR-1 and RR-3: the playground now opens with an H1 and a plain lede, links back to the portfolio (`PORTFOLIO_URL` in `packages/core/src/meta.ts`) from the header, and every page says "Built by Chase Holroyd" in the footer.
 - 2026-10-22: studio agents re-synced from studio-agents PR #6 branch (`claude/project-thread-wvkxmq`, not merged there yet): ux-reviewer gains the visual pass, heuristic sweep, showcase review mode and iterate loop; positioning reads HANDOFF.md first. Studio-only agents (orchestrator, focus-coach) not copied.
 - 2026-10-21: link preview for the playground. `og:` and `twitter:` meta tags in `packages/web/src/template.html` point at `og.png`, a 1200×627 card rendered from `packages/web/src/og.svg` by `scripts/make-og-image.mjs` (Playwright, run by hand, commit both). The Pages workflow copies it next to `index.html`. The playground URL lives in `PLAYGROUND_URL` in `packages/core/src/meta.ts`; the LinkedIn post text now links it first and the repo second.
 - 2026-10-21: studio session rules installed: `.claude/settings.json` SessionStart hook prints this file into every Claude Code session, `.github/workflows/handoff-check.yml` fails a PR that changes files without updating this file, and CLAUDE.md has a "Session rules" section.
@@ -60,6 +62,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Recruiter-Ready Sprint v2 (Oct 22): review doc `docs/reviews/2026-10-22-recruiter-ready.md`, fix PRs stacked on `claude/project-thread-ofwrnk*`.
 
 ## Exact next step
+- Recruiter-ready fix loop: take the next `open` row in `docs/reviews/2026-10-22-recruiter-ready.md` (RR-4 honest sample share card next), failing test first, stacked on the latest `claude/project-thread-ofwrnk-*` branch.
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): approve storing output × context, opt-in carbon or kWh-only, what "metric data" meant for the bench idea.
