@@ -20,9 +20,9 @@ export function num(n: number): string {
   return n === 0 ? "0" : n.toPrecision(1);
 }
 
-/** Picks Wh or kWh from the central value and uses it for the whole range. */
+/** Picks Wh or kWh from the high bound and uses it for the whole range, so no row reads "88.5 – 2,155 Wh". */
 export function formatEnergy(range: Range): { central: string; range: string; unit: string } {
-  const kwh = range.central >= 1000;
+  const kwh = range.high >= 1000;
   const scale = kwh ? 1000 : 1;
   const unit = kwh ? "kWh" : "Wh";
   return {

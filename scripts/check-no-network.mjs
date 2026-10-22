@@ -23,12 +23,39 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.goto(pathToFileURL(page_).href);
 
   if ((await page.textContent("#source-pill")) !== "Sample data") problems.push("did not open on sample data");
+
+  // Keyboard: Tab must reach both file pickers (recruiter-ready RR-5).
+  const reached = new Set();
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press("Tab");
+    reached.add(await page.evaluate(() => document.activeElement?.id));
+  }
+  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
+
+  // Tap targets: every button 44px tall or more (RR-9).
+  const short = await page.$$eval("button, label.btn", (els) => els.filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).map((e) => e.id || e.textContent.trim()));
+  // Chart labels stay readable on a phone: drawn at the screen's pixel width, not scaled down (RR-8).
+  const label = await page.$eval("#chart text", (t) => t.getBoundingClientRect().height);
+  if (label < 11) problems.push(`chart labels ${label.toFixed(1)}px tall at ${viewport.width}px (want 11+)`);
+  // Method table: no sideways scroll inside it on a phone, distinct source links 44px tall (RR-10, RR-11).
+  const table = await page.$eval(".tablewrap", (t) => ({ over: t.scrollWidth - t.clientWidth }));
+  if (table.over > 1) problems.push(`method table scrolls sideways by ${table.over}px at ${viewport.width}px`);
+  const links = await page.$$eval("#params a", (as) => as.map((a) => ({ t: a.textContent.trim(), h: a.getBoundingClientRect().height })));
+  if (links.some((l) => l.t === "source")) problems.push("source links don't name their source");
+  if (links.some((l) => l.h < 44)) problems.push(`source links under 44px at ${viewport.width}px`);
+  // Phones get a hint that logs live on a computer (RR-13).
+  const hint = await page.$eval("#phone-hint", (h) => h.getBoundingClientRect().height > 0).catch(() => null);
+  if (hint !== viewport.width < 600) problems.push(`phone hint ${hint ? "shown" : "missing"} at ${viewport.width}px`);
+  if (short.length) problems.push(`buttons under 44px at ${viewport.width}px: ${short.join(", ")}`);
   const sampleHeadline = await page.textContent("#hero-big");
   await page.setInputFiles("#pick-files", log);
   await page.waitForFunction(() => document.querySelector("#source-pill")?.textContent === "Your files");
   if ((await page.textContent("#hero-big")) === sampleHeadline) problems.push("headline did not change after loading a file");
+  // The lede follows the data source (recruiter-ready RR-16).
+  if ((await page.textContent("#lede")).includes("sample data")) problems.push("lede still says sample data after loading a file");
   await page.click("#w-7d");
   await page.click("#use-sample");
+  if (!(await page.textContent("#lede")).includes("sample data")) problems.push("lede lost its sample-data note after Use sample data");
 
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   if (width > viewport.width) problems.push(`horizontal scroll at ${viewport.width}px (${width}px wide)`);

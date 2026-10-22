@@ -29,6 +29,9 @@ const { sampleRows } = await import(`${tmp}?t=${Date.now()}`);
 rmSync(tmp);
 const sample = JSON.stringify(sampleRows(here("../../fixtures/claude-code/demo.jsonl"))).replace(/</g, "\\u003c");
 
+// Read from core/src/meta.ts so the URL lives in one place.
+const PLAYGROUND_URL = /PLAYGROUND_URL = "([^"]+)"/.exec(readFileSync(here("../core/src/meta.ts"), "utf8"))[1];
+
 const hash = createHash("sha256").update(script).digest("base64");
 // Nothing can be fetched: no connect-src, no external scripts, styles, fonts or frames.
 const csp = [
@@ -42,6 +45,7 @@ const csp = [
 
 const html = readFileSync(here("src/template.html"), "utf8")
   .replace("__CSP__", () => csp)
+  .replaceAll("__PLAYGROUND_URL__", () => PLAYGROUND_URL)
   .replace("__SAMPLE__", () => sample)
   .replace("__SCRIPT__", () => script);
 writeFileSync(here("dist/ccwatts.html"), html);

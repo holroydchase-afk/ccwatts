@@ -1,6 +1,7 @@
 import {
   APP_NAME,
   APP_VERSION,
+  PORTFOLIO_URL,
   REPO_URL,
   TOKEN_TYPES,
   TYPE_LABELS,
@@ -75,7 +76,7 @@ function renderHero(e: Estimate, label: string) {
   $("hero-eyebrow").textContent = `Claude Code electricity · ${label}`;
   $("hero-big").innerHTML = e.responses ? `${esc(value ?? "")}<small>${esc(unit ?? "")}</small>` : "–";
   $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}, from the bounds on every assumption.` : "No usage in this window.";
-  $("hero-compare").textContent = e.responses ? `About the same as ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
+  $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
   const span = e.span ? ` · ${e.span.from} to ${e.span.to}` : "";
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   $("hero-meta").textContent = `${int(e.responses)} responses · ${int(tokens)} tokens${span} · method v${params.version}`;
@@ -84,8 +85,10 @@ function renderHero(e: Estimate, label: string) {
 
 function renderChart(e: Estimate) {
   const svg = $("chart");
-  const W = 720;
+  // Draw at the chart's on-screen width (320 to 720 px) so labels keep their size on a phone.
+  const W = Math.round(Math.min(720, Math.max(320, svg.getBoundingClientRect().width || 720)));
   const H = 240;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   const pad = { l: 44, r: 8, t: 22, b: 28 };
   const days = e.byDay;
   $("legend").innerHTML = (["cacheRead", "cacheWrite", "output", "input"] as TokenType[]).map((t) => `<span><i style="background:var(--t-${t})"></i>${TYPE_LABELS[t]}</span>`).join("");
@@ -184,7 +187,7 @@ let currentLine = "";
 let currentPost = "";
 
 function renderShare(e: Estimate, label: string) {
-  const input = { estimate: e, params, windowLabel: label };
+  const input = { estimate: e, params, windowLabel: label, sample: state.source === "sample" };
   currentSvg = receiptSvg(input);
   currentLine = shareLine(input);
   currentPost = linkedInPost(input);
@@ -193,25 +196,44 @@ function renderShare(e: Estimate, label: string) {
   $("share-status").textContent = state.source === "sample" ? "This card shows sample data. Load your own logs to make yours." : "";
 }
 
+/** "theclimatebrink.com" from a source URL, so each link names where it goes. */
+function sourceName(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "source";
+  }
+}
+
 function renderMethod() {
-  $("method-intro").textContent = `Energy = tokens × energy per token, by model family and token type. Each parameter below has a low and high bound, and they combine into the range you see. The boundary is ${params.boundary}. Method v${params.version}, parameters as of ${params.as_of}, licensed ${params.license}.`;
+  $("method-intro").textContent = `Energy = tokens × energy per token, by model family and token type. Each parameter below has a low and high bound, and they combine into the range you see. The boundary is ${params.boundary}. Labels say how solid each number is: MODELED is derived from published figures, GUESS is a best estimate with wide bounds. Method v${params.version}, parameters as of ${params.as_of}, licensed ${params.license}.`;
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>
-        `<tr><td><code>${esc(id)}</code><div class="meta">${esc(p.note)}</div></td><td class="num">${p.value}</td><td class="num">${p.low} – ${p.high}</td><td>${esc(p.unit)}</td><td><span class="label">${esc(p.label)}</span></td><td><a href="${esc(p.source)}" rel="noopener noreferrer">source</a></td></tr>`,
+        `<tr><td data-label="Parameter"><code>${esc(id)}</code><div class="meta">${esc(p.note)}</div></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
     )
     .join("");
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
 }
 
+const LEDE: Record<typeof state.source, string> = {
+  sample: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. You're looking at sample data; try your own logs below.",
+  files: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. You're looking at the files you loaded; nothing was uploaded.",
+  history: "ccwatts estimates the electricity behind your Claude Code use from the token counts in its local logs, as a range with every assumption sourced.",
+};
+
+let lastEstimate: Estimate | null = null;
+
 function render() {
   const rows = windowRows(state.rows, state.window);
   buildDayTypeCache(rows);
   const e = estimateFor(rows);
+  lastEstimate = e;
   const label = WINDOW_LABEL[state.window];
   const pill = $("source-pill");
   pill.textContent = state.source === "sample" ? "Sample data" : state.source === "history" ? "Your history" : "Your files";
   pill.classList.toggle("sample", state.source === "sample");
+  $("lede").textContent = LEDE[state.source];
   renderHero(e, label);
   renderChart(e);
   renderRank("by-model", e.byModel, shortModel, e);
@@ -318,7 +340,24 @@ function wire() {
     });
   }
 
+  let resizeTimer = 0;
+  let chartWidth = $("chart").getBoundingClientRect().width;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      const w = $("chart").getBoundingClientRect().width;
+      if (lastEstimate && Math.round(w) !== Math.round(chartWidth)) renderChart(lastEstimate);
+      chartWidth = w;
+    }, 150);
+  });
+
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;
+  ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
+  if (payload.mode === "playground") {
+    const back = $<HTMLAnchorElement>("back-link");
+    back.href = PORTFOLIO_URL;
+    back.hidden = false;
+  }
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;
   document.title = payload.mode === "dashboard" ? `${APP_NAME} dashboard` : `${APP_NAME} playground`;
