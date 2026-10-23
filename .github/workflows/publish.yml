@@ -1,0 +1,52 @@
+# Publishes the CLI (packages/cli) to npm. Runs only when started by hand:
+# Actions → "Publish to npm" → Run workflow, then type the version to confirm.
+# First publish uses the NPM_TOKEN secret. After that, npm trusted publishing
+# (OIDC) can replace the token with no change to this file.
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_version:
+        description: "Type the version in packages/cli/package.json to confirm (e.g. 0.1.0)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # npm provenance and trusted publishing
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # npm 11, which trusted publishing needs
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - name: Check the confirmed version
+        env:
+          CONFIRM: ${{ inputs.confirm_version }}
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          if [ "$CONFIRM" != "$version" ]; then
+            echo "::error::You typed '$CONFIRM' but packages/cli/package.json is $version. Nothing was published."
+            exit 1
+          fi
+          if npm view "ccwatts@$version" version >/dev/null 2>&1; then
+            echo "::error::ccwatts@$version is already on npm. Bump the version first."
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Publish
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

@@ -4,7 +4,7 @@
   "description": "Estimate the electricity your Claude Code usage consumes.",
   "type": "module",
   "bin": {
-    "ccwatts": "./dist/index.js"
+    "ccwatts": "dist/index.js"
   },
   "files": [
     "dist",
