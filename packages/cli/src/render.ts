@@ -42,7 +42,7 @@ export function header(params: Params, window: Window): string {
   return `${APP_NAME} v${APP_VERSION} · method v${params.version} · ${window.label}`;
 }
 
-export function summary(e: Estimate, params: Params, window: Window): string {
+export function summary(e: Estimate, params: Params, window: Window, sample = false): string {
   if (e.responses === 0) return `${header(params, window)}\n\n  No Claude Code usage found in this window. Try --since all.`;
   const total = energy(e.total);
   const kwh = e.total.central / 1000;
@@ -64,7 +64,8 @@ export function summary(e: Estimate, params: Params, window: Window): string {
   const span = e.span ? ` · ${e.span.from} to ${e.span.to}` : "";
   lines.push(`  Based on      ${int(e.responses)} responses, ${int(totalTokens(e.tokens))} tokens${span}`);
   for (const w of e.warnings) lines.push(`  Note          ${w}`);
-  lines.push("", `  How this is estimated: ${APP_NAME} --method   ·   Share: ${APP_NAME} receipt`);
+  const next = sample ? `Your own usage: ${APP_NAME}` : `Share: ${APP_NAME} receipt`;
+  lines.push("", `  How this is estimated: ${APP_NAME} --method   ·   ${next}`);
   return lines.join("\n");
 }
 
@@ -117,7 +118,7 @@ export function method(params: Params): string {
 }
 
 /** Same numbers as the table output, in Wh, for scripts. */
-export function json(e: Estimate, params: Params, window: Window): string {
+export function json(e: Estimate, params: Params, window: Window, sample = false): string {
   const rows = (list: Breakdown[], dim: Dimension) =>
     list.map((r) => ({
       key: dim === "project" ? projectName(r.key) : r.key,
@@ -131,6 +132,7 @@ export function json(e: Estimate, params: Params, window: Window): string {
       version: APP_VERSION,
       methodVersion: params.version,
       unit: "Wh",
+      ...(sample ? { sample: true } : {}),
       window,
       span: e.span,
       responses: e.responses,

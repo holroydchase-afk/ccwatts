@@ -9,6 +9,7 @@ npx ccwatts history        # weekly trend, survives log cleanup
 npx ccwatts receipt        # share line and card
 npx ccwatts dashboard      # offline HTML dashboard
 npx ccwatts --method       # every parameter and its source
+npx ccwatts --demo         # no Claude Code logs yet? try synthetic sample data
 ```
 
 - **Local only.** No network calls, no accounts, no telemetry. It reads token counts, never prompt or response text.

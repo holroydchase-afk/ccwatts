@@ -6,7 +6,7 @@
 
 ![ccwatts running in a terminal on sample data: one command prints an electricity range, an everyday comparison and the split by model, token type and project](docs/images/cli-demo.gif)
 
-> Screenshots and the terminal recording use synthetic sample data (`fixtures/claude-code/demo.jsonl`), not anyone's real usage. The output is the real CLI's. The `npx ccwatts` command shown works once ccwatts is on npm; until then, run it from a clone (see [Try it](#try-it)).
+> Screenshots and the terminal recording use synthetic sample data (`fixtures/claude-code/demo.jsonl`), not anyone's real usage. The output is the real CLI's.
 
 ## Why it exists
 
@@ -47,17 +47,17 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 
 ## Try it
 
-The name is final (ccwatts); the npm publish is the next step. Until then, from a clone:
+ccwatts is on npm. With Node 20+:
 
 ```
-npm install
-npm run build
-node packages/cli/dist/index.js            # your last 30 days
-node packages/cli/dist/index.js dashboard  # offline dashboard
-node packages/cli/dist/index.js --path fixtures/claude-code/demo.jsonl   # sample data
+npx ccwatts               # your last 30 days
+npx ccwatts --by project  # also: model, day, type
+npx ccwatts history       # weekly trend, survives log cleanup
+npx ccwatts receipt       # share line, LinkedIn post and card
+npx ccwatts dashboard     # offline dashboard
 ```
 
-Node 20+. No runtime dependencies.
+No runtime dependencies. To build from source: `npm install && npm run build && node packages/cli/dist/index.js`.
 
 ## How it's built
 
@@ -65,7 +65,7 @@ TypeScript monorepo: `packages/core` holds the pure parsing, energy model and re
 
 ## Status
 
-v0.1, pre-release. Next steps: run it on real logs from a few developers (friend beta), get an outside check of the cache-read factor, and publish to npm.
+v0.1.0, on npm. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 

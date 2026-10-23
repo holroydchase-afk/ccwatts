@@ -9,10 +9,10 @@ describe("README tells the same story as the playground (recruiter-ready RR-7, R
     expect(readme.split("\n").slice(0, 10).join("\n")).toContain(PLAYGROUND_URL);
   });
 
-  it("never claims npx works before the package is published", () => {
-    for (const line of readme.split("\n").filter((l) => l.includes("npx ccwatts"))) {
-      expect(line).toMatch(/once .*npm/);
-    }
+  it("CCW-H6 leads with npx now that ccwatts is on npm, with no stale pre-publish wording", () => {
+    const tryIt = readme.slice(readme.indexOf("## Try it"), readme.indexOf("\n## ", readme.indexOf("## Try it") + 1));
+    expect(tryIt).toContain("npx ccwatts");
+    expect(readme).not.toMatch(/once ccwatts is on npm|until then|publish to npm|npm publish is the next step/i);
   });
 
   it("shows the playground on sample data, not a dashboard that reads as real history", () => {
