@@ -186,7 +186,7 @@ IDs follow the studio standard (`docs/planning-ids.md` in holroydchase-afk/studi
 | ID | Task | Done when | Status | Branch |
 |---|---|---|---|---|
 | M2.1 | **Real-log run** on Chase's laptop. | Totals look right and `cleanupPeriodDays` is recorded in `core/README.md` | todo (Chase) | n/a |
-| M2.2 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds | doing: clean-install test passes from a packed tarball; publish blocked on name (ANCHORS P1) | `m2.2-ship` |
+| M2.2 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds | doing: name decided (ccwatts), package ready; publish waits on Chase's go | `m2.2-ship` |
 | M2.3 | **Friend beta fixes.** | Top 3 issues from beta feedback fixed | todo | `m2.3-beta-fixes` |
 
 ### M3: Methodology v0.2

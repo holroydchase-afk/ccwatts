@@ -72,13 +72,14 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 
 ## In progress
 - M2.2 ship prep (everything except the npm publish). Done so far: fixed a packaging bug (the CLI listed the unpublished `@ccwatts/core` as a runtime dependency, so `npm install` of the tarball failed with a 404; it is bundled anyway, so it is now a devDependency), added a test that the CLI has no runtime dependencies, and ran a clean install of `npm pack` output into an empty project with an empty HOME: install took under a second, the summary and `dashboard` worked on the demo fixture.
-- Still to do in M2.2: `npm publish` on Chase's go (needs his npm login). The README GIF is done (PR for branch `claude/project-thread-giqcv1`).
+- Oct 23: name decided (ccwatts, ANCHORS P1). The CLI package is publish-ready: `private` removed, `publishConfig.access` public, an npm README (`packages/cli/README.md`), and LICENSE copied in on pack (gitignored). `npm publish --dry-run` from `packages/cli` passes (4 files, 88 KB bundle), and a clean tarball install runs. `ccwatts` was still free on npm on Oct 23.
+- Still to do in M2.2: `npm publish` on Chase's go (`cd packages/cli && npm login && npm publish`, needs his npm account), then switch the README from "from a clone" to `npx ccwatts`. The README GIF is done (PR for branch `claude/project-thread-giqcv1`).
 
 ## Exact next step
 - Recruiter-ready stack is merged. Chase: paste the RR-2 INTAKE (in `docs/reviews/2026-10-22-recruiter-ready.md`) into Product Studio if not done.
 - M2.1: Chase has only used Claude Code in the browser (cloud sessions), so his Mac has no `~/.claude/projects` logs yet. Oct 23: ran the CLI on a real cloud session's own log (95 responses, 13.5M tokens, Opus 5.5) and it matched an independent dedupe count exactly (same responses, same tokens). Still to do: a run on a local install once Chase uses Claude Code on his Mac, to record `cleanupPeriodDays` (cloud containers have no settings.json).
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
-- Chase: lock the final name (ANCHORS P1; availability check Oct 22 came back clear for `ccwatts`). It is the only blocker on M2.2's publish.
+- Chase: say go on the npm publish, then run `cd packages/cli && npm login && npm publish` (or hand Claude a Remote Control session to run it with his account).
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): what "metric data" meant for the bench idea.
 
 ## Decisions to review
@@ -86,7 +87,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Plugin order (Chase, Oct 22; ANCHORS D11): the Claude Code plugin (PR #21) ships after the npm release (M2.2). #21 carries its own bundled copy of the CLI, so npm doesn't depend on it. Two things to know: PR #18 (removes the unpublished `@ccwatts/core` runtime dependency) must merge before any publish, and #21's new `ccwatts statusline` command won't be in the first npm version unless #21 lands first. When #21 is picked up again, it needs a base merge (HANDOFF/README moved on) and could call the published package instead of the 986-line bundle.
 - Recruiter-ready (Oct 22): range units now come from the high bound (a 618 Wh central with a 2,155 Wh high shows as 0.62 kWh, range 0.09 – 2.2 kWh). Share text on your own data says "I estimated", not "I measured".
 - QA-2: `npm run check:browser` (the only real-browser test) still runs by hand. Running it in CI means installing Playwright in the workflow; not done without your OK.
-- Final product name (P1): Chase leaned to `ccwatts` on Oct 22 and asked for an availability check before locking it. Oct 22 check: `ccwatts`, `@ccwatts/core`, `@ccwatts/cli` are unclaimed on npm (registry 404), also free on PyPI and crates.io; no product, repo or trademark found by web search. Not yet locked; publish (M2.2) waits on Chase's go.
+- Final product name (P1): Chase leaned to `ccwatts` on Oct 22 and asked for an availability check before locking it. Oct 22 check: `ccwatts`, `@ccwatts/core`, `@ccwatts/cli` are unclaimed on npm (registry 404), also free on PyPI and crates.io; no product, repo or trademark found by web search. Locked Oct 22 on Chase's decision card (PR #35); publish (M2.2) waits on Chase's go.
 - Range math: each param's low/high is a ~90% interval; spreads combine root-sum-of-squares in log space; ranges add across types (fully correlated). See METHODOLOGY.md.
 - No separate PUE/overhead parameter: per-token values are set at the comprehensive boundary directly, since the sources report at that boundary.
 - Unknown models fall back to the Sonnet tier with a warning.

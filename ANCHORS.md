@@ -4,7 +4,7 @@
 
 This file explains why ccwatts exists, what it won't compromise on, and who it's for. `PLAN.md` explains how it gets built. When the two conflict, this file wins, and the conflict gets raised with Chase.
 
-*"ccwatts" is the working name. See P1 below; the final name may change before S1.*
+*The name is ccwatts (P1, decided Oct 22, 2026).*
 
 ---
 
@@ -49,7 +49,7 @@ These came out of the Oct 18 naming and growth discussion. **None of them count 
 
 | # | Proposal | Notes | Status |
 |---|---|---|---|
-| P1 | **Final name.** Pick before S1, since the npm package, GitHub repo and domain must match. | Options so far: **ccwatts** (rides on ccusage, but "cc" ties it to Claude Code), **tokenwatts** (provider-neutral and self-describing, free on npm as of Oct 18), and **Wattson** (fun, but has conflicts with IBM Watson and the Apex Legends character; could be the voice on the receipt instead of the package name). Also free on npm as of Oct 18: agentwatts, promptwatts. | Open |
+| P1 | **Final name.** Pick before S1, since the npm package, GitHub repo and domain must match. | Options so far: **ccwatts** (rides on ccusage, but "cc" ties it to Claude Code), **tokenwatts** (provider-neutral and self-describing, free on npm as of Oct 18), and **Wattson** (fun, but has conflicts with IBM Watson and the Apex Legends character; could be the voice on the receipt instead of the package name). Also free on npm as of Oct 18: agentwatts, promptwatts. | **Decided Oct 22, 2026: ccwatts.** Chase picked it because it already runs on the playground and portfolio, and "cc" signals Claude Code to the target audience. Other providers can come later under the same name. The npm name was free on Oct 23. |
 | P2 | **Claude Code first, not Claude Code only.** The long-term ambition is to cover many providers, Poe-style. Ship v0.1 with Claude Code only, but build the parser as per-provider adapters so adding Codex CLI or Gemini CLI is a single session. | Only agent CLIs that write local logs fit D3/C2. Grok, ChatGPT and claude.ai web usage would need account connections. Non-Anthropic models don't disclose their sizes, so ranges will be wider; METHODOLOGY must say so. | Open |
 | P3 | **Open-core path if it takes off.** The CLI, methodology and parameters stay free and open forever. Possible later paid tier: a hosted team/org dashboard, org-level ingestion via provider admin/usage APIs, audit-ready reports (CSRD, GHG Protocol), SSO, retention. | Trigger: friend-beta or early users asking to run it across a team. Nothing gets built before that signal. | Open |
 | P4 | **License: MIT** for the code, **CC BY 4.0** for METHODOLOGY.md and params.json. | MIT keeps adoption and acquirer diligence easy. CC BY means anyone reusing or citing the numbers credits the project. Avoid AGPL/source-available: they slow adoption. | **Decided Oct 20, 2026** |
@@ -115,7 +115,7 @@ This isn't a plan, it's a map, so near-term choices don't block the long-term op
 
 ## Open questions
 
-- **Name (P1):** decide before S1, then claim the npm package, GitHub repo and domain together. Run a trademark check if the choice is Wattson.
+- ~~**Name (P1)**~~ Decided Oct 22, 2026: ccwatts.
 - **Scope (P2):** adopt "Claude Code first," with adapters? If so, update D1/D9 and PLAN.md's core layout.
 - Does the cache-read energy factor hold up? It may dominate agentic totals. Get an outside sanity check (Hausfather, EcoLogits maintainers).
 - Should the share receipt lead with kWh or with a comparison ("≈ X miles")? Test both with the friend beta.

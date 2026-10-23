@@ -10,8 +10,8 @@ describe("published package", () => {
     expect(pkg.dependencies ?? {}).toEqual({});
   });
 
-  it("ships only the built CLI", () => {
-    expect(pkg.files).toEqual(["dist"]);
+  it("ships only the built CLI, its README and the license", () => {
+    expect(pkg.files).toEqual(["dist", "README.md", "LICENSE"]);
     expect(pkg.bin.ccwatts).toBe("./dist/index.js");
   });
 });
