@@ -39,7 +39,7 @@ function sampleWhose(windowLabel: string): string {
 export function shareLine({ estimate: e, params, windowLabel, sample }: ReceiptInput): string {
   const t = formatEnergy(e.total);
   const first = everyday(e.total.central / 1000, params).split(" · ")[0];
-  return `${sample ? sampleWhose(windowLabel) : whose(windowLabel)} used about ${t.central} of electricity (range ${t.range} ${t.unit}), roughly ${first}. Estimated locally with ${APP_NAME}, method v${params.version}: ${repoShort}`;
+  return `${sample ? sampleWhose(windowLabel) : whose(windowLabel)} came to about ${t.central} of electricity (range ${t.range} ${t.unit}), like ${first}. Estimated locally with ${APP_NAME}, method v${params.version}: ${repoShort}`;
 }
 
 /** A short ready-to-paste LinkedIn post. Plain words, no hype, sources linked. */
@@ -49,7 +49,7 @@ export function linkedInPost(input: ReceiptInput): string {
   const cacheShare = e.total.central > 0 ? Math.round(((e.byType.find((r) => r.key === "cacheRead")?.energy.central ?? 0) / e.total.central) * 100) : 0;
   if (sample) {
     return [
-      `(Sample data) This is what ${APP_NAME} shows for a sample developer, not a real measurement. ${sampleWhose(windowLabel).replace("(Sample data) ", "")}: about ${t.central} (range ${t.range} ${t.unit}), roughly ${everyday(e.total.central / 1000, params)}.`,
+      `(Sample data) This is what ${APP_NAME} shows for a sample developer, not a real measurement. ${sampleWhose(windowLabel).replace("(Sample data) ", "")}: about ${t.central} (range ${t.range} ${t.unit}), like ${everyday(e.total.central / 1000, params).replace(" · ", " or ")}.`,
       "",
       `${cacheShare}% of it came from the agent re-reading context it had already seen.`,
       "",
@@ -60,7 +60,7 @@ export function linkedInPost(input: ReceiptInput): string {
     ].join("\n");
   }
   return [
-    `I estimated the electricity behind my AI coding. ${whose(windowLabel)}: about ${t.central} (range ${t.range} ${t.unit}), roughly ${everyday(e.total.central / 1000, params)}.`,
+    `I estimated the electricity behind my AI coding. ${whose(windowLabel)}: about ${t.central} (range ${t.range} ${t.unit}), like ${everyday(e.total.central / 1000, params).replace(" · ", " or ")}.`,
     "",
     `${cacheShare >= 50 ? "The surprise: " : ""}${cacheShare}% of it came from the agent re-reading context it had already seen.`,
     "",

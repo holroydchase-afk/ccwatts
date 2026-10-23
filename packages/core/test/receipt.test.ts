@@ -21,6 +21,15 @@ describe("receipt", () => {
     expect(svg).toContain("ELECTRICITY RECEIPT");
   });
 
+  it("CCW-UX2 share line and post read as sentences: no double hedge, no dot separators in prose", () => {
+    for (const text of [shareLine(input), linkedInPost(input), linkedInPost({ ...input, sample: true })]) {
+      const first = text.split("\n")[0] + (text.split("\n")[2] ?? "");
+      expect(first).not.toMatch(/roughly/);
+      expect(first).not.toMatch(/miles · |days · /);
+      expect(first).toMatch(/like driving an EV about [\d.]+ miles/);
+    }
+  });
+
   it("post links the repo and explains the range", () => {
     const post = linkedInPost(input);
     expect(post).toContain("https://github.com/");

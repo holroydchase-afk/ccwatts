@@ -59,6 +59,10 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // Phones get a hint that logs live on a computer (RR-13).
   const hint = await page.$eval("#phone-hint", (h) => h.getBoundingClientRect().height > 0).catch(() => null);
   if (hint !== viewport.width < 600) problems.push(`phone hint ${hint ? "shown" : "missing"} at ${viewport.width}px`);
+  // CCW-UX1: the hero's meta line breaks between items, never inside a date or a number.
+  const metaParts = await page.$$eval("#hero-meta > span", (ss) => ss.map((s) => ({ t: s.textContent, lines: s.getClientRects().length })));
+  if (metaParts.length < 3) problems.push("hero meta line isn't split into items");
+  for (const m of metaParts) if (m.lines > 1) problems.push(`hero meta item "${m.t}" wraps at ${viewport.width}px`);
   if (short.length) problems.push(`buttons under 44px at ${viewport.width}px: ${short.join(", ")}`);
   const sampleHeadline = await page.textContent("#hero-big");
   await page.setInputFiles("#pick-files", log);
