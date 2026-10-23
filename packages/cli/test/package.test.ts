@@ -12,6 +12,6 @@ describe("published package", () => {
 
   it("ships only the built CLI, its README and the license", () => {
     expect(pkg.files).toEqual(["dist", "README.md", "LICENSE"]);
-    expect(pkg.bin.ccwatts).toBe("./dist/index.js");
+    expect(pkg.bin.ccwatts).toBe("dist/index.js");
   });
 });
