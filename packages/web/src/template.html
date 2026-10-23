@@ -108,6 +108,11 @@ a.src{display:inline-flex;align-items:center;min-height:44px}
 .card{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line);display:block}
 .sharetext{font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre-wrap;margin:0}
 .status{font-size:14px;color:var(--muted);min-height:1.4em}
+.export>summary{cursor:pointer;min-height:44px;padding:11px 0;box-sizing:border-box;font-size:15px;color:var(--ink)}
+.export>*+*{margin-top:10px}
+.export label{display:block;font-size:14px;color:var(--muted)}
+.export textarea{display:block;font-family:var(--mono);font-size:13px;width:100%;box-sizing:border-box;border:1px solid var(--control);border-radius:8px;padding:10px;background:var(--surface);color:var(--ink)}
+kbd{font-family:var(--mono);font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 4px}
 footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:6px}
 @media (prefers-reduced-motion:no-preference){.rank .bar span{transition:width .3s ease}}
 </style>
@@ -142,7 +147,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 
   <section class="drop" id="drop" hidden>
     <h2>Try it on your own logs</h2>
-    <p>Claude Code saves logs in <code>~/.claude/projects</code>. Pick that folder, or drop any <code>.jsonl</code> files here. Files are read by this page on your device and never uploaded.</p>
+    <p>Claude Code saves logs in <code>~/.claude/projects</code>. Pick that folder, or drop any <code>.jsonl</code> files here. Files are read by this page on your device and never uploaded. On a Mac the folder is hidden: in the picker, press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>.</kbd> to show it.</p>
     <div class="controls">
       <input type="file" class="vh" id="pick-folder" webkitdirectory multiple>
       <label class="btn primary" for="pick-folder">Choose folder</label>
@@ -150,7 +155,28 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
       <label class="btn" for="pick-files">Choose files</label>
       <button type="button" id="use-sample">Use sample data</button>
     </div>
-    <p class="phone-only" id="phone-hint">On a phone? Claude Code keeps its logs on your computer, so open this page there to try your own.</p>
+    <p class="phone-only" id="phone-hint">On a phone? Claude Code keeps its logs on the computer it runs on. Open this page there, or use the prompt below if you run Claude Code on the web.</p>
+    <details class="export" id="export">
+      <summary>Use Claude Code on the web, or can't find the folder?</summary>
+      <p>Paste this prompt into a Claude Code session. It writes a copy of that machine's usage with token counts only, and no prompts or code. Then drop the file here, or paste what it prints into the box below.</p>
+      <pre class="sharetext" id="export-prompt">Make a counts-only copy of my Claude Code usage for ccwatts.
+
+Read every .jsonl file under ~/.claude/projects. For each line whose "type" is "assistant" and that has message.usage, write one JSON line containing only:
+- type, timestamp, requestId
+- cwd, reduced to the last folder name (never the full path)
+- message.id and message.model
+- message.usage with input_tokens, cache_creation_input_tokens, cache_read_input_tokens and output_tokens
+
+Leave out everything else, especially message content. Save the lines as ccwatts-usage.jsonl and give me the file to download. If you can't offer a download, print the lines in one code block instead.</pre>
+      <div class="controls">
+        <button type="button" id="copy-prompt">Copy prompt</button>
+      </div>
+      <label for="paste-log">Paste the lines it printed</label>
+      <textarea id="paste-log" rows="4" spellcheck="false" placeholder='{"type":"assistant", …}'></textarea>
+      <div class="controls">
+        <button type="button" id="read-paste">Read pasted lines</button>
+      </div>
+    </details>
     <div class="status" id="drop-status"></div>
   </section>
 

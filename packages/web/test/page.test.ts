@@ -93,3 +93,35 @@ describe("injectData", () => {
     expect(safeJson("<!--")).toBe('"\\u003c!--"');
   });
 });
+
+describe("export prompt for Claude Code on the web", () => {
+  const prompt = /<pre[^>]*id="export-prompt"[^>]*>([\s\S]*?)<\/pre>/.exec(html)?.[1] ?? "";
+
+  it("asks for counts only, with no content and no full paths", () => {
+    expect(prompt).toContain("Leave out everything else, especially message content");
+    expect(prompt).toContain("never the full path");
+    for (const field of ["input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens", "message.id", "requestId"]) {
+      expect(prompt, field).toContain(field);
+    }
+  });
+
+  it("gives a copy button and a paste box", () => {
+    expect(html).toContain('id="copy-prompt"');
+    expect(html).toMatch(/<textarea[^>]*id="paste-log"/);
+    expect(html).toContain('id="read-paste"');
+  });
+
+  it("produces lines the adapter reads, even pasted inside a code fence", () => {
+    const line = JSON.stringify({
+      type: "assistant",
+      timestamp: "2026-10-22T18:26:13.104Z",
+      requestId: "req_1",
+      cwd: "ccwatts",
+      message: { id: "msg_1", model: "claude-opus-4-6", usage: { input_tokens: 2, cache_creation_input_tokens: 300, cache_read_input_tokens: 4000, output_tokens: 50 } },
+    });
+    const records = claudeCodeAdapter.parse(["```json", line, "```"].join("\n"));
+    expect(records).toHaveLength(1);
+    expect(records[0]!.tokens).toEqual({ input: 2, cacheWrite: 300, cacheRead: 4000, output: 50 });
+    expect(records[0]!.project?.name).toBe("ccwatts");
+  });
+});
