@@ -5,6 +5,7 @@ import {
   defaultParams as params,
   estimate,
   mergeHistory,
+  outputContext,
   parseHistory,
   rollup,
   rollupRecords,
@@ -48,6 +49,22 @@ describe("history", () => {
     expect(parseHistory(text)).toEqual(rows);
     expect(text).not.toContain("/home/dev");
     expect(text).not.toContain("content");
+  });
+
+  it("stores output × context per row, summed over responses (ANCHORS D12)", () => {
+    const rows = rollup(records);
+    const total = rows.reduce((s, r) => s + r.outputContext!, 0);
+    expect(total).toBe(records.reduce((s, r) => s + outputContext(r.tokens), 0));
+    expect(total).toBeGreaterThan(0);
+    expect(outputContext({ input: 10, cacheWrite: 20, cacheRead: 70, output: 5 })).toBe(500);
+  });
+
+  it("reads rows written before outputContext existed, and fills it in from fresh logs", () => {
+    const fresh = rollup(records);
+    const old = fresh.map(({ outputContext: _, ...r }) => r);
+    expect(parseHistory(serializeHistory(old))).toEqual(old);
+    expect(mergeHistory(old, fresh)).toEqual(fresh);
+    expect(mergeHistory(fresh, old)).toEqual(fresh);
   });
 
   it("skips malformed lines", () => {

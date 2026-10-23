@@ -36,6 +36,7 @@ _Updated 2026-10-21._
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-22: D12 built: history rows carry `outputContext` (sum of output × context per day/model/project). Counts only, not shown or priced yet; old rows without it still parse, and fresh logs fill it in. See `packages/core/README.md`.
 - 2026-10-22: PR #18 (M2.2 prep, CLI installable) merged after a main merge; 64 tests, typecheck and build pass, and a packed tarball installs and runs in an empty project with an empty HOME.
 - 2026-10-22: Recruiter-ready stack merged to main in order (#22 to #29, merge commits; tests and typecheck passed at every step and on main, 62 tests). Stale PR #2 (old CLAUDE.md rules) closed. Pages deploy of #29 started 18:30 UTC.
 - 2026-10-22: M2.2 README GIF: the README now opens with `docs/images/cli-demo.gif`, an 8-second terminal recording of the real CLI on the demo fixture (`npx ccwatts --path demo.jsonl --since all`). `scripts/make-readme-gif.mjs` re-records it (Playwright + ffmpeg, run by hand) and refreshes the still `docs/images/cli-summary.png` (no longer in the README; kept for the portfolio). `readme.test.ts` checks the GIF is linked near the top and exists.
@@ -75,7 +76,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 
 ## Exact next step
 - Recruiter-ready stack is merged. Chase: paste the RR-2 INTAKE (in `docs/reviews/2026-10-22-recruiter-ready.md`) into Product Studio if not done.
-- M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
+- M2.1: Chase has only used Claude Code in the browser (cloud sessions), so his Mac has no `~/.claude/projects` logs yet. Oct 23: ran the CLI on a real cloud session's own log (95 responses, 13.5M tokens, Opus 5.5) and it matched an independent dedupe count exactly (same responses, same tokens). Still to do: a run on a local install once Chase uses Claude Code on his Mac, to record `cleanupPeriodDays` (cloud containers have no settings.json).
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
 - Chase: lock the final name (ANCHORS P1; availability check Oct 22 came back clear for `ccwatts`). It is the only blocker on M2.2's publish.
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): what "metric data" meant for the bench idea.
@@ -109,4 +110,4 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 
 ## Blockers
 - Oct 22: chaseholroyd.com was added to the cloud env's allowed hosts, but from the container the TLS handshake returns GitHub's `*.github.io` certificate, which doesn't cover chaseholroyd.com, so the page still can't be loaded with verification on. Chase to confirm in a real browser that https://chaseholroyd.com/ccwatts/ has no certificate warning (if it does: Pages settings, re-save the custom domain and tick Enforce HTTPS).
-- M2.1 needs Chase's laptop run (real logs, `cleanupPeriodDays`). Not blocking later work.
+- M2.1 local run needs Chase to use Claude Code on his Mac first (he has only used it in the browser). The parser itself is verified on real cloud-session logs (Oct 23). Not blocking later work.
