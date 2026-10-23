@@ -33,9 +33,11 @@ _Updated 2026-10-21._
 - 2026-10-22: README's top image is now a terminal GIF (`docs/images/cli-demo.gif`); `cli-summary.png` was re-shot from the same run if the portfolio wants a still.
 - 2026-10-22: playground gains an H1 ("How much electricity does your AI coding use?"), a lede, and a "← Chase Holroyd's portfolio" link to https://chaseholroyd.com/ccwatts.html. Portfolio fix for `npx ccwatts` (RR-2) sent as an INTAKE block for Product Studio.
 - 2026-10-22: README now links the live playground near the top, and its screenshots show the current playground on sample data (new H1 and back link). If the portfolio reuses README images, use `docs/images/playground-laptop.png` / `playground-phone.png`.
+- 2026-10-23: the playground's "Try it on your own logs" box adds a copy-paste prompt and a paste box for Claude Code on the web users (PR pending). No portfolio change needed.
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-23: playground gets a copy-paste prompt for people who run Claude Code on the web (or can't find the folder). The prompt asks Claude to write a counts-only `ccwatts-usage.jsonl` (no content, cwd reduced to the folder name). The page reads it from a file or a paste box, and the Mac hidden-folder shortcut (⌘⇧.) is shown. Chase's idea after he found he only uses Claude Code in the browser. Covered by `page.test.ts` and `check:browser`.
 - 2026-10-22: D12 built: history rows carry `outputContext` (sum of output × context per day/model/project). Counts only, not shown or priced yet; old rows without it still parse, and fresh logs fill it in. See `packages/core/README.md`.
 - 2026-10-22: PR #18 (M2.2 prep, CLI installable) merged after a main merge; 64 tests, typecheck and build pass, and a packed tarball installs and runs in an empty project with an empty HOME.
 - 2026-10-22: Recruiter-ready stack merged to main in order (#22 to #29, merge commits; tests and typecheck passed at every step and on main, 62 tests). Stale PR #2 (old CLAUDE.md rules) closed. Pages deploy of #29 started 18:30 UTC.

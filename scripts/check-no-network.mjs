@@ -5,11 +5,24 @@
 // Needs Playwright, which is not a project dependency:  npx playwright@1 install chromium
 // Run after `npm run build`:                            node scripts/check-no-network.mjs
 // Set PLAYWRIGHT_MODULE to a Playwright path and CHROMIUM_PATH to a browser binary if needed.
+import { readFileSync } from "node:fs";
+import { basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
 const page_ = fileURLToPath(new URL("../packages/web/dist/ccwatts.html", import.meta.url));
 const log = fileURLToPath(new URL("../fixtures/claude-code/sample.jsonl", import.meta.url));
+
+// What the export prompt asks Claude to write: the fixture reduced to counts, cwd as a folder name.
+const counts = readFileSync(log, "utf8").split("\n").flatMap((l) => {
+    try { return [JSON.parse(l)]; } catch { return []; } // the fixture has a deliberately broken line
+  })
+  .filter((d) => d.type === "assistant" && d.message?.usage)
+  .map((d) => {
+    const u = d.message.usage;
+    return JSON.stringify({ type: d.type, timestamp: d.timestamp, requestId: d.requestId, cwd: basename(d.cwd ?? ""),
+      message: { id: d.message.id, model: d.message.model, usage: { input_tokens: u.input_tokens, cache_creation_input_tokens: u.cache_creation_input_tokens, cache_read_input_tokens: u.cache_read_input_tokens, output_tokens: u.output_tokens } } });
+  }).join("\n");
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const problems = [];
@@ -56,6 +69,14 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.click("#w-7d");
   await page.click("#use-sample");
   if (!(await page.textContent("#lede")).includes("sample data")) problems.push("lede lost its sample-data note after Use sample data");
+  // Claude Code on the web: the copied prompt's counts-only output, pasted inside a code fence, loads.
+  await page.click("#export > summary");
+  const prompt = await page.textContent("#export-prompt");
+  if (!prompt.includes("never the full path") || !prompt.includes("message content")) problems.push("export prompt lost its counts-only wording");
+  await page.fill("#paste-log", ["```json", counts, "```"].join("\n"));
+  await page.click("#read-paste");
+  await page.waitForFunction(() => document.querySelector("#source-pill")?.textContent === "Your files");
+  if (!(await page.textContent("#drop-status")).includes("pasted text")) problems.push("pasted lines did not load");
 
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   if (width > viewport.width) problems.push(`horizontal scroll at ${viewport.width}px (${width}px wide)`);

@@ -249,18 +249,25 @@ async function loadFiles(files: FileList | File[]) {
     status.textContent = "No .jsonl files found there. Claude Code keeps them in ~/.claude/projects.";
     return;
   }
-  status.textContent = `Reading ${logs.length} file${logs.length === 1 ? "" : "s"} on this device…`;
+  const what = `${logs.length} file${logs.length === 1 ? "" : "s"}`;
+  status.textContent = `Reading ${what} on this device…`;
+  loadTexts(await Promise.all(logs.map((f) => f.text())), what);
+}
+
+/** Parses log text (from files or the paste box) on this device and shows it. */
+function loadTexts(texts: string[], what: string) {
+  const status = $("drop-status");
   const records: UsageRecord[] = [];
-  for (const f of logs) records.push(...claudeCodeAdapter.parse(await f.text()));
+  for (const text of texts) records.push(...claudeCodeAdapter.parse(text));
   const rows = rollup(dedupe(records));
   if (!rows.length) {
-    status.textContent = "Those files had no Claude Code usage in them.";
+    status.textContent = `${what === "pasted text" ? "That text" : "Those files"} had no Claude Code usage in them.`;
     return;
   }
   state.rows = rows;
   state.source = "files";
   state.window = "all";
-  status.textContent = `Read ${int(records.length)} responses from ${logs.length} file${logs.length === 1 ? "" : "s"}. Nothing was uploaded.`;
+  status.textContent = `Read ${int(records.length)} responses from ${what}. Nothing was uploaded.`;
   render();
 }
 
@@ -274,17 +281,17 @@ function download(name: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-async function copy(text: string, what: string) {
-  const status = $("share-status");
+async function copy(text: string, what: string, statusId = "share-status", fallbackId = "post") {
+  const status = $(statusId);
   try {
     await navigator.clipboard.writeText(text);
     status.textContent = `Copied the ${what}.`;
   } catch {
     const range = document.createRange();
-    range.selectNodeContents($("post"));
+    range.selectNodeContents($(fallbackId));
     getSelection()?.removeAllRanges();
     getSelection()?.addRange(range);
-    status.textContent = "Couldn't reach the clipboard. The post text is selected so you can copy it.";
+    status.textContent = `Couldn't reach the clipboard. The ${fallbackId === "post" ? "post text" : what} is selected so you can copy it.`;
   }
 }
 
@@ -315,6 +322,11 @@ function wire() {
   if (payload.mode === "playground") {
     const drop = $("drop");
     drop.hidden = false;
+    $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
+    $("read-paste").addEventListener("click", () => {
+      // Pasted from a chat, the lines may sit inside a ``` code fence; the adapter skips those lines.
+      loadTexts([$<HTMLTextAreaElement>("paste-log").value], "pasted text");
+    });
     for (const id of ["pick-folder", "pick-files"]) {
       $<HTMLInputElement>(id).addEventListener("change", (ev) => {
         const files = (ev.target as HTMLInputElement).files;
