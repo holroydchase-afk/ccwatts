@@ -47,7 +47,7 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 
 ## Try it
 
-Not on npm yet, because the name isn't final. From a clone:
+The name is final (ccwatts); the npm publish is the next step. Until then, from a clone:
 
 ```
 npm install

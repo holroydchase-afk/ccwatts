@@ -69,13 +69,14 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 
 ## In progress
 - M2.2 ship prep (everything except the npm publish). Done so far: fixed a packaging bug (the CLI listed the unpublished `@ccwatts/core` as a runtime dependency, so `npm install` of the tarball failed with a 404; it is bundled anyway, so it is now a devDependency), added a test that the CLI has no runtime dependencies, and ran a clean install of `npm pack` output into an empty project with an empty HOME: install took under a second, the summary and `dashboard` worked on the demo fixture.
-- Still to do in M2.2: README install GIF, then `npm publish` once the name is final.
+- Oct 23: name decided (ccwatts, ANCHORS P1). The CLI package is publish-ready: `private` removed, `publishConfig.access` public, an npm README (`packages/cli/README.md`), and LICENSE copied in on pack (gitignored). `npm publish --dry-run` from `packages/cli` passes (4 files, 88 KB bundle), and a clean tarball install runs. `ccwatts` was still free on npm on Oct 23.
+- Still to do in M2.2: Chase's go, then `npm login && npm publish` from `packages/cli` (it needs his npm account). Then the README install GIF, and switch the README from "from a clone" to `npx ccwatts`.
 
 ## Exact next step
 - Recruiter-ready stack is merged. Chase: paste the RR-2 INTAKE (in `docs/reviews/2026-10-22-recruiter-ready.md`) into Product Studio if not done.
 - M2.1, Chase: run on real logs (`npm install && npm run build && node packages/cli/dist/index.js` on main) to confirm totals and `cleanupPeriodDays`.
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
-- Chase: lock the final name (ANCHORS P1; availability check Oct 22 came back clear for `ccwatts`). It is the only blocker on M2.2's publish.
+- Chase: say go on the npm publish, then run `cd packages/cli && npm login && npm publish` (or hand Claude a Remote Control session to run it with his account).
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): what "metric data" meant for the bench idea.
 
 ## Decisions to review
