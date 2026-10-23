@@ -30,6 +30,7 @@ _Updated 2026-10-21._
 - **Demo data:** the playground opens on labeled synthetic sample data. Visitors can pick their own `.jsonl` files, which are parsed in the browser and never uploaded.
 - **Studio-wide status** (portfolio, domain, every demo, what's waiting on Chase): https://github.com/holroydchase-afk/pm-tools/blob/main/STUDIO-STATUS.md
 - 2026-10-21: the portfolio home page lists ccwatts under "Since Jan 2026: independent product work" with a "Live playground" tag.
+- 2026-10-22: README's top image is now a terminal GIF (`docs/images/cli-demo.gif`); `cli-summary.png` was re-shot from the same run if the portfolio wants a still.
 - 2026-10-22: playground gains an H1 ("How much electricity does your AI coding use?"), a lede, and a "← Chase Holroyd's portfolio" link to https://chaseholroyd.com/ccwatts.html. Portfolio fix for `npx ccwatts` (RR-2) sent as an INTAKE block for Product Studio.
 - 2026-10-22: README now links the live playground near the top, and its screenshots show the current playground on sample data (new H1 and back link). If the portfolio reuses README images, use `docs/images/playground-laptop.png` / `playground-phone.png`.
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
@@ -37,6 +38,7 @@ _Updated 2026-10-21._
 ## Done
 - 2026-10-22: PR #18 (M2.2 prep, CLI installable) merged after a main merge; 64 tests, typecheck and build pass, and a packed tarball installs and runs in an empty project with an empty HOME.
 - 2026-10-22: Recruiter-ready stack merged to main in order (#22 to #29, merge commits; tests and typecheck passed at every step and on main, 62 tests). Stale PR #2 (old CLAUDE.md rules) closed. Pages deploy of #29 started 18:30 UTC.
+- 2026-10-22: M2.2 README GIF: the README now opens with `docs/images/cli-demo.gif`, an 8-second terminal recording of the real CLI on the demo fixture (`npx ccwatts --path demo.jsonl --since all`). `scripts/make-readme-gif.mjs` re-records it (Playwright + ffmpeg, run by hand) and refreshes the still `docs/images/cli-summary.png` (no longer in the README; kept for the portfolio). `readme.test.ts` checks the GIF is linked near the top and exists.
 - 2026-10-22: Round 2 (RR-15 to RR-19): lede follows the data source, post says "I estimated" and only calls a 50%+ cache share a surprise, ranges pick kWh from the high bound, method labels explained, and `docs/images/receipt-sample.png` is now the labeled sample card (new `scripts/make-readme-images.mjs` re-shoots all three README playground images).
 - 2026-10-22: RR-7, RR-14: README links the live playground in its second paragraph, says `npx ccwatts` works once it's on npm, and its screenshots are the current playground on sample data (`docs/images/playground-laptop.png` replaces `dashboard.png`; `playground-phone.png` re-shot). `packages/web/test/readme.test.ts` guards all three.
 - 2026-10-22: RR-10, RR-11, RR-13: method-table source links name their site (e.g. theclimatebrink.com) and are 44px tall; under 600px the table becomes one card per parameter (no sideways scroll); phones see "On a phone? Claude Code keeps its logs on your computer…" under the pickers. All three are in `check:browser`.
@@ -69,7 +71,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 
 ## In progress
 - M2.2 ship prep (everything except the npm publish). Done so far: fixed a packaging bug (the CLI listed the unpublished `@ccwatts/core` as a runtime dependency, so `npm install` of the tarball failed with a 404; it is bundled anyway, so it is now a devDependency), added a test that the CLI has no runtime dependencies, and ran a clean install of `npm pack` output into an empty project with an empty HOME: install took under a second, the summary and `dashboard` worked on the demo fixture.
-- Still to do in M2.2: README install GIF, then `npm publish` once the name is final.
+- Still to do in M2.2: `npm publish` on Chase's go (needs his npm login). The README GIF is done (PR for branch `claude/project-thread-giqcv1`).
 
 ## Exact next step
 - Recruiter-ready stack is merged. Chase: paste the RR-2 INTAKE (in `docs/reviews/2026-10-22-recruiter-ready.md`) into Product Studio if not done.

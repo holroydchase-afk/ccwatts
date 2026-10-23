@@ -4,9 +4,9 @@
 
 **[Try it in your browser](https://chaseholroyd.com/ccwatts/)**: it opens on sample data, needs no install or sign-in, and your own logs never leave the page.
 
-![ccwatts summary in the terminal](docs/images/cli-summary.png)
+![ccwatts running in a terminal on sample data: one command prints an electricity range, an everyday comparison and the split by model, token type and project](docs/images/cli-demo.gif)
 
-> Screenshots use synthetic sample data (`fixtures/claude-code/demo.jsonl`), not anyone's real usage. The `npx ccwatts` command shown works once ccwatts is on npm; until then, run it from a clone (see [Try it](#try-it)).
+> Screenshots and the terminal recording use synthetic sample data (`fixtures/claude-code/demo.jsonl`), not anyone's real usage. The output is the real CLI's. The `npx ccwatts` command shown works once ccwatts is on npm; until then, run it from a clone (see [Try it](#try-it)).
 
 ## Why it exists
 
@@ -47,7 +47,7 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 
 ## Try it
 
-Not on npm yet, because the name isn't final. From a clone:
+Not on npm yet. From a clone:
 
 ```
 npm install
