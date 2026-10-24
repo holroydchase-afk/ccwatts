@@ -9,6 +9,8 @@ export interface ReceiptInput {
   params: Params;
   /** e.g. "last 30 days" */
   windowLabel: string;
+  /** True for the playground's synthetic sample, so nothing reads as a real measurement. */
+  sample?: boolean | undefined;
 }
 
 /** Up to two everyday comparisons big enough to picture (at least 1 of the thing), else the largest. */
@@ -28,22 +30,39 @@ function whose(windowLabel: string): string {
   return `My ${windowLabel} of Claude Code`;
 }
 
+/** "Sample data: last 30 days of Claude Code", with no first person. */
+function sampleWhose(windowLabel: string): string {
+  return windowLabel === "all time" ? "(Sample data) All of a sample's Claude Code use" : `(Sample data) ${windowLabel[0]!.toUpperCase()}${windowLabel.slice(1)} of Claude Code`;
+}
+
 /** One line to paste anywhere. Central value first, range right after, method version always. */
-export function shareLine({ estimate: e, params, windowLabel }: ReceiptInput): string {
+export function shareLine({ estimate: e, params, windowLabel, sample }: ReceiptInput): string {
   const t = formatEnergy(e.total);
   const first = everyday(e.total.central / 1000, params).split(" · ")[0];
-  return `${whose(windowLabel)} used about ${t.central} of electricity (range ${t.range} ${t.unit}), roughly ${first}. Estimated locally with ${APP_NAME}, method v${params.version}: ${repoShort}`;
+  return `${sample ? sampleWhose(windowLabel) : whose(windowLabel)} came to about ${t.central} of electricity (range ${t.range} ${t.unit}), like ${first}. Estimated locally with ${APP_NAME}, method v${params.version}: ${repoShort}`;
 }
 
 /** A short ready-to-paste LinkedIn post. Plain words, no hype, sources linked. */
 export function linkedInPost(input: ReceiptInput): string {
-  const { estimate: e, params, windowLabel } = input;
+  const { estimate: e, params, windowLabel, sample } = input;
   const t = formatEnergy(e.total);
   const cacheShare = e.total.central > 0 ? Math.round(((e.byType.find((r) => r.key === "cacheRead")?.energy.central ?? 0) / e.total.central) * 100) : 0;
+  if (sample) {
+    return [
+      `(Sample data) This is what ${APP_NAME} shows for a sample developer, not a real measurement. ${sampleWhose(windowLabel).replace("(Sample data) ", "")}: about ${t.central} (range ${t.range} ${t.unit}), like ${everyday(e.total.central / 1000, params).replace(" · ", " or ")}.`,
+      "",
+      `${cacheShare}% of it came from the agent re-reading context it had already seen.`,
+      "",
+      `It's a range because nobody outside the AI labs knows the real energy per token. Every assumption is sourced, and it runs entirely on your own machine, so no logs leave it.`,
+      "",
+      `Try it on your own logs: ${PLAYGROUND_URL}`,
+      `Code and method: ${REPO_URL}`,
+    ].join("\n");
+  }
   return [
-    `I measured the electricity behind my AI coding. ${whose(windowLabel)}: about ${t.central} (range ${t.range} ${t.unit}), roughly ${everyday(e.total.central / 1000, params)}.`,
+    `I estimated the electricity behind my AI coding. ${whose(windowLabel)}: about ${t.central} (range ${t.range} ${t.unit}), like ${everyday(e.total.central / 1000, params).replace(" · ", " or ")}.`,
     "",
-    `The surprise: ${cacheShare}% of it came from the agent re-reading context it had already seen.`,
+    `${cacheShare >= 50 ? "The surprise: " : ""}${cacheShare}% of it came from the agent re-reading context it had already seen.`,
     "",
     `It's a range because nobody outside the AI labs knows the real energy per token. Every assumption is sourced, and the tool runs entirely on my laptop, so no logs leave it.`,
     "",
@@ -64,7 +83,7 @@ function row(left: string, right: string, width: number): string {
  * The share card: 1200×627 (LinkedIn's link and image size). Pure string, no fonts or images
  * fetched, so it renders the same offline and in the browser.
  */
-export function receiptSvg({ estimate: e, params, windowLabel }: ReceiptInput): string {
+export function receiptSvg({ estimate: e, params, windowLabel, sample }: ReceiptInput): string {
   const W = 1200;
   const H = 627;
   const t = formatEnergy(e.total);
@@ -133,14 +152,14 @@ export function receiptSvg({ estimate: e, params, windowLabel }: ReceiptInput): 
     .join("\n    ");
 
   const headline = t.central.split(" ");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(shareLine({ estimate: e, params, windowLabel }))}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(shareLine({ estimate: e, params, windowLabel, sample }))}">
   <rect width="${W}" height="${H}" fill="#12251c"/>
   <rect x="0" y="${H - 6}" width="${W}" height="6" fill="#7cc4a0"/>
-  <text x="64" y="104" font-family="${mono}" font-size="20" letter-spacing="2" fill="#7cc4a0">CLAUDE CODE · ${esc(windowLabel.toUpperCase())}</text>
+  <text x="64" y="104" font-family="${mono}" font-size="20" letter-spacing="2" fill="#7cc4a0">${sample ? '<tspan fill="#e0b56a">SAMPLE DATA · </tspan>' : ""}CLAUDE CODE · ${esc(windowLabel.toUpperCase())}</text>
   <text x="60" y="262" font-family="${sans}" font-size="148" font-weight="700" fill="#f4f1e8">${esc(headline[0] ?? "")}<tspan font-size="64" font-weight="500" dx="14">${esc(headline[1] ?? "")}</tspan></text>
   <text x="64" y="318" font-family="${sans}" font-size="28" fill="#cfe3d6">of electricity, range ${esc(t.range)} ${unit}</text>
   ${compare.map((c, i) => `<text x="64" y="${384 + i * 38}" font-family="${sans}" font-size="26" fill="#f4f1e8">≈ ${esc(c)}</text>`).join("\n  ")}
-  <text x="64" y="520" font-family="${sans}" font-size="20" fill="#9fb8a8">Estimated on my laptop. No logs left it.</text>
+  <text x="64" y="520" font-family="${sans}" font-size="20" fill="${sample ? "#e0b56a" : "#9fb8a8"}">${sample ? "Sample data, not a real measurement." : "Estimated on my laptop. No logs left it."}</text>
   <text x="64" y="552" font-family="${mono}" font-size="17" fill="#7cc4a0">${esc(APP_NAME)} · method v${esc(params.version)}</text>
   <text x="64" y="578" font-family="${mono}" font-size="17" fill="#7cc4a0">${esc(repoShort)}</text>
   <path d="${slipPath}" fill="#f7f5ef"/>

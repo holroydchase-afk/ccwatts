@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { parseArgs } from "node:util";
+import { parseArgs, type ParseArgsConfig } from "node:util";
 import {
   APP_NAME,
   claudeCodeAdapter,
   dedupe,
+  APP_VERSION,
+  PLAYGROUND_URL,
   defaultParams,
   estimate,
   mergeHistory,
@@ -18,7 +20,7 @@ import {
   since,
   type Dimension,
 } from "@ccwatts/core";
-import { openFile, writeDashboard } from "./dashboard.js";
+import { openFile, sampleRows, writeDashboard } from "./dashboard.js";
 import { defaultLogRoots, loadLogs } from "./logs.js";
 import { breakdown, history, historyCsv, json, method, statusLine, summary } from "./render.js";
 import { readHistory, writeHistory } from "./store.js";
@@ -42,16 +44,31 @@ Options:
   --method          Parameters, sources and method version
   --export csv      With history: daily rows as CSV on stdout
   --out <file>      With receipt: where to write the card (default ./${APP_NAME}-receipt.svg)
-  --path <dir>      Read logs from this folder instead
+  --demo            Try it on synthetic sample data (no logs needed)
+  --path <dir>      Estimate just this folder or .jsonl file (history is left alone)
   --no-open         With dashboard: write the file but don't open it
   --no-history      Don't read or update ~/.${APP_NAME}/history.jsonl
-  -h, --help        Show this help`;
+  -v, --version     Show the version
+  -h, --help        Show this help
+
+Logs somewhere else? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep your history.`;
 
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
 const COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline"];
 
+/** parseArgs errors are written for developers; say the same thing in plain words. */
+function plainArgError(error: unknown): Error | undefined {
+  const code = (error as { code?: string }).code;
+  const message = error instanceof Error ? error.message : "";
+  const option = message.match(/'(-{1,2}[\w-]+)/)?.[1];
+  const help = `Run ${APP_NAME} --help to see the options.`;
+  if (code === "ERR_PARSE_ARGS_UNKNOWN_OPTION") return new Error(`Unknown option "${option}". ${help}`);
+  if (code === "ERR_PARSE_ARGS_INVALID_OPTION_VALUE") return new Error(`${option} needs a value. ${help}`);
+  return undefined;
+}
+
 async function main(): Promise<void> {
-  const { values, positionals } = parseArgs({
+  const { values, positionals } = parseArgsPlain({
     allowPositionals: true,
     options: {
       since: { type: "string" },
@@ -61,12 +78,15 @@ async function main(): Promise<void> {
       export: { type: "string" },
       out: { type: "string" },
       path: { type: "string" },
+      demo: { type: "boolean" },
       "no-history": { type: "boolean" },
       "no-open": { type: "boolean" },
+      version: { type: "boolean", short: "v" },
       help: { type: "boolean", short: "h" },
     },
   });
   if (values.help) return void console.log(HELP);
+  if (values.version) return void console.log(`${APP_NAME} ${APP_VERSION}`);
   const params = defaultParams;
   if (values.method) return void console.log(method(params));
 
@@ -81,12 +101,24 @@ async function main(): Promise<void> {
   if (by && !DIMS.includes(by)) throw new Error(`--by must be one of: ${DIMS.join(", ")}`);
   if (values.export && values.export !== "csv") throw new Error(`--export supports csv only`);
 
-  const window = parseSince(values.since ?? (command === "history" ? "all" : "30d"), new Date());
-  const logs = await loadLogs(values.path ? [values.path] : defaultLogRoots());
+  const demo = Boolean(values.demo);
+  if (demo && (command === "receipt" || command === "dashboard")) {
+    throw new Error(
+      `${command} is for your own usage, so it doesn't run on sample data. ` +
+        `The playground shows the sample ${command === "receipt" ? "card" : "dashboard"}: ${PLAYGROUND_URL}`,
+    );
+  }
+  const logs = demo ? { roots: [], files: 0, records: [] } : await loadLogs(values.path ? [values.path] : defaultLogRoots());
+  const sample = demo ? sampleRows() : [];
+  // The sample is a fixed month in the past: show all of it, and count --since back from its last day.
+  const now = demo ? new Date(`${sample.map((r) => r.date).sort().at(-1)}T23:59:59Z`) : new Date();
+  const window = parseSince(values.since ?? (command === "history" || demo ? "all" : "30d"), now);
 
   // History keeps daily token counts so usage survives Claude Code's log cleanup.
-  let rows = rollup(logs.records);
-  if (!values["no-history"]) {
+  let rows = demo ? sample : rollup(logs.records);
+  // --path estimates exactly what you point it at (often the sample data), so it never mixes
+  // into or writes your personal history. Relocated logs use CLAUDE_CONFIG_DIR instead.
+  if (!values["no-history"] && !values.path && !demo) {
     const stored = await readHistory().catch((error: unknown) => {
       console.error(`Couldn't read history (${error instanceof Error ? error.message : String(error)}). Using current logs only.`);
       return [];
@@ -102,6 +134,7 @@ async function main(): Promise<void> {
   if (rows.length === 0) {
     console.log(`No Claude Code logs found. Looked in:\n${logs.roots.map((r) => `  ${r}`).join("\n")}`);
     console.log(`Point ${APP_NAME} at another folder with --path <dir>.`);
+    console.log(`No Claude Code yet? See it on sample data with ${APP_NAME} --demo, or in your browser: ${PLAYGROUND_URL}`);
     return;
   }
 
@@ -121,9 +154,11 @@ async function main(): Promise<void> {
     e.responses = inWindow.reduce((n, r) => n + r.responses, 0);
   }
 
+  const label = demo && !values.json && !values.export ? "Sample data (synthetic), not your usage.\n\n" : "";
   if (command === "history") {
     if (values.export) return void console.log(historyCsv(inWindow, params));
-    if (values.json) return void console.log(json(e, params, window));
+    if (values.json) return void console.log(json(e, params, window, demo));
+    if (label) process.stdout.write(label);
     return void console.log(history(e, params, window, new Set(rows.map((r) => r.date)).size));
   }
   if (command === "receipt") {
@@ -135,9 +170,18 @@ async function main(): Promise<void> {
     console.log(`\nReady-to-paste post:\n\n${linkedInPost(input)}`);
     return;
   }
-  if (values.json) console.log(json(e, params, window));
-  else if (by) console.log(breakdown(e, params, window, by));
-  else console.log(summary(e, params, window));
+  if (values.json) return void console.log(json(e, params, window, demo));
+  if (label) process.stdout.write(label);
+  if (by) console.log(breakdown(e, params, window, by));
+  else console.log(summary(e, params, window, demo));
+}
+
+function parseArgsPlain<T extends ParseArgsConfig>(config: T): ReturnType<typeof parseArgs<T>> {
+  try {
+    return parseArgs(config);
+  } catch (error) {
+    throw plainArgError(error) ?? error;
+  }
 }
 
 /**

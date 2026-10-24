@@ -19,3 +19,12 @@ export function injectData(html: string, payload: PagePayload): string {
   if (!DATA_MARKER.test(html)) throw new Error("Dashboard template is missing its data slot.");
   return html.replace(DATA_MARKER, (_m, open: string, _old: string, close: string) => `${open}${safeJson(payload)}${close}`);
 }
+
+const SAMPLE_MARKER = /<script id="ccwatts-sample" type="application\/json">([\s\S]*?)<\/script>/;
+
+/** The synthetic sample rollups the page ships with (built from fixtures/claude-code/demo.jsonl). */
+export function readSample(html: string): RollupRow[] {
+  const json = SAMPLE_MARKER.exec(html)?.[1];
+  if (!json) throw new Error("Page is missing its sample data.");
+  return JSON.parse(json) as RollupRow[];
+}

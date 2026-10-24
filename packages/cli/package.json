@@ -1,19 +1,42 @@
 {
   "name": "ccwatts",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
   "description": "Estimate the electricity your Claude Code usage consumes.",
   "type": "module",
   "bin": {
-    "ccwatts": "./dist/index.js"
+    "ccwatts": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "prepack": "cp ../../LICENSE LICENSE"
   },
-  "dependencies": {
+  "devDependencies": {
     "@ccwatts/core": "0.0.0"
-  }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holroydchase-afk/ccwatts.git",
+    "directory": "packages/cli"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://chaseholroyd.com/ccwatts/",
+  "keywords": [
+    "claude-code",
+    "energy",
+    "electricity",
+    "kwh",
+    "carbon",
+    "cli"
+  ]
 }

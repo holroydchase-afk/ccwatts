@@ -12,3 +12,4 @@ coverage/
 # Local outputs
 ccwatts-receipt.*
 .ccwatts/
+packages/cli/LICENSE

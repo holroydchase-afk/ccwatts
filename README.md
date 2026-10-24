@@ -2,9 +2,11 @@
 
 **See how much electricity your AI coding uses.** ccwatts reads the logs Claude Code already keeps on your machine and turns token counts into an electricity estimate. The estimate is always a range, and every assumption is sourced.
 
-![ccwatts summary in the terminal](docs/images/cli-summary.png)
+**[Try it in your browser](https://chaseholroyd.com/ccwatts/)**: it opens on sample data, needs no install or sign-in, and your own logs never leave the page.
 
-> Screenshots use synthetic sample data (`fixtures/claude-code/demo.jsonl`), not anyone's real usage.
+![ccwatts running in a terminal on sample data: one command prints an electricity range, an everyday comparison and the split by model, token type and project](docs/images/cli-demo.gif)
+
+> Screenshots and the terminal recording use synthetic sample data (`fixtures/claude-code/demo.jsonl`), not anyone's real usage. The output is the real CLI's.
 
 ## Why it exists
 
@@ -25,9 +27,9 @@ Developers run AI agents all day, and almost nobody can see what that costs in e
 - **`ccwatts receipt`**: a share line, a ready-to-paste LinkedIn post, and a 1200×627 card.
 - **`ccwatts dashboard`**: an offline HTML dashboard of your history, with "Save PNG for LinkedIn".
 
-| Dashboard | Share card | Playground on a phone |
+| Playground on a laptop | Share card | Playground on a phone |
 |---|---|---|
-| ![Dashboard](docs/images/dashboard.png) | ![Receipt card](docs/images/receipt-sample.png) | ![Playground on a phone](docs/images/playground-phone.png) |
+| ![Playground on a laptop, showing sample data](docs/images/playground-laptop.png) | ![Receipt card](docs/images/receipt-sample.png) | ![Playground on a phone, showing sample data](docs/images/playground-phone.png) |
 
 ## How the estimate works
 
@@ -45,17 +47,17 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 
 ## Try it
 
-Not on npm yet, because the name isn't final. From a clone:
+ccwatts is on npm. With Node 20+:
 
 ```
-npm install
-npm run build
-node packages/cli/dist/index.js            # your last 30 days
-node packages/cli/dist/index.js dashboard  # offline dashboard
-node packages/cli/dist/index.js --path fixtures/claude-code/demo.jsonl   # sample data
+npx ccwatts               # your last 30 days
+npx ccwatts --by project  # also: model, day, type
+npx ccwatts history       # weekly trend, survives log cleanup
+npx ccwatts receipt       # share line, LinkedIn post and card
+npx ccwatts dashboard     # offline dashboard
 ```
 
-Node 20+. No runtime dependencies.
+No runtime dependencies. To build from source: `npm install && npm run build && node packages/cli/dist/index.js`.
 
 ### Inside Claude Code
 
@@ -74,7 +76,7 @@ TypeScript monorepo: `packages/core` holds the pure parsing, energy model and re
 
 ## Status
 
-v0.1, pre-release. Next steps: run it on real logs from a few developers (friend beta), get an outside check of the cache-read factor, and publish to npm.
+v0.1.0, on npm. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 
