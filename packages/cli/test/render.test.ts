@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { claudeCodeAdapter, defaultParams as params, estimate, parseSince } from "@ccwatts/core";
-import { breakdown, energy, history, json, method, num, sparkline, summary } from "../src/render.js";
+import { breakdown, energy, history, json, method, num, sparkline, statusLine, summary } from "../src/render.js";
 
 const sample = readFileSync(new URL("../../../fixtures/claude-code/sample.jsonl", import.meta.url), "utf8");
 const e = estimate(claudeCodeAdapter.parse(sample), params);
@@ -76,5 +76,19 @@ describe("history", () => {
     expect(out).toMatchSnapshot();
     expect(out).toContain("Trend");
     expect(sparkline([0, 1, 2])).toBe("▁▅█");
+  });
+});
+
+describe("statusLine", () => {
+  it("is one short line with a range and the method version", () => {
+    const line = statusLine(e, params);
+    expect(line.split("\n")).toHaveLength(1);
+    expect(line).toMatch(/range [\d.]+ – [\d.]+/);
+    expect(line).toContain(`method v${params.version}`);
+    expect(line.length).toBeLessThan(80);
+  });
+
+  it("says so before the first response", () => {
+    expect(statusLine(estimate([], params), params)).toContain("no usage yet");
   });
 });
