@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { RollupRow } from "@ccwatts/core";
-import { injectData } from "../../web/src/inject.js";
+import { injectData, readSample } from "../../web/src/inject.js";
 import template from "../../web/dist/ccwatts.html";
 import { dataDir } from "./store.js";
 
@@ -25,3 +25,6 @@ export function openFile(path: string): void {
     // Opening is a convenience; the path is printed either way.
   }
 }
+
+/** Synthetic sample rollups, the same ones the playground opens on. Counts only. */
+export const sampleRows = (): RollupRow[] => readSample(template);

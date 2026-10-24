@@ -77,9 +77,10 @@ function renderHero(e: Estimate, label: string) {
   $("hero-big").innerHTML = e.responses ? `${esc(value ?? "")}<small>${esc(unit ?? "")}</small>` : "–";
   $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}, from the bounds on every assumption.` : "No usage in this window.";
   $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
-  const span = e.span ? ` · ${e.span.from} to ${e.span.to}` : "";
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
-  $("hero-meta").textContent = `${int(e.responses)} responses · ${int(tokens)} tokens${span} · method v${params.version}`;
+  // One span per item, kept whole, so a phone wraps between items and never inside a date.
+  const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [`${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
+  $("hero-meta").innerHTML = items.map((i) => `<span>${esc(i)}</span>`).join(" · ");
   for (const id of ["7d", "30d", "all"] as WindowId[]) $(`w-${id}`).setAttribute("aria-pressed", String(state.window === id));
 }
 
