@@ -80,5 +80,14 @@ describe("receipt", () => {
       expect(t.range).toBe("0.09 – 2.2");
       expect(formatEnergy({ low: 2.3, central: 9.1, high: 27.5 }).unit).toBe("Wh");
     });
+
+    // CCW-RR-21: the dashboard showed "8 kWh" where the playground showed "8.5 kWh".
+    it("keeps one decimal between 1 and 100 so totals line up across surfaces", () => {
+      expect(formatEnergy({ low: 1200, central: 8000, high: 30000 }).central).toBe("8.0 kWh");
+      expect(formatEnergy({ low: 1300, central: 8500, high: 30500 }).range).toBe("1.3 – 30.5");
+      expect(formatEnergy({ low: 1000, central: 2000, high: 3000 }).range).toBe("1.0 – 3.0");
+      expect(formatEnergy({ low: 88.5, central: 618, high: 2155 }).central).toBe("0.62 kWh");
+      expect(formatEnergy({ low: 120, central: 340, high: 900 }).central).toBe("340 Wh");
+    });
   });
 });

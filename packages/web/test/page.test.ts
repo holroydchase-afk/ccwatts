@@ -59,6 +59,15 @@ describe("first screen (recruiter-ready RR-1, RR-3)", () => {
   });
 });
 
+describe("CLI on npm (recruiter-ready RR-22)", () => {
+  it("tells visitors the same tool runs in a terminal with npx", () => {
+    expect(html).toMatch(/id="cli-line"[^>]*>[^<]*Prefer the terminal\?/);
+    expect(html).toContain('id="cli-cmd"');
+    expect(html).toContain("`npx ${");
+    expect(html).toContain("Node 20+");
+  });
+});
+
 describe("accessibility (recruiter-ready RR-5, RR-6, RR-9, RR-12)", () => {
   it("keeps the file pickers in the tab order (visually hidden, not hidden)", () => {
     for (const id of ["pick-folder", "pick-files"]) {
