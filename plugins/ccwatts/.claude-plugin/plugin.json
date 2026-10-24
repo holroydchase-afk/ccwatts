@@ -1,0 +1,10 @@
+{
+  "name": "ccwatts",
+  "version": "0.1.1",
+  "description": "Estimate the electricity your Claude Code usage consumes, as a sourced range. Reads local logs only; nothing leaves your machine.",
+  "author": { "name": "Chase Holroyd", "url": "https://chaseholroyd.com" },
+  "homepage": "https://chaseholroyd.com/ccwatts/",
+  "repository": "https://github.com/holroydchase-afk/ccwatts",
+  "license": "MIT",
+  "keywords": ["energy", "electricity", "climate", "usage"]
+}

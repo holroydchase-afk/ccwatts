@@ -1,0 +1,12 @@
+{
+  "name": "ccwatts",
+  "owner": { "name": "Chase Holroyd", "url": "https://chaseholroyd.com" },
+  "description": "Estimate the electricity your Claude Code usage consumes, as a sourced range. Local only.",
+  "plugins": [
+    {
+      "name": "ccwatts",
+      "source": "./plugins/ccwatts",
+      "description": "/ccwatts for your kWh range, plus an optional status line for the current session."
+    }
+  ]
+}

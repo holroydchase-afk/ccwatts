@@ -11,7 +11,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build -w packages/core -w packages/web -w packages/cli",
+    "build": "npm run build -w packages/core -w packages/web -w packages/cli && node scripts/build-plugin.mjs",
     "typecheck": "tsc -p packages/core && tsc -p packages/web && tsc -p packages/cli",
     "test": "node packages/web/build.mjs && vitest run",
     "check:browser": "node scripts/check-no-network.mjs",

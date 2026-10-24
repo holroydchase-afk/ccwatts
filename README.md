@@ -59,6 +59,17 @@ npx ccwatts dashboard     # offline dashboard
 
 No runtime dependencies. To build from source: `npm install && npm run build && node packages/cli/dist/index.js`.
 
+### Inside Claude Code
+
+ccwatts is also a Claude Code plugin, so you can check your number without leaving a session:
+
+```
+/plugin marketplace add holroydchase-afk/ccwatts
+/plugin install ccwatts@ccwatts
+```
+
+Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same options as the CLI, for example `/ccwatts history` or `/ccwatts --by project`. Run `/ccwatts:statusline` once to add a status line that shows the current session's estimate after every response. The plugin runs the same local CLI, so nothing leaves your machine.
+
 ## How it's built
 
 TypeScript monorepo: `packages/core` holds the pure parsing, energy model and receipt code, shared by `packages/cli` (terminal) and `packages/web` (one static HTML page). Log parsing sits behind a small adapter interface, so other agent CLIs can be added later without touching the energy model. The product reasoning is written down: [VISION.md](VISION.md) (problems and answers), [ANCHORS.md](ANCHORS.md) (decisions and what was cut), [PLAN.md](PLAN.md) (build plan) and [IDEAS.md](IDEAS.md) (ideas and lessons).

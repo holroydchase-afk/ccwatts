@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import {
   APP_NAME,
+  claudeCodeAdapter,
+  dedupe,
   APP_VERSION,
   PLAYGROUND_URL,
   defaultParams,
@@ -20,7 +22,7 @@ import {
 } from "@ccwatts/core";
 import { openFile, sampleRows, writeDashboard } from "./dashboard.js";
 import { defaultLogRoots, loadLogs } from "./logs.js";
-import { breakdown, history, historyCsv, json, method, summary } from "./render.js";
+import { breakdown, history, historyCsv, json, method, statusLine, summary } from "./render.js";
 import { readHistory, writeHistory } from "./store.js";
 
 const HELP = `Usage: ${APP_NAME} [command] [options]
@@ -33,6 +35,7 @@ Commands:
   history           Weekly trend, all-time total, best and worst weeks
   dashboard         Write an offline HTML dashboard of your history and open it
   receipt           Share line, LinkedIn post text and a 1200×627 card (SVG)
+  statusline        One line for the Claude Code status line (reads its JSON on stdin)
 
 Options:
   --since <when>    7d, 12h, 4w, 2026-10-01 or all (default 30d; history defaults to all)
@@ -51,7 +54,7 @@ Options:
 Logs somewhere else? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep your history.`;
 
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
-const COMMANDS = ["summary", "history", "receipt", "dashboard"];
+const COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline"];
 
 /** parseArgs errors are written for developers; say the same thing in plain words. */
 function plainArgError(error: unknown): Error | undefined {
@@ -93,6 +96,7 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  if (command === "statusline") return void console.log(await sessionLine(values.path));
   const by = values.by as Dimension | undefined;
   if (by && !DIMS.includes(by)) throw new Error(`--by must be one of: ${DIMS.join(", ")}`);
   if (values.export && values.export !== "csv") throw new Error(`--export supports csv only`);
@@ -178,6 +182,29 @@ function parseArgsPlain<T extends ParseArgsConfig>(config: T): ReturnType<typeof
   } catch (error) {
     throw plainArgError(error) ?? error;
   }
+}
+
+/**
+ * Claude Code runs the status line after every response and passes the session's transcript
+ * path on stdin. We read token counts from that one file and never touch history, so it stays
+ * fast and side-effect free. Any problem prints a quiet line rather than an error.
+ */
+async function sessionLine(path?: string): Promise<string> {
+  try {
+    const file = path ?? (JSON.parse(await readStdin()) as { transcript_path?: string }).transcript_path;
+    if (!file) return `⚡ ${APP_NAME}: waiting for the first response`;
+    const records = dedupe(claudeCodeAdapter.parse(await readFile(file, "utf8")));
+    return statusLine(estimate(records, defaultParams), defaultParams);
+  } catch {
+    return `⚡ ${APP_NAME}: no estimate yet`;
+  }
+}
+
+async function readStdin(): Promise<string> {
+  if (process.stdin.isTTY) return "{}";
+  let text = "";
+  for await (const chunk of process.stdin) text += chunk;
+  return text || "{}";
 }
 
 main().catch((error: unknown) => {
