@@ -55,7 +55,7 @@ describe("method", () => {
 
 describe("formatting", () => {
   it("switches to kWh at 1000 Wh", () => {
-    expect(energy({ low: 400, central: 1200, high: 3000 })).toEqual({ central: "1.2 kWh", range: "0.4 – 3", unit: "kWh" });
+    expect(energy({ low: 400, central: 1200, high: 3000 })).toEqual({ central: "1.2 kWh", range: "0.4 – 3.0", unit: "kWh" });
     expect(num(0.004)).toBe("0.004");
   });
 });

@@ -201,26 +201,37 @@ export interface ComparisonLine {
   text: string;
 }
 
+/** Phone charges in words: "about half a phone charge" rather than "0.5 times" for small totals. */
+function phoneText(charges: number, round: (n: number) => number): string {
+  if (round(charges) === 1) return "charging a phone about once";
+  if (charges >= 1) return `charging a phone about ${round(charges)} times`;
+  const pct = Math.round(charges * 100);
+  if (pct < 1) return "under 1% of a phone charge";
+  if (pct >= 45 && pct <= 55) return "about half a phone charge";
+  return `about ${Math.round(pct / 10) * 10 || pct}% of a phone charge`;
+}
+
 /** Everyday equivalents for a kWh amount, always from the central value, in display order. */
 export function comparisons(kwh: number, params: Params): ComparisonLine[] {
   const c = params.comparisons;
   const out: ComparisonLine[] = [];
   const round = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10);
+  const count = (n: number, one: string, many: string) => (round(n) === 1 ? `1 ${one}` : `${round(n)} ${many}`);
   if (c.ev_kwh_per_mile) {
     const miles = kwh / c.ev_kwh_per_mile.value;
-    out.push({ id: "ev", amount: miles, text: `driving an EV about ${round(miles)} miles` });
+    out.push({ id: "ev", amount: miles, text: `driving an EV about ${count(miles, "mile", "miles")}` });
   }
   if (c.fridge_kwh_per_day) {
     const days = kwh / c.fridge_kwh_per_day.value;
-    out.push({ id: "fridge", amount: days, text: `running a fridge about ${round(days)} days` });
+    out.push({ id: "fridge", amount: days, text: `running a fridge about ${count(days, "day", "days")}` });
   }
   if (c.phone_charge_kwh) {
     const charges = kwh / c.phone_charge_kwh.value;
-    out.push({ id: "phone", amount: charges, text: `charging a phone about ${round(charges)} times` });
+    out.push({ id: "phone", amount: charges, text: phoneText(charges, round) });
   }
   if (c.us_home_kwh_per_day) {
     const days = kwh / c.us_home_kwh_per_day.value;
-    out.push({ id: "home", amount: days, text: `powering a US home about ${round(days)} days` });
+    out.push({ id: "home", amount: days, text: `powering a US home about ${count(days, "day", "days")}` });
   }
   return out;
 }
