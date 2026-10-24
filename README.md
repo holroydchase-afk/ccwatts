@@ -72,11 +72,11 @@ Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same opt
 
 ## How it's built
 
-TypeScript monorepo: `packages/core` holds the pure parsing, energy model and receipt code, shared by `packages/cli` (terminal) and `packages/web` (one static HTML page). Log parsing sits behind a small adapter interface, so other agent CLIs can be added later without touching the energy model. The product reasoning is written down: [VISION.md](VISION.md) (problems and answers), [ANCHORS.md](ANCHORS.md) (decisions and what was cut), [PLAN.md](PLAN.md) (build plan) and [IDEAS.md](IDEAS.md) (ideas and lessons).
+TypeScript monorepo: `packages/core` holds the pure parsing, energy model and receipt code, shared by `packages/cli` (terminal) and `packages/web` (one static HTML page). `plugins/ccwatts` wraps the same CLI as a Claude Code plugin. Log parsing sits behind a small adapter interface, so other agent CLIs can be added later without touching the energy model. The product reasoning is written down: [VISION.md](VISION.md) (problems and answers), [ANCHORS.md](ANCHORS.md) (decisions and what was cut), [PLAN.md](PLAN.md) (build plan) and [IDEAS.md](IDEAS.md) (ideas and lessons).
 
 ## Status
 
-v0.1.0, on npm. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
+v0.1.0 on npm, plus a Claude Code plugin from this repo. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 
