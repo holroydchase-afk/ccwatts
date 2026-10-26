@@ -82,16 +82,15 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 ## In progress
 - M2.2 ship prep (everything except the npm publish). Done so far: fixed a packaging bug (the CLI listed the unpublished `@ccwatts/core` as a runtime dependency, so `npm install` of the tarball failed with a 404; it is bundled anyway, so it is now a devDependency), added a test that the CLI has no runtime dependencies, and ran a clean install of `npm pack` output into an empty project with an empty HOME: install took under a second, the summary and `dashboard` worked on the demo fixture.
 - Oct 23: name decided (ccwatts, ANCHORS P1). The CLI package is publish-ready: `private` removed, `publishConfig.access` public, an npm README (`packages/cli/README.md`), and LICENSE copied in on pack (gitignored). `npm publish --dry-run` from `packages/cli` passes (4 files, 88 KB bundle), and a clean tarball install runs. `ccwatts` was still free on npm on Oct 23.
-- M2.2 close-out: PR #39 merged (Oct 24). Version bumped to 0.1.1 in `packages/cli/package.json` and `APP_VERSION` (this PR). Chase: set up Trusted Publishing on npm (issue #38), then Actions → Publish to npm → `0.1.1`, then delete the token and the `NPM_TOKEN` secret. After 0.1.1 is live, add `npx ccwatts --demo` to the root README.
+- M2.2 done (Oct 26): Chase merged #41 and published ccwatts@0.1.1 from the Actions workflow (`npx ccwatts@0.1.1 --demo` verified with an empty HOME), then deleted the npm token and the `NPM_TOKEN` secret. README Try it now lists `npx ccwatts --demo`.
 
 ## Exact next step
 - M2.4, Chase (optional, on a laptop): `/plugin marketplace add holroydchase-afk/ccwatts`, `/plugin install ccwatts@ccwatts`, then `/ccwatts` and `/ccwatts:statusline`.
 - Recruiter-ready stack is merged. Chase: paste the RR-2 INTAKE (in `docs/reviews/2026-10-22-recruiter-ready.md`) into Product Studio if not done.
 - M2.1: Chase has only used Claude Code in the browser (cloud sessions), so his Mac has no `~/.claude/projects` logs yet. Oct 23: ran the CLI on a real cloud session's own log (95 responses, 13.5M tokens, Opus 5.5) and it matched an independent dedupe count exactly (same responses, same tokens). Still to do: a run on a local install once Chase uses Claude Code on his Mac, to record `cleanupPeriodDays` (cloud containers have no settings.json).
 - M1.9 playground hosting (PR #12): live at chaseholroyd.com/ccwatts/ since Oct 21 (Pages deploys from `main` succeed).
-- Chase: after 0.1.0, switch npm to trusted publishing and delete the token and the `NPM_TOKEN` secret (issue #38). Bypass-2FA direct publish ends January 2027.
-- Chase: publish 0.1.1 (Actions → "Publish to npm" → Run workflow → `0.1.1`) while the token is still valid (about Oct 30), then do issue #38. npm still serves 0.1.0, which has no `--demo` (RR-24). After it's live, add `npx ccwatts --demo` to the README's Try it block.
-- Product Studio: paste the RR-23 INTAKE (portfolio "Stack" line still says "on npm once the name is final").
+- Next release: set up npm Trusted Publishing first (issue #38; package Settings → Trusted Publisher → GitHub Actions, workflow `publish.yml`), within 2 days of publishing, since the setting expires unused. The token and secret are gone, so the workflow can only publish through it.
+- Product Studio: portfolio "Stack" line fix (RR-23) handed to Chase as an INTAKE on Oct 26.
 - Waiting on Chase (from the Atlas intake, logged in IDEAS.md): what "metric data" meant for the bench idea.
 
 ## Decisions to review

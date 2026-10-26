@@ -55,6 +55,7 @@ npx ccwatts --by project  # also: model, day, type
 npx ccwatts history       # weekly trend, survives log cleanup
 npx ccwatts receipt       # share line, LinkedIn post and card
 npx ccwatts dashboard     # offline dashboard
+npx ccwatts --demo        # no Claude Code logs? try it on sample data
 ```
 
 No runtime dependencies. To build from source: `npm install && npm run build && node packages/cli/dist/index.js`.
@@ -76,7 +77,7 @@ TypeScript monorepo: `packages/core` holds the pure parsing, energy model and re
 
 ## Status
 
-v0.1.0 on npm, plus a Claude Code plugin from this repo. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
+v0.1.1 on npm, plus a Claude Code plugin from this repo. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 
