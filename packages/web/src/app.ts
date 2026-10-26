@@ -365,6 +365,7 @@ function wire() {
   });
 
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;
+  $("cli-cmd").textContent = `npx ${APP_NAME}`;
   ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
   if (payload.mode === "playground") {
     const back = $<HTMLAnchorElement>("back-link");

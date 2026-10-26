@@ -107,4 +107,23 @@ describe("comparisons", () => {
     const [ev] = comparisons(3, params);
     expect(ev?.amount).toBeCloseTo(10, 5);
   });
+
+  // CCW-RR-20: tiny totals read "charging a phone about 0.5 times".
+  it("says a fraction of a phone charge in words, not '0.5 times'", () => {
+    const phone = (kwh: number) => comparisons(kwh, params).find((c) => c.id === "phone")?.text;
+    expect(phone(0.0095)).toBe("about half a phone charge");
+    expect(phone(0.0057)).toBe("about 30% of a phone charge");
+    expect(phone(0.00005)).toBe("under 1% of a phone charge");
+    expect(phone(0.019)).toBe("charging a phone about once");
+    expect(phone(0.038)).toBe("charging a phone about 2 times");
+  });
+
+  it("uses the singular for exactly one mile or day", () => {
+    const all = comparisons(0.3, params);
+    const ev = params.comparisons.ev_kwh_per_mile!.value;
+    expect(comparisons(ev, params).find((c) => c.id === "ev")?.text).toBe("driving an EV about 1 mile");
+    const fridge = params.comparisons.fridge_kwh_per_day!.value;
+    expect(comparisons(fridge, params).find((c) => c.id === "fridge")?.text).toBe("running a fridge about 1 day");
+    for (const c of all) expect(c.text).not.toMatch(/\b1 (miles|days|times)\b/);
+  });
 });
