@@ -36,6 +36,7 @@ _Updated 2026-10-21._
 - 2026-10-23: the playground's "Try it on your own logs" box adds a copy-paste prompt and a paste box for Claude Code on the web users (PR pending). No portfolio change needed.
 - 2026-10-23: README phone/laptop screenshots re-shot (hero meta line no longer splits a date on phones). Share text now says "like driving an EV about N miles" instead of "roughly driving…". If the portfolio quotes the share line, it can update.
 - 2026-10-24: the playground's try-it box says "Prefer the terminal? Run `npx ccwatts` with Node 20+" (RR-22). Portfolio "Stack" line is stale ("on npm once the name is final"): INTAKE in `docs/reviews/2026-10-24-recruiter-ready-r2.md` (RR-23).
+- 2026-10-26: portfolio page updated from this project's intake (holroydchase-afk.github.io PR #28, WEB-M7.3): eyebrow "Developer tool · on npm · playground live"; Stack says to run `npx ccwatts` (try `npx ccwatts --demo` without logs) and names the plugin (`/plugin marketplace add holroydchase-afk/ccwatts`). RR-23 is done.
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
