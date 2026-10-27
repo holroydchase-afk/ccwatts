@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bad page</title>
+<style>body{margin:0;font:17px system-ui}.wide{width:900px;height:10px;background:#ccc}button{height:24px}.tiny{font-size:9px}</style>
+</head><body>
+<h1>TODO: write the headline</h1>
+<div class="wide"></div>
+<button id="small">Tiny</button>
+<button id="unreachable" tabindex="-1">Skip me</button>
+<p class="tiny">Fine print nobody can read.</p>
+<img src="missing-image.png" alt="Broken">
+<script>console.error("boom"); fetch("https://example.com/track").catch(() => {});</script>
+</body></html>

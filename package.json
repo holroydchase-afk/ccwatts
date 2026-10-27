@@ -15,6 +15,8 @@
     "typecheck": "tsc -p packages/core && tsc -p packages/web && tsc -p packages/cli",
     "test": "node packages/web/build.mjs && vitest run",
     "check:browser": "node scripts/check-no-network.mjs",
+    "check:kit": "node tools/showcase-check/selftest.mjs",
+    "check:page": "node tools/showcase-check/cli.mjs",
     "start": "npm run build && node packages/cli/dist/index.js"
   },
   "devDependencies": {
