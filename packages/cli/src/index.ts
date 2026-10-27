@@ -10,20 +10,15 @@ import {
   PLAYGROUND_URL,
   defaultParams,
   estimate,
-  mergeHistory,
   parseSince,
-  rollup,
   linkedInPost,
   receiptSvg,
-  rollupRecords,
   shareLine,
-  since,
   type Dimension,
 } from "@ccwatts/core";
-import { openFile, sampleRows, writeDashboard } from "./dashboard.js";
-import { defaultLogRoots, loadLogs } from "./logs.js";
+import { openFile, writeDashboard } from "./dashboard.js";
 import { breakdown, history, historyCsv, json, method, statusLine, summary } from "./render.js";
-import { readHistory, writeHistory } from "./store.js";
+import { estimateWindow, loadUsage, rowsIn, type UsageOptions } from "./usage.js";
 
 const HELP = `Usage: ${APP_NAME} [command] [options]
 
@@ -36,6 +31,7 @@ Commands:
   dashboard         Write an offline HTML dashboard of your history and open it
   receipt           Share line, LinkedIn post text and a 1200×627 card (SVG)
   statusline        One line for the Claude Code status line (reads its JSON on stdin)
+  mcp               MCP server on stdio, so Claude Code can ask about its own energy use
 
 Options:
   --since <when>    7d, 12h, 4w, 2026-10-01 or all (default 30d; history defaults to all)
@@ -54,7 +50,7 @@ Options:
 Logs somewhere else? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep your history.`;
 
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
-const COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline"];
+const COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline", "mcp"];
 
 /** parseArgs errors are written for developers; say the same thing in plain words. */
 function plainArgError(error: unknown): Error | undefined {
@@ -97,6 +93,7 @@ async function main(): Promise<void> {
     return;
   }
   if (command === "statusline") return void console.log(await sessionLine(values.path));
+  if (command === "mcp") return runMcp({ path: values.path, demo: values.demo, noHistory: values["no-history"] });
   const by = values.by as Dimension | undefined;
   if (by && !DIMS.includes(by)) throw new Error(`--by must be one of: ${DIMS.join(", ")}`);
   if (values.export && values.export !== "csv") throw new Error(`--export supports csv only`);
@@ -108,31 +105,11 @@ async function main(): Promise<void> {
         `The playground shows the sample ${command === "receipt" ? "card" : "dashboard"}: ${PLAYGROUND_URL}`,
     );
   }
-  const logs = demo ? { roots: [], files: 0, records: [] } : await loadLogs(values.path ? [values.path] : defaultLogRoots());
-  const sample = demo ? sampleRows() : [];
-  // The sample is a fixed month in the past: show all of it, and count --since back from its last day.
-  const now = demo ? new Date(`${sample.map((r) => r.date).sort().at(-1)}T23:59:59Z`) : new Date();
-  const window = parseSince(values.since ?? (command === "history" || demo ? "all" : "30d"), now);
-
-  // History keeps daily token counts so usage survives Claude Code's log cleanup.
-  let rows = demo ? sample : rollup(logs.records);
-  // --path estimates exactly what you point it at (often the sample data), so it never mixes
-  // into or writes your personal history. Relocated logs use CLAUDE_CONFIG_DIR instead.
-  if (!values["no-history"] && !values.path && !demo) {
-    const stored = await readHistory().catch((error: unknown) => {
-      console.error(`Couldn't read history (${error instanceof Error ? error.message : String(error)}). Using current logs only.`);
-      return [];
-    });
-    rows = mergeHistory(stored, rows);
-    // History is a convenience: a read-only home folder shouldn't stop the estimate.
-    if (logs.records.length > 0) {
-      await writeHistory(rows).catch((error: unknown) =>
-        console.error(`Couldn't save history (${error instanceof Error ? error.message : String(error)}). Continuing without it.`),
-      );
-    }
-  }
+  const usage = await loadUsage({ path: values.path, demo, noHistory: values["no-history"] });
+  const { rows } = usage;
+  const window = parseSince(values.since ?? (command === "history" || demo ? "all" : "30d"), usage.now);
   if (rows.length === 0) {
-    console.log(`No Claude Code logs found. Looked in:\n${logs.roots.map((r) => `  ${r}`).join("\n")}`);
+    console.log(`No Claude Code logs found. Looked in:\n${usage.roots.map((r) => `  ${r}`).join("\n")}`);
     console.log(`Point ${APP_NAME} at another folder with --path <dir>.`);
     console.log(`No Claude Code yet? See it on sample data with ${APP_NAME} --demo, or in your browser: ${PLAYGROUND_URL}`);
     return;
@@ -145,14 +122,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  const inWindow = window.start ? rows.filter((r) => r.date >= window.start!.slice(0, 10)) : rows;
-  // Day rollups are coarse; within the window, raw records give exact hour-level cuts.
-  const records = window.start && window.label.includes("hour") ? since(logs.records, window.start) : rollupRecords(inWindow);
-  const e = estimate(records, params);
-  // Rollups hold one record per day/model/project, so count responses from the rows instead.
-  if (!(window.start && window.label.includes("hour"))) {
-    e.responses = inWindow.reduce((n, r) => n + r.responses, 0);
-  }
+  const inWindow = rowsIn(rows, window);
+  const e = estimateWindow(usage, window, params);
 
   const label = demo && !values.json && !values.export ? "Sample data (synthetic), not your usage.\n\n" : "";
   if (command === "history") {
@@ -198,6 +169,23 @@ async function sessionLine(path?: string): Promise<string> {
   } catch {
     return `⚡ ${APP_NAME}: no estimate yet`;
   }
+}
+
+/**
+ * The MCP server lives in its own file (dist/mcp.js) because the MCP SDK is most of its size:
+ * every other command, including the status line after each response, stays small and fast.
+ * The plain specifier keeps the bundler from inlining it.
+ */
+async function runMcp(options: UsageOptions): Promise<void> {
+  const file = new URL("./mcp.js", import.meta.url).href;
+  let mod: typeof import("./mcp.js");
+  try {
+    mod = (await import(file)) as typeof import("./mcp.js");
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ERR_MODULE_NOT_FOUND") throw error;
+    throw new Error(`This copy of ${APP_NAME} doesn't include the MCP server. Use the npm package: claude mcp add ${APP_NAME} -- npx ${APP_NAME} mcp`);
+  }
+  await mod.serveStdio(options);
 }
 
 async function readStdin(): Promise<string> {

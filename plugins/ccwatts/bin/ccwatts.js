@@ -701,31 +701,6 @@ function openFile(path) {
 }
 var sampleRows = () => readSample(ccwatts_default);
 
-// src/logs.ts
-import { readdir, readFile as readFile2, stat } from "fs/promises";
-import { homedir as homedir2 } from "os";
-import { join as join3 } from "path";
-function defaultLogRoots() {
-  const fromEnv = process.env.CLAUDE_CONFIG_DIR?.split(",").map((dir) => join3(dir.trim(), "projects"));
-  if (fromEnv?.length) return fromEnv;
-  return [join3(homedir2(), ".claude", "projects"), join3(homedir2(), ".config", "claude", "projects")];
-}
-async function findJsonl(dir) {
-  if (dir.endsWith(".jsonl") && (await stat(dir).catch(() => null))?.isFile()) return [dir];
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true, recursive: true });
-  } catch {
-    return [];
-  }
-  return entries.filter((e) => e.isFile() && e.name.endsWith(".jsonl")).map((e) => join3(e.parentPath, e.name));
-}
-async function loadLogs(roots) {
-  const files = (await Promise.all(roots.map(findJsonl))).flat();
-  const parsed = await Promise.all(files.map(async (f) => claudeCodeAdapter.parse(await readFile2(f, "utf8"))));
-  return { roots, files: files.length, records: dedupe(parsed.flat()) };
-}
-
 // src/render.ts
 var energy = formatEnergy;
 var totalTokens2 = (t) => TOKEN_TYPES.reduce((s, k) => s + t[k], 0);
@@ -889,6 +864,61 @@ function statusLine(e, params) {
   return `\u26A1 ~${t.central} this session (range ${t.range}) \xB7 method v${params.version}`;
 }
 
+// src/logs.ts
+import { readdir, readFile as readFile2, stat } from "fs/promises";
+import { homedir as homedir2 } from "os";
+import { join as join3 } from "path";
+function defaultLogRoots() {
+  const fromEnv = process.env.CLAUDE_CONFIG_DIR?.split(",").map((dir) => join3(dir.trim(), "projects"));
+  if (fromEnv?.length) return fromEnv;
+  return [join3(homedir2(), ".claude", "projects"), join3(homedir2(), ".config", "claude", "projects")];
+}
+async function findJsonl(dir) {
+  if (dir.endsWith(".jsonl") && (await stat(dir).catch(() => null))?.isFile()) return [dir];
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true, recursive: true });
+  } catch {
+    return [];
+  }
+  return entries.filter((e) => e.isFile() && e.name.endsWith(".jsonl")).map((e) => join3(e.parentPath, e.name));
+}
+async function loadLogs(roots) {
+  const files = (await Promise.all(roots.map(findJsonl))).flat();
+  const parsed = await Promise.all(files.map(async (f) => claudeCodeAdapter.parse(await readFile2(f, "utf8"))));
+  return { roots, files: files.length, records: dedupe(parsed.flat()) };
+}
+
+// src/usage.ts
+async function loadUsage(options) {
+  const demo = Boolean(options.demo);
+  const logs = demo ? { roots: [], files: 0, records: [] } : await loadLogs(options.path ? [options.path] : defaultLogRoots());
+  const sample = demo ? sampleRows() : [];
+  const now = demo ? /* @__PURE__ */ new Date(`${sample.map((r) => r.date).sort().at(-1)}T23:59:59Z`) : /* @__PURE__ */ new Date();
+  let rows = demo ? sample : rollup(logs.records);
+  if (!options.noHistory && !options.path && !demo) {
+    const stored = await readHistory().catch((error) => {
+      console.error(`Couldn't read history (${error instanceof Error ? error.message : String(error)}). Using current logs only.`);
+      return [];
+    });
+    rows = mergeHistory(stored, rows);
+    if (logs.records.length > 0) {
+      await writeHistory(rows).catch(
+        (error) => console.error(`Couldn't save history (${error instanceof Error ? error.message : String(error)}). Continuing without it.`)
+      );
+    }
+  }
+  return { rows, records: logs.records, roots: logs.roots, now, sample: demo };
+}
+var rowsIn = (rows, window) => window.start ? rows.filter((r) => r.date >= window.start.slice(0, 10)) : [...rows];
+function estimateWindow(usage, window, params) {
+  const hourly = Boolean(window.start && window.label.includes("hour"));
+  const inWindow = rowsIn(usage.rows, window);
+  const e = estimate(hourly ? since(usage.records, window.start) : rollupRecords(inWindow), params);
+  if (!hourly) e.responses = inWindow.reduce((n, r) => n + r.responses, 0);
+  return e;
+}
+
 // src/index.ts
 var HELP = `Usage: ${APP_NAME} [command] [options]
 
@@ -901,6 +931,7 @@ Commands:
   dashboard         Write an offline HTML dashboard of your history and open it
   receipt           Share line, LinkedIn post text and a 1200\xD7627 card (SVG)
   statusline        One line for the Claude Code status line (reads its JSON on stdin)
+  mcp               MCP server on stdio, so Claude Code can ask about its own energy use
 
 Options:
   --since <when>    7d, 12h, 4w, 2026-10-01 or all (default 30d; history defaults to all)
@@ -918,7 +949,7 @@ Options:
 
 Logs somewhere else? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep your history.`;
 var DIMS = ["model", "day", "project", "type"];
-var COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline"];
+var COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline", "mcp"];
 function plainArgError(error) {
   const code = error.code;
   const message = error instanceof Error ? error.message : "";
@@ -959,6 +990,7 @@ ${HELP}`);
     return;
   }
   if (command === "statusline") return void console.log(await sessionLine(values.path));
+  if (command === "mcp") return runMcp({ path: values.path, demo: values.demo, noHistory: values["no-history"] });
   const by = values.by;
   if (by && !DIMS.includes(by)) throw new Error(`--by must be one of: ${DIMS.join(", ")}`);
   if (values.export && values.export !== "csv") throw new Error(`--export supports csv only`);
@@ -968,26 +1000,12 @@ ${HELP}`);
       `${command} is for your own usage, so it doesn't run on sample data. The playground shows the sample ${command === "receipt" ? "card" : "dashboard"}: ${PLAYGROUND_URL}`
     );
   }
-  const logs = demo ? { roots: [], files: 0, records: [] } : await loadLogs(values.path ? [values.path] : defaultLogRoots());
-  const sample = demo ? sampleRows() : [];
-  const now = demo ? /* @__PURE__ */ new Date(`${sample.map((r) => r.date).sort().at(-1)}T23:59:59Z`) : /* @__PURE__ */ new Date();
-  const window = parseSince(values.since ?? (command === "history" || demo ? "all" : "30d"), now);
-  let rows = demo ? sample : rollup(logs.records);
-  if (!values["no-history"] && !values.path && !demo) {
-    const stored = await readHistory().catch((error) => {
-      console.error(`Couldn't read history (${error instanceof Error ? error.message : String(error)}). Using current logs only.`);
-      return [];
-    });
-    rows = mergeHistory(stored, rows);
-    if (logs.records.length > 0) {
-      await writeHistory(rows).catch(
-        (error) => console.error(`Couldn't save history (${error instanceof Error ? error.message : String(error)}). Continuing without it.`)
-      );
-    }
-  }
+  const usage = await loadUsage({ path: values.path, demo, noHistory: values["no-history"] });
+  const { rows } = usage;
+  const window = parseSince(values.since ?? (command === "history" || demo ? "all" : "30d"), usage.now);
   if (rows.length === 0) {
     console.log(`No Claude Code logs found. Looked in:
-${logs.roots.map((r) => `  ${r}`).join("\n")}`);
+${usage.roots.map((r) => `  ${r}`).join("\n")}`);
     console.log(`Point ${APP_NAME} at another folder with --path <dir>.`);
     console.log(`No Claude Code yet? See it on sample data with ${APP_NAME} --demo, or in your browser: ${PLAYGROUND_URL}`);
     return;
@@ -998,12 +1016,8 @@ ${logs.roots.map((r) => `  ${r}`).join("\n")}`);
     if (!values["no-open"]) openFile(path);
     return;
   }
-  const inWindow = window.start ? rows.filter((r) => r.date >= window.start.slice(0, 10)) : rows;
-  const records = window.start && window.label.includes("hour") ? since(logs.records, window.start) : rollupRecords(inWindow);
-  const e = estimate(records, params);
-  if (!(window.start && window.label.includes("hour"))) {
-    e.responses = inWindow.reduce((n, r) => n + r.responses, 0);
-  }
+  const inWindow = rowsIn(rows, window);
+  const e = estimateWindow(usage, window, params);
   const label = demo && !values.json && !values.export ? "Sample data (synthetic), not your usage.\n\n" : "";
   if (command === "history") {
     if (values.export) return void console.log(historyCsv(inWindow, params));
@@ -1045,6 +1059,17 @@ async function sessionLine(path) {
   } catch {
     return `\u26A1 ${APP_NAME}: no estimate yet`;
   }
+}
+async function runMcp(options) {
+  const file = new URL("./mcp.js", import.meta.url).href;
+  let mod;
+  try {
+    mod = await import(file);
+  } catch (error) {
+    if (error.code !== "ERR_MODULE_NOT_FOUND") throw error;
+    throw new Error(`This copy of ${APP_NAME} doesn't include the MCP server. Use the npm package: claude mcp add ${APP_NAME} -- npx ${APP_NAME} mcp`);
+  }
+  await mod.serveStdio(options);
 }
 async function readStdin() {
   if (process.stdin.isTTY) return "{}";
