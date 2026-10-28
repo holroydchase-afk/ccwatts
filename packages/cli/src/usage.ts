@@ -11,6 +11,7 @@ import {
   type Window,
 } from "@ccwatts/core";
 import { sampleRows } from "./dashboard.js";
+import { reason } from "./errors.js";
 import { defaultLogRoots, loadLogs } from "./logs.js";
 import { readHistory, writeHistory } from "./store.js";
 
@@ -49,15 +50,17 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
   // into or writes your personal history. Relocated logs use CLAUDE_CONFIG_DIR instead.
   if (!options.noHistory && !options.path && !demo) {
     const stored = await readHistory().catch((error: unknown) => {
-      console.error(`Couldn't read history (${error instanceof Error ? error.message : String(error)}). Using current logs only.`);
+      const why = reason(error);
+      console.error(`Couldn't read history (${why}). Using current logs only.`);
       return [];
     });
     rows = mergeHistory(stored, rows);
     // History is a convenience: a read-only home folder shouldn't stop the estimate.
     if (logs.records.length > 0) {
-      await writeHistory(rows).catch((error: unknown) =>
-        console.error(`Couldn't save history (${error instanceof Error ? error.message : String(error)}). Continuing without it.`),
-      );
+      await writeHistory(rows).catch((error: unknown) => {
+        const why = reason(error);
+        console.error(`Couldn't save history (${why}). Continuing without it.`);
+      });
     }
   }
   return { rows, records: logs.records, roots: logs.roots, now, sample: demo };

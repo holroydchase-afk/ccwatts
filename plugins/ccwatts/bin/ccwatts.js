@@ -701,6 +701,18 @@ function openFile(path) {
 }
 var sampleRows = () => readSample(ccwatts_default);
 
+// src/errors.ts
+function reason(error) {
+  const code = error?.code;
+  if (typeof code === "string") return code;
+  if (error instanceof Error) return error.name;
+  return "unknown error";
+}
+function errorLine(error) {
+  if (error instanceof Error) return error.message.replace(/https?:\S+/g, "(link removed)");
+  return "Something went wrong.";
+}
+
 // src/render.ts
 var energy = formatEnergy;
 var totalTokens2 = (t) => TOKEN_TYPES.reduce((s, k) => s + t[k], 0);
@@ -898,14 +910,16 @@ async function loadUsage(options) {
   let rows = demo ? sample : rollup(logs.records);
   if (!options.noHistory && !options.path && !demo) {
     const stored = await readHistory().catch((error) => {
-      console.error(`Couldn't read history (${error instanceof Error ? error.message : String(error)}). Using current logs only.`);
+      const why = reason(error);
+      console.error(`Couldn't read history (${why}). Using current logs only.`);
       return [];
     });
     rows = mergeHistory(stored, rows);
     if (logs.records.length > 0) {
-      await writeHistory(rows).catch(
-        (error) => console.error(`Couldn't save history (${error instanceof Error ? error.message : String(error)}). Continuing without it.`)
-      );
+      await writeHistory(rows).catch((error) => {
+        const why = reason(error);
+        console.error(`Couldn't save history (${why}). Continuing without it.`);
+      });
     }
   }
   return { rows, records: logs.records, roots: logs.roots, now, sample: demo };
@@ -948,6 +962,7 @@ Options:
   -h, --help        Show this help
 
 Logs somewhere else? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep your history.`;
+var PLAYGROUND = PLAYGROUND_URL;
 var DIMS = ["model", "day", "project", "type"];
 var COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline", "mcp"];
 function plainArgError(error) {
@@ -996,9 +1011,11 @@ ${HELP}`);
   if (values.export && values.export !== "csv") throw new Error(`--export supports csv only`);
   const demo = Boolean(values.demo);
   if (demo && (command === "receipt" || command === "dashboard")) {
-    throw new Error(
-      `${command} is for your own usage, so it doesn't run on sample data. The playground shows the sample ${command === "receipt" ? "card" : "dashboard"}: ${PLAYGROUND_URL}`
+    console.error(
+      `${command} is for your own usage, so it doesn't run on sample data. The playground shows the sample ${command === "receipt" ? "card" : "dashboard"}: ${PLAYGROUND}`
     );
+    process.exitCode = 1;
+    return;
   }
   const usage = await loadUsage({ path: values.path, demo, noHistory: values["no-history"] });
   const { rows } = usage;
@@ -1007,7 +1024,7 @@ ${HELP}`);
     console.log(`No Claude Code logs found. Looked in:
 ${usage.roots.map((r) => `  ${r}`).join("\n")}`);
     console.log(`Point ${APP_NAME} at another folder with --path <dir>.`);
-    console.log(`No Claude Code yet? See it on sample data with ${APP_NAME} --demo, or in your browser: ${PLAYGROUND_URL}`);
+    console.log(`No Claude Code yet? See it on sample data with ${APP_NAME} --demo, or in your browser: ${PLAYGROUND}`);
     return;
   }
   if (command === "dashboard") {
@@ -1017,16 +1034,16 @@ ${usage.roots.map((r) => `  ${r}`).join("\n")}`);
     return;
   }
   const inWindow = rowsIn(rows, window);
-  const e = estimateWindow(usage, window, params);
+  const est = estimateWindow(usage, window, params);
   const label = demo && !values.json && !values.export ? "Sample data (synthetic), not your usage.\n\n" : "";
   if (command === "history") {
     if (values.export) return void console.log(historyCsv(inWindow, params));
-    if (values.json) return void console.log(json(e, params, window, demo));
+    if (values.json) return void console.log(json(est, params, window, demo));
     if (label) process.stdout.write(label);
-    return void console.log(history(e, params, window, new Set(rows.map((r) => r.date)).size));
+    return void console.log(history(est, params, window, new Set(rows.map((r) => r.date)).size));
   }
   if (command === "receipt") {
-    const input = { estimate: e, params, windowLabel: window.label };
+    const input = { estimate: est, params, windowLabel: window.label };
     const out = resolve(values.out ?? `${APP_NAME}-receipt.svg`);
     await writeFile3(out, receiptSvg(input));
     console.log(shareLine(input));
@@ -1038,10 +1055,10 @@ Ready-to-paste post:
 ${linkedInPost(input)}`);
     return;
   }
-  if (values.json) return void console.log(json(e, params, window, demo));
+  if (values.json) return void console.log(json(est, params, window, demo));
   if (label) process.stdout.write(label);
-  if (by) console.log(breakdown(e, params, window, by));
-  else console.log(summary(e, params, window, demo));
+  if (by) console.log(breakdown(est, params, window, by));
+  else console.log(summary(est, params, window, demo));
 }
 function parseArgsPlain(config) {
   try {
@@ -1078,6 +1095,7 @@ async function readStdin() {
   return text || "{}";
 }
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  const line = errorLine(error);
+  console.error(line);
   process.exitCode = 1;
 });
