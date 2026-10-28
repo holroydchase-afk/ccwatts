@@ -42,3 +42,13 @@ Chase's 7-phase release plan, run overnight. staff-pm scoped it; ux-reviewer too
 
 ## Cut
 0.1.2 publish (Chase, after Trusted Publishing #38); carbon (ANCHORS D13); other-CLI adapters (P2 proposal); `ccwatts bench` (M3.1); merges, deploys, secrets (never unattended).
+
+## UX after M2.6.3 (ux-reviewer, same method): playground 8/10, CLI 8/10
+Fixed: R1–R3, R5–R9, R11, R13; R4 mostly (mono kept for short data lines). Open: R10 (share card text ~5px on phones), R12 (no-logs copy). Measured contrast: `--danger` 5.96:1 light, 8.21:1 dark; muted 4.98:1 light.
+New P2s, carried into M2.6.4:
+- **UX-R14** single junk file: "Found 1 .jsonl file in bad.jsonl, but no … usage in them." → "bad.jsonl has no Claude Code usage."
+- **UX-R15** no logs: plain run exits 0, `--json` exits 1. Pick one.
+- **UX-R16** (finishes R12) lead the no-logs message with the next step, then a dim "Looked in:" list.
+- **UX-R17** (finishes R10) share-card text ≥11px on phones (crop or "Open full size").
+- **UX-R18** empty `#drop-status` leaves a gap: `:empty{display:none}`.
+- **UX-R19** `history` draws a divider over the unlabeled bar column.
