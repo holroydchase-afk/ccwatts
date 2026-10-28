@@ -1,7 +1,7 @@
 # Publishes the CLI (packages/cli) to npm. Runs only when started by hand:
 # Actions → "Publish to npm" → Run workflow, then type the version to confirm.
-# First publish uses the NPM_TOKEN secret. After that, npm trusted publishing
-# (OIDC) can replace the token with no change to this file.
+# Publishes through npm trusted publishing (OIDC, set up Oct 28 for this
+# workflow, "npm publish" only). There is no npm token or secret.
 name: Publish to npm
 
 on:
@@ -56,6 +56,4 @@ jobs:
       - run: npm test
       - name: Publish
         working-directory: packages/cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
