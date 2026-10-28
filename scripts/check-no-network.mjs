@@ -133,6 +133,42 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.click("#w-all");
   if ((await total()) !== allTime) problems.push("window toggle: All time total changed after a round trip");
 
+  // WI-3, WI-4 (CCW-M2.6.5): the "What if?" cache-read slider recomputes the hero, says it's a
+  // what-if, leaves the share card and LinkedIn post on the published estimate, and Reset undoes it.
+  if (!(await page.$("#whatif-cache"))) problems.push(`WI-3: no #whatif-cache slider at ${viewport.width}px`);
+  else {
+    const share = () => page.evaluate(() => `${document.querySelector("#card")?.getAttribute("src")}|${document.querySelector("#post")?.textContent}`);
+    const noteShown = () => page.$eval("#whatif-note", (n) => !n.hidden && n.getBoundingClientRect().height > 0).catch(() => null);
+    const heroBefore = await page.textContent("#hero-big");
+    const shareBefore = await share();
+    const box = await page.$eval("#whatif-cache", (s) => s.getBoundingClientRect().height);
+    if (box < 44) problems.push(`WI-3: slider is ${box.toFixed(1)}px tall at ${viewport.width}px (want 44+)`);
+    if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note missing or shown before the slider moves");
+    await page.$eval("#whatif-cache", (s) => {
+      s.value = s.max;
+      s.dispatchEvent(new Event("input", { bubbles: true }));
+      s.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    if ((await page.textContent("#hero-big")) === heroBefore) problems.push("WI-3: hero total did not change with the slider at its max");
+    if (!(await noteShown())) problems.push("WI-3: #whatif-note not shown while a what-if is active");
+    else if (!(await page.textContent("#whatif-note")).includes("What if")) problems.push(`WI-3: #whatif-note says "${await page.textContent("#whatif-note")}", want it to contain "What if"`);
+    if ((await share()) !== shareBefore) problems.push("WI-3: share card or LinkedIn post changed with the what-if slider (must stay the published estimate)");
+    const valuetext = await page.$eval("#whatif-cache", (s) => s.getAttribute("aria-valuetext"));
+    if (!valuetext?.includes("%")) problems.push(`WI-3: slider aria-valuetext is ${JSON.stringify(valuetext)}, want a percent`);
+    // WI-4: the method version stays on screen during a what-if.
+    if (!(await page.textContent("#hero-meta")).includes(`method v`)) problems.push("WI-4: hero meta line lost the method version during a what-if");
+    if (!(await page.textContent("#footer-version")).includes("method v")) problems.push("WI-4: footer lost the method version during a what-if");
+    await page.click("#whatif-reset");
+    if ((await page.textContent("#hero-big")) !== heroBefore) problems.push("WI-3: Reset did not restore the hero total");
+    if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note still shown after Reset");
+    // Keyboard: ArrowRight on the focused slider moves it.
+    const v0 = await page.$eval("#whatif-cache", (s) => s.value);
+    await page.focus("#whatif-cache");
+    await page.keyboard.press("ArrowRight");
+    if ((await page.$eval("#whatif-cache", (s) => s.value)) === v0) problems.push("WI-3: ArrowRight did not change the slider value");
+    await page.click("#whatif-reset");
+  }
+
   // UX-R17 (CCW-M2.6.4): on a phone the 1200px share card shrinks its text under 11px, so an
   // "Open full size" link sits under the card preview.
   if (viewport.width <= 600) {
