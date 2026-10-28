@@ -67,6 +67,8 @@ Across token types and models, ranges simply add up (lows with lows, highs with 
 
 The comparison line ("about X miles in an EV") always uses the central value and says "about".
 
+The playground's "What if?" slider lets you move `cache_read_vs_input` within its published low and high; it moves that parameter's low and high by the same ratio, so its spread is unchanged. A what-if never changes the published estimate: the share card, LinkedIn post, CLI and params.json always use the values above.
+
 ## Sanity checks
 
 These run as unit tests (`packages/core/test/energy.test.ts`), so a parameter change that breaks them fails the build.

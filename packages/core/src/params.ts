@@ -37,3 +37,20 @@ export interface Params {
 
 /** The parameter set shipped with this build (methodology/params.json). */
 export const defaultParams = data as Params;
+
+/**
+ * A copy of `params` with some parameters moved, for "What if?" views. Each override sets the
+ * parameter's value and scales its low and high by the same ratio, so the spread is unchanged.
+ * The input is never mutated. Throws on an unknown id or a value that isn't a positive number.
+ */
+export function withOverrides(params: Params, overrides: Record<string, number>): Params {
+  const next: Record<string, Param> = { ...params.params };
+  for (const [id, value] of Object.entries(overrides)) {
+    const p = params.params[id];
+    if (!p) throw new Error(`Unknown parameter "${id}"`);
+    if (!Number.isFinite(value) || value <= 0) throw new Error(`Parameter "${id}" must be a positive number, got ${value}`);
+    const ratio = value / p.value;
+    next[id] = { ...p, value, low: p.low * ratio, high: p.high * ratio };
+  }
+  return { ...params, params: next };
+}

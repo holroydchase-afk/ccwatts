@@ -7,7 +7,7 @@ export * from "./types.js";
 export { projectRef } from "./project.js";
 export { claudeCodeAdapter, MAX_TOKENS_PER_RESPONSE } from "./adapters/claude-code.js";
 export { addCounts, dedupe, totalTokens, totalsByModel, type ModelTotals } from "./rollup.js";
-export { defaultParams, type Param, type Params, type Comparison, type ConfidenceLabel } from "./params.js";
+export { defaultParams, withOverrides, type Param, type Params, type Comparison, type ConfidenceLabel } from "./params.js";
 export {
   estimate,
   energyForCounts,

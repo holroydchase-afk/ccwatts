@@ -24,7 +24,9 @@ import {
   type Estimate,
   type RollupRow,
   type TokenType,
+  type Params,
   type UsageRecord,
+  withOverrides,
 } from "@ccwatts/core";
 import type { PagePayload } from "./inject.js";
 import { noUsageStatus, readLogFiles, readPaste, type ReadResult } from "./read.js";
@@ -65,8 +67,15 @@ function windowRows(rows: RollupRow[], id: WindowId): RollupRow[] {
   return rows.filter((r) => r.date >= start);
 }
 
-function estimateFor(rows: RollupRow[]): Estimate {
-  const e = estimate(rollupRecords(rows), params);
+/** Published cache-read ratio, and the params the page views (published unless a what-if is active). */
+const CACHE_ID = "cache_read_vs_input";
+const publishedCache = params.params[CACHE_ID]!.value;
+let viewParams: Params = params;
+const whatIfActive = () => viewParams !== params;
+const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+function estimateFor(rows: RollupRow[], p: Params = params): Estimate {
+  const e = estimate(rollupRecords(rows), p);
   e.responses = rows.reduce((n, r) => n + r.responses, 0);
   return e;
 }
@@ -74,7 +83,7 @@ function estimateFor(rows: RollupRow[]): Estimate {
 function renderHero(e: Estimate, label: string) {
   const t = formatEnergy(e.total);
   const [value, unit] = t.central.split(" ");
-  $("hero-eyebrow").textContent = `Claude Code electricity · ${label}`;
+  $("hero-eyebrow").innerHTML = `Claude Code electricity · ${esc(label)}${whatIfActive() ? ` · <span class="whatif-flag">what-if, not published</span>` : ""}`;
   $("hero-big").innerHTML = e.responses ? `${esc(value ?? "")}<small>${esc(unit ?? "")}</small>` : "–";
   $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}, from the bounds on every assumption.` : "No usage in this window.";
   $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
@@ -144,10 +153,10 @@ function typeShare(day: Breakdown, type: TokenType): number {
 }
 let dayTypeCache = new Map<string, Record<TokenType, number>>();
 
-function buildDayTypeCache(rows: RollupRow[]) {
+function buildDayTypeCache(rows: RollupRow[], p: Params) {
   dayTypeCache = new Map();
   for (const r of rows) {
-    const e = estimate(rollupRecords([r]), params);
+    const e = estimate(rollupRecords([r]), p);
     let entry = dayTypeCache.get(r.date);
     if (!entry) dayTypeCache.set(r.date, (entry = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 }));
     for (const b of e.byType) entry[b.key as TokenType] += b.energy.central;
@@ -231,10 +240,12 @@ const LEDE: Record<typeof state.source, string> = {
 
 let lastEstimate: Estimate | null = null;
 
-function render() {
+/** Hero, chart and breakdowns follow the what-if; the share card and post always use the published estimate. */
+function render(share = true) {
   const rows = windowRows(state.rows, state.window);
-  buildDayTypeCache(rows);
-  const e = estimateFor(rows);
+  buildDayTypeCache(rows, viewParams);
+  const published = estimateFor(rows);
+  const e = whatIfActive() ? estimateFor(rows, viewParams) : published;
   lastEstimate = e;
   const label = WINDOW_LABEL[state.window];
   const pill = $("source-pill");
@@ -246,7 +257,28 @@ function render() {
   renderRank("by-model", e.byModel, shortModel, e);
   renderRank("by-project", e.byProject, projectName, e);
   renderExplain(e);
-  renderShare(e, label);
+  renderWhatIf(e, published);
+  if (share) renderShare(published, label);
+}
+
+function renderWhatIf(e: Estimate, published: Estimate) {
+  const value = viewParams.params[CACHE_ID]!.value;
+  const slider = $<HTMLInputElement>("whatif-cache");
+  slider.setAttribute("aria-valuetext", `${pct(value)} of fresh input`);
+  $("whatif-value").textContent = pct(value);
+  const note = $("whatif-note");
+  note.hidden = !whatIfActive();
+  $("whatif-reset").hidden = !whatIfActive();
+  if (!whatIfActive()) return void (note.textContent = "");
+  const t = formatEnergy(e.total);
+  const pub = formatEnergy(published.total);
+  const total = e.responses ? ` Your total would be ${t.central} (range ${t.range} ${t.unit}) instead of ${pub.central} (range ${pub.range} ${pub.unit}).` : "";
+  note.textContent = `What if: cache reads cost ${pct(value)} of fresh input.${total} Not the published estimate; the share card still uses ${pct(publishedCache)}. Method v${params.version}.`;
+}
+
+function setWhatIf(value: number) {
+  viewParams = Math.abs(value - publishedCache) < 1e-9 ? params : withOverrides(params, { [CACHE_ID]: value });
+  render(false);
 }
 
 /** Shows a line under the "Try it" box; errors are styled as errors and scrolled into view. */
@@ -369,6 +401,13 @@ function wire() {
       if (lastEstimate && Math.round(w) !== Math.round(chartWidth)) renderChart(lastEstimate);
       chartWidth = w;
     }, 150);
+  });
+
+  const slider = $<HTMLInputElement>("whatif-cache");
+  slider.addEventListener("input", () => setWhatIf(Number(slider.value)));
+  $("whatif-reset").addEventListener("click", () => {
+    slider.value = String(publishedCache);
+    setWhatIf(publishedCache);
   });
 
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;
