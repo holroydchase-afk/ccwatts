@@ -131,6 +131,20 @@ details>*+*{margin-top:10px}
 .export label{display:block;font-size:14px;color:var(--muted)}
 .export textarea{display:block;font-family:var(--mono);font-size:13px;width:100%;box-sizing:border-box;border:1px solid var(--control);border-radius:8px;padding:10px;background:var(--surface);color:var(--ink)}
 kbd{font-family:var(--mono);font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+/* "What if?" cache-read slider (M2.6.5): a what-if view, never the published estimate. */
+.whatif{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:65ch}
+.whatif-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.whatif-head label{font-weight:700;font-size:16px}
+.whatif output{font-family:var(--mono);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums;color:var(--accent)}
+.whatif input[type=range]{width:100%;height:48px;margin:0;accent-color:var(--accent);cursor:pointer;background:transparent}
+.whatif-scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:-8px}
+/* The "published" tick sits where the published value is on the track (thumb is about 16px wide). */
+.whatif-scale{position:relative}
+.whatif-scale .mark{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.whatif-scale .mark::before{content:"";position:absolute;left:50%;top:-6px;height:5px;border-left:1px solid var(--muted)}
+.whatif-note{margin:0;font-size:15px;line-height:1.5;border-left:3px solid var(--sample);padding-left:10px}
+.whatif button{align-self:flex-start}
+#hero-eyebrow .whatif-flag{color:var(--sample)}
 footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:6px}
 @media (prefers-reduced-motion:no-preference){.rank .bar span{transition:width .3s ease}}
 </style>
@@ -217,6 +231,17 @@ Leave out everything else, especially message content. Save the lines as ccwatts
   <section>
     <h2>What drives your number</h2>
     <p class="explain" id="explain"></p>
+    <div class="whatif" id="whatif">
+      <div class="whatif-head">
+        <label for="whatif-cache">What if? Cache-read cost</label>
+        <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
+      </div>
+      <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
+      <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
+      <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
+      <p class="whatif-note" id="whatif-note" role="status" hidden></p>
+      <button type="button" id="whatif-reset" hidden>Reset</button>
+    </div>
   </section>
 
   <section>

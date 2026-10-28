@@ -133,6 +133,81 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.click("#w-all");
   if ((await total()) !== allTime) problems.push("window toggle: All time total changed after a round trip");
 
+  // WI-3, WI-4 (CCW-M2.6.5): the "What if?" cache-read slider recomputes the hero, says it's a
+  // what-if, leaves the share card and LinkedIn post on the published estimate, and Reset undoes it.
+  if (!(await page.$("#whatif-cache"))) problems.push(`WI-3: no #whatif-cache slider at ${viewport.width}px`);
+  else {
+    const share = () => page.evaluate(() => `${document.querySelector("#card")?.getAttribute("src")}|${document.querySelector("#post")?.textContent}`);
+    const noteShown = () => page.$eval("#whatif-note", (n) => !n.hidden && n.getBoundingClientRect().height > 0).catch(() => null);
+    const heroBefore = await page.textContent("#hero-big");
+    const shareBefore = await share();
+    const box = await page.$eval("#whatif-cache", (s) => s.getBoundingClientRect().height);
+    if (box < 44) problems.push(`WI-3: slider is ${box.toFixed(1)}px tall at ${viewport.width}px (want 44+)`);
+    // WI-R7: 48px slider box; WI-R6: the 1% / published / 25% scale is 13px or more.
+    if (box < 48) problems.push(`WI-R7: slider is ${box.toFixed(1)}px tall at ${viewport.width}px (want 48+)`);
+    const scalePx = await page.$eval(".whatif-scale", (s) => parseFloat(getComputedStyle(s).fontSize)).catch(() => 0);
+    if (scalePx < 13) problems.push(`WI-R6: .whatif-scale is ${scalePx}px at ${viewport.width}px (want 13+)`);
+    if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note missing or shown before the slider moves");
+    await page.$eval("#whatif-cache", (s) => {
+      s.value = s.max;
+      s.dispatchEvent(new Event("input", { bubbles: true }));
+      s.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    if ((await page.textContent("#hero-big")) === heroBefore) problems.push("WI-3: hero total did not change with the slider at its max");
+    if (!(await noteShown())) problems.push("WI-3: #whatif-note not shown while a what-if is active");
+    // WI-R4 changes the wording to "What-if at 25%…", so WI-3 accepts either spelling.
+    else if (!/What[- ]if/.test(await page.textContent("#whatif-note"))) problems.push(`WI-3: #whatif-note says "${await page.textContent("#whatif-note")}", want it to contain "What if"`);
+    if ((await share()) !== shareBefore) problems.push("WI-3: share card or LinkedIn post changed with the what-if slider (must stay the published estimate)");
+    const valuetext = await page.$eval("#whatif-cache", (s) => s.getAttribute("aria-valuetext"));
+    if (!valuetext?.includes("%")) problems.push(`WI-3: slider aria-valuetext is ${JSON.stringify(valuetext)}, want a percent`);
+    // WI-4: the method version stays on screen during a what-if.
+    if (!(await page.textContent("#hero-meta")).includes(`method v`)) problems.push("WI-4: hero meta line lost the method version during a what-if");
+    if (!(await page.textContent("#footer-version")).includes("method v")) problems.push("WI-4: footer lost the method version during a what-if");
+    // WI-R1: the page pins the moved parameter (low = high = value) instead of scaling its bounds.
+    // With scaled bounds the sample's all-time high at 25% is 63.4 kWh; pinned it must be lower.
+    const rangeHigh = async () => {
+      const m = /[–-]\s*([\d.,]+)\s*(kWh|Wh)/.exec(await page.textContent("#hero-range"));
+      return m ? Number(m[1].replace(/,/g, "")) / (m[2] === "Wh" ? 1000 : 1) : NaN;
+    };
+    const highAtMax = await rangeHigh();
+    if (!(highAtMax < 63)) problems.push(`WI-R1: hero range high at 25% is ${highAtMax} kWh (want < 63: the cache parameter should be pinned, not scaled)`);
+    if (!(await page.textContent("#hero-range")).includes("with cache reads fixed at 25%")) problems.push(`WI-R1: hero range "${await page.textContent("#hero-range")}" doesn't say "with cache reads fixed at 25%"`);
+    // WI-R4: the note is short, leads with the setting, and keeps the published figure and method version.
+    const noteText = (await page.textContent("#whatif-note")).trim();
+    const words = noteText.split(/\s+/).filter(Boolean).length;
+    if (words > 30) problems.push(`WI-R4: #whatif-note is ${words} words (want 30 or fewer): "${noteText}"`);
+    if (!noteText.startsWith("What-if at 25%")) problems.push(`WI-R4: #whatif-note should start "What-if at 25%", got "${noteText.slice(0, 40)}"`);
+    if (!noteText.includes("Published:")) problems.push("WI-R4: #whatif-note lacks \"Published:\"");
+    if (!noteText.includes("Method v")) problems.push("WI-R4: #whatif-note lacks \"Method v\"");
+    // WI-R5: the hero flag names the setting.
+    const flag = await page.$eval(".whatif-flag", (f) => f.textContent).catch(() => "");
+    if (!flag.includes("what-if: cache reads 25%")) problems.push(`WI-R5: hero flag says "${flag}", want "what-if: cache reads 25%"`);
+    await page.click("#whatif-reset");
+    if ((await page.textContent("#hero-big")) !== heroBefore) problems.push("WI-3: Reset did not restore the hero total");
+    if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note still shown after Reset");
+    // WI-R2: Reset hides itself, so focus goes back to the slider (click and Enter).
+    const focused = () => page.evaluate(() => document.activeElement?.id ?? null);
+    if ((await focused()) !== "whatif-cache") problems.push(`WI-R2: after clicking Reset focus is on #${await focused()}, want #whatif-cache`);
+    // WI-R1 at the slider's min: the range still renders and names the pinned setting.
+    await page.$eval("#whatif-cache", (s) => {
+      s.value = s.min;
+      s.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const minRange = await page.textContent("#hero-range");
+    if (!(await rangeHigh() > 0)) problems.push(`WI-R1: hero range doesn't render at 1%: "${minRange}"`);
+    if (!minRange.includes("with cache reads fixed at 1%")) problems.push(`WI-R1: hero range "${minRange}" doesn't say "with cache reads fixed at 1%"`);
+    await page.focus("#whatif-reset");
+    await page.keyboard.press("Enter");
+    if ((await page.textContent("#hero-big")) !== heroBefore) problems.push("WI-R2: Enter on Reset did not restore the hero total");
+    if ((await focused()) !== "whatif-cache") problems.push(`WI-R2: after Enter on Reset focus is on #${await focused()}, want #whatif-cache`);
+    // Keyboard: ArrowRight on the focused slider moves it.
+    const v0 = await page.$eval("#whatif-cache", (s) => s.value);
+    await page.focus("#whatif-cache");
+    await page.keyboard.press("ArrowRight");
+    if ((await page.$eval("#whatif-cache", (s) => s.value)) === v0) problems.push("WI-3: ArrowRight did not change the slider value");
+    await page.click("#whatif-reset");
+  }
+
   // UX-R17 (CCW-M2.6.4): on a phone the 1200px share card shrinks its text under 11px, so an
   // "Open full size" link sits under the card preview.
   if (viewport.width <= 600) {

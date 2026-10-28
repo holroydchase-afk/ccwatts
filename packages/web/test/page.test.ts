@@ -220,3 +220,68 @@ describe("UX-R18 an empty status line takes no space (CCW-M2.6.4)", () => {
     expect(css).toMatch(/(#drop-status|\.status):empty\s*\{[^}]*display\s*:\s*none/);
   });
 });
+
+// CCW-M2.6.5 "What if?" cache-read slider. The bounds come from methodology/params.json so the
+// slider can never leave the published range. Browser behavior (WI-3, WI-4) is in check-no-network.mjs.
+describe("WI-2 What if? cache-read slider is on the page (CCW-M2.6.5)", () => {
+  const p = defaultParams.params.cache_read_vs_input!;
+  const tag = /<input[^>]*id="whatif-cache"[^>]*>/.exec(html)?.[0] ?? "";
+  const attr = (name: string) => new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+
+  it("WI-2: has <input type=\"range\" id=\"whatif-cache\">", () => {
+    expect(tag, "slider input").not.toBe("");
+    expect(attr("type")).toBe("range");
+  });
+
+  it("WI-2: min, max and value come from params low, high and central; step is fine-grained", () => {
+    expect(Number(attr("min"))).toBeCloseTo(p.low, 9);
+    expect(Number(attr("max"))).toBeCloseTo(p.high, 9);
+    expect(Number(attr("value"))).toBeCloseTo(p.value, 9);
+    const step = Number(attr("step"));
+    expect(step).toBeGreaterThan(0);
+    expect(step).toBeLessThanOrEqual(0.01);
+  });
+
+  it("WI-2: has a visible <label for=\"whatif-cache\">", () => {
+    const label = /<label[^>]*for="whatif-cache"[^>]*>([\s\S]*?)<\/label>/.exec(html);
+    expect(label, "label").not.toBeNull();
+    expect(label![0]).not.toMatch(/class="[^"]*\bvh\b/);
+    expect(label![0]).not.toMatch(/\shidden[\s>]/);
+    expect(label![1]!.replace(/<[^>]+>/g, "").trim().length).toBeGreaterThan(0);
+  });
+
+  it("WI-2: has an <output id=\"whatif-value\"> showing the percent, and a Reset button", () => {
+    const out = /<output[^>]*id="whatif-value"[^>]*>([^<]*)<\/output>/.exec(html);
+    expect(out, "output element").not.toBeNull();
+    expect(out![1]).toContain(`${Math.round(p.value * 100)}%`);
+    expect(html).toMatch(/<button[^>]*id="whatif-reset"[^>]*>\s*Reset\s*<\/button>/);
+  });
+
+  it("WI-2: has a #whatif-note, hidden until the slider moves", () => {
+    expect(html).toMatch(/<[a-z]+[^>]*id="whatif-note"[^>]*\shidden[\s>]/);
+  });
+});
+
+// ux-reviewer / positioning findings on the what-if slider (CCW-M2.6.5).
+describe("WI-R3 what-if explainer wording", () => {
+  const box = /<div class="whatif" id="whatif">[\s\S]*?<button[^>]*id="whatif-reset"/.exec(html)?.[0] ?? "";
+  const text = box.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  it("WI-R3: calls cache reads the least certain assumption and says the source tests 1% to 25%", () => {
+    expect(box, "what-if box").not.toBe("");
+    expect(text).toContain("the least certain assumption");
+    expect(text).toContain("tests 1% to 25%");
+  });
+
+  it("WI-R3: no longer says 'sources disagree'", () => {
+    expect(html).not.toContain("sources disagree");
+  });
+});
+
+describe("WI-R6 what-if scale is readable", () => {
+  it("WI-R6: .whatif-scale font-size is 13px or more in every rule that sets it", () => {
+    const sizes = [...html.matchAll(/\.whatif-scale\{[^}]*font-size:(\d+)px/g)].map((m) => Number(m[1]));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const s of sizes) expect(s).toBeGreaterThanOrEqual(13);
+  });
+});
