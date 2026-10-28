@@ -17,6 +17,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Agent roster matches CLAUDE.md
+        run: bash scripts/check-agents.sh
       - run: npm run build
       - run: npm run typecheck
       - run: npm test
