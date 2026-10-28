@@ -83,13 +83,13 @@ It runs on stdio: Claude Code starts it when it needs it and talks to it over a 
 
 Installing the plugin (above) also adds the MCP tools: the plugin registers the server itself, so there is nothing else to run. `/mcp` lists it as `plugin:ccwatts:ccwatts`, and you can switch it off there.
 
-Without the plugin, once the next version is on npm:
+Without the plugin:
 
 ```
 claude mcp add ccwatts -- npx -y ccwatts mcp
 ```
 
-From a clone of this repo, before that release (after `npm install && npm run build`):
+From a clone of this repo (after `npm install && npm run build`):
 
 ```
 claude mcp add ccwatts -- node /path/to/ccwatts/packages/cli/dist/index.js mcp
@@ -105,7 +105,7 @@ If you clone it to contribute, `npm install` turns on a pre-commit hook (`.githo
 
 ## Status
 
-v0.1.1 on npm, plus a Claude Code plugin from this repo. The MCP server (`ccwatts mcp`) is on `main` and ships in the next npm version. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
+v0.1.2 on npm (includes the `ccwatts mcp` server), plus a Claude Code plugin from this repo that registers it. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 
