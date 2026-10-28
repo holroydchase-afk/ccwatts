@@ -25,3 +25,9 @@ describe("README tells the same story as the playground (recruiter-ready RR-7, R
     expect(existsSync(new URL("../../../docs/images/cli-demo.gif", import.meta.url))).toBe(true);
   });
 });
+
+describe("WI-R3 README describes the what-if slider in the same words (CCW-M2.6.5)", () => {
+  it("WI-R3: README says the slider 'moves the least certain assumption'", () => {
+    expect(readme).toContain("moves the least certain assumption");
+  });
+});

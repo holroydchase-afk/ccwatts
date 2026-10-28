@@ -261,3 +261,27 @@ describe("WI-2 What if? cache-read slider is on the page (CCW-M2.6.5)", () => {
     expect(html).toMatch(/<[a-z]+[^>]*id="whatif-note"[^>]*\shidden[\s>]/);
   });
 });
+
+// ux-reviewer / positioning findings on the what-if slider (CCW-M2.6.5).
+describe("WI-R3 what-if explainer wording", () => {
+  const box = /<div class="whatif" id="whatif">[\s\S]*?<button[^>]*id="whatif-reset"/.exec(html)?.[0] ?? "";
+  const text = box.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  it("WI-R3: calls cache reads the least certain assumption and says the source tests 1% to 25%", () => {
+    expect(box, "what-if box").not.toBe("");
+    expect(text).toContain("the least certain assumption");
+    expect(text).toContain("tests 1% to 25%");
+  });
+
+  it("WI-R3: no longer says 'sources disagree'", () => {
+    expect(html).not.toContain("sources disagree");
+  });
+});
+
+describe("WI-R6 what-if scale is readable", () => {
+  it("WI-R6: .whatif-scale font-size is 13px or more in every rule that sets it", () => {
+    const sizes = [...html.matchAll(/\.whatif-scale\{[^}]*font-size:(\d+)px/g)].map((m) => Number(m[1]));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const s of sizes) expect(s).toBeGreaterThanOrEqual(13);
+  });
+});

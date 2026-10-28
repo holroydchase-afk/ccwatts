@@ -76,3 +76,30 @@ describe("WI-1 withOverrides (pure, core)", () => {
     expect(() => withOverrides!(defaultParams, { [ID]: Number.NaN })).toThrow();
   });
 });
+
+// WI-R1 (ux-reviewer/positioning, CCW-M2.6.5): the page pins the moved parameter instead of
+// scaling its bounds, so "cache reads fixed at 25%" doesn't also widen the range to a 50% high.
+// Assumed interface: withOverrides(params, overrides, { pin: true }). Scaling stays the default (WI-1).
+type WithOverridesPin = (params: Params, overrides: Record<string, number>, opts?: { pin?: boolean }) => Params;
+describe("WI-R1 withOverrides pin option", () => {
+  it("WI-R1: { pin: true } sets low = high = value for the overridden parameter only", () => {
+    const pinned = (withOverrides as unknown as WithOverridesPin)(defaultParams, { [ID]: 0.25 }, { pin: true });
+    const p = pinned.params[ID]!;
+    expect(p.value).toBe(0.25);
+    expect(p.low).toBe(0.25);
+    expect(p.high).toBe(0.25);
+    for (const id of Object.keys(defaultParams.params)) {
+      if (id !== ID) expect(pinned.params[id], id).toEqual(defaultParams.params[id]);
+    }
+    expect(defaultParams.params[ID]!.low).toBe(0.01);
+  });
+
+  it("WI-R1: pinning at the published high gives a narrower high than scaling, same central", () => {
+    const scaled = estimate(records, withOverrides!(defaultParams, { [ID]: 0.25 })).total;
+    const pinned = estimate(records, (withOverrides as unknown as WithOverridesPin)(defaultParams, { [ID]: 0.25 }, { pin: true })).total;
+    expect(pinned.central).toBeCloseTo(scaled.central, 9);
+    expect(pinned.high).toBeLessThan(scaled.high);
+    expect(pinned.low).toBeLessThanOrEqual(pinned.central);
+    expect(pinned.central).toBeLessThanOrEqual(pinned.high);
+  });
+});
