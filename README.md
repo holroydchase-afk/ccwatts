@@ -75,7 +75,7 @@ Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same opt
 
 `ccwatts mcp` is a local [MCP](https://modelcontextprotocol.io) server, so Claude Code can answer "how much energy did my sessions use this week?" itself. It has four read-only tools: `energy_summary`, `energy_by_project`, `energy_weekly` (each takes an optional `since`, like `7d` or `all`) and `methodology`. Every answer is a low/central/high range in Wh with the method version, counts only, and projects by folder name, never the full path.
 
-It runs on stdio: Claude Code starts it when it needs it and talks to it over a pipe. There is no port, no listener and no network.
+It runs on stdio: Claude Code starts it when it needs it and talks to it over a pipe. There is no port, no listener and no network. You don't run it by hand: `ccwatts mcp --help` prints the line to add it, and typed in a terminal it says what it is waiting for.
 
 Once the next version is on npm:
 

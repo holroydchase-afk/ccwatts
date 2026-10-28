@@ -27,6 +27,7 @@ import {
   type UsageRecord,
 } from "@ccwatts/core";
 import type { PagePayload } from "./inject.js";
+import { readLogFiles } from "./read.js";
 
 type WindowId = "7d" | "30d" | "all";
 
@@ -244,15 +245,14 @@ function render() {
 }
 
 async function loadFiles(files: FileList | File[]) {
-  const logs = [...files].filter((f) => f.name.endsWith(".jsonl"));
   const status = $("drop-status");
-  if (!logs.length) {
-    status.textContent = "No .jsonl files found there. Claude Code keeps them in ~/.claude/projects.";
+  status.textContent = "Reading files on this device…";
+  const read = await readLogFiles(files);
+  if (!read.ok) {
+    status.textContent = read.status;
     return;
   }
-  const what = `${logs.length} file${logs.length === 1 ? "" : "s"}`;
-  status.textContent = `Reading ${what} on this device…`;
-  loadTexts(await Promise.all(logs.map((f) => f.text())), what);
+  loadTexts(read.texts, read.what);
 }
 
 /** Parses log text (from files or the paste box) on this device and shows it. */

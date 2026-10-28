@@ -38,7 +38,7 @@ type          tokens      Wh          range   share
 cache write   21,500     7.6       2 – 22.1     83%
 cache read    35,000    0.99       0.07 – 4     11%
 output           500    0.55     0.19 – 1.4      6%
-input             20   0.006   0.002 – 0.02      0%
+input             20   0.006   0.002 – 0.02     <1%
 total         57,020     9.1     2.3 – 27.5    100%"
 `;
 
@@ -51,8 +51,6 @@ week of 2026-09-28   9.1   2.3 – 27.5   ████████████�
 
   Trend         █
   Total         9.1 Wh   (range 2.3 – 27.5)
-  Lightest week 2026-09-28   9.1 Wh (range 2.3 – 27.5)
-  Heaviest week 2026-09-28   9.1 Wh (range 2.3 – 27.5)
   Recorded      2 days, kept in your local history even after Claude Code deletes old logs
 
   Energy is recalculated from stored token counts with method v0.1.0."
@@ -65,7 +63,7 @@ exports[`summary > matches the PLAN.md layout 1`] = `
   ≈ about half a phone charge
 
   By model      opus-4-6 95%   sonnet-4-6 5%
-  By type       cache write 83%   cache read 11%   output 6%   input 0%
+  By type       cache write 83%   cache read 11%   output 6%   input <1%
   Top project   alpha   8.6 Wh (range 2.2 – 25.7)
   Based on      3 responses, 57,020 tokens · 2026-10-01 to 2026-10-02
 

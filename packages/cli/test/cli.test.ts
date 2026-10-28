@@ -195,3 +195,121 @@ describe("ccwatts CLI", () => {
     expect(r.out).toContain(PLAYGROUND_URL);
   });
 });
+
+// CCW-M2.6.2 day-one gaps (docs/reviews/2026-10-28-release-plan.md F1–F8). Synthetic counts only.
+const usageLine = (id: string, ts: string, usage: { input: number; cacheWrite: number; cacheRead: number; output: number }) =>
+  JSON.stringify({
+    type: "assistant",
+    timestamp: ts,
+    cwd: "/synthetic/proj",
+    requestId: `req_${id}`,
+    message: {
+      id: `msg_${id}`,
+      model: "claude-opus-4-6",
+      role: "assistant",
+      content: [],
+      usage: {
+        input_tokens: usage.input,
+        cache_creation_input_tokens: usage.cacheWrite,
+        cache_read_input_tokens: usage.cacheRead,
+        output_tokens: usage.output,
+      },
+    },
+  });
+
+function logDir(lines: string[]) {
+  const dir = join(home(), "logs");
+  mkdirSync(dir);
+  writeFileSync(join(dir, "session.jsonl"), lines.join("\n") + "\n");
+  return dir;
+}
+
+describe("ccwatts CLI day-one gaps (CCW-M2.6.2)", () => {
+  it("CCW-F1: --path to a folder that doesn't exist says so (basename only) and exits 1", () => {
+    const missing = join(work, "nope-not-here-f1");
+    const r = cli(["--path", missing], { HOME: home() });
+    const all = r.out + r.err;
+    expect(r.code).toBe(1);
+    expect(all).toMatch(/doesn't exist|does not exist/i);
+    expect(all).toContain("nope-not-here-f1");
+    expect(all).not.toContain(missing);
+    expect(all).not.toContain(work);
+    expect(all).not.toContain("No Claude Code logs found");
+  });
+
+  it("CCW-F2: .jsonl files with no usage say files were found but had no Claude Code usage", () => {
+    const dir = logDir([
+      JSON.stringify({ type: "user", timestamp: "2026-10-01T10:00:00.000Z", cwd: "/synthetic/proj", message: { role: "user", content: "" } }),
+      JSON.stringify({ type: "summary", leafUuid: "x" }),
+    ]);
+    const r = cli(["--path", dir, "--since", "all"], { HOME: home() });
+    const all = r.out + r.err;
+    expect(all).toMatch(/no Claude Code usage/i);
+    expect(all).not.toContain("No Claude Code logs found");
+    expect(all).not.toContain(dir);
+  });
+
+  it("CCW-F3: --json with no logs prints a JSON error, no full paths, exit 1", () => {
+    const h = home();
+    const r = cli(["--json"], { HOME: h, CCWATTS_HOME: join(h, ".ccwatts") });
+    expect(r.code).toBe(1);
+    let parsed: { error?: string } | undefined;
+    expect(() => (parsed = JSON.parse(r.out))).not.toThrow();
+    expect(parsed?.error).toBe("no_logs");
+    expect(r.out).not.toContain(h);
+    expect(r.out).not.toContain(work);
+  });
+
+  // One day of usage where input is a tiny but nonzero share of energy.
+  const oneDay = () =>
+    logDir([
+      usageLine("F5a", "2026-10-01T10:00:00.000Z", { input: 3, cacheWrite: 20000, cacheRead: 400000, output: 3000 }),
+      usageLine("F5b", "2026-10-01T11:00:00.000Z", { input: 2, cacheWrite: 10000, cacheRead: 300000, output: 2000 }),
+    ]);
+
+  it("CCW-F5: a single-day span prints the date once, not 'D to D'", () => {
+    const r = cli(["--path", oneDay(), "--since", "all"], { HOME: home() });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("2026-10-01");
+    expect(r.out).not.toContain("2026-10-01 to 2026-10-01");
+  });
+
+  it("CCW-F5: a share above zero that rounds to 0 prints '<1%', not '0%'", () => {
+    const r = cli(["--path", oneDay(), "--since", "all"], { HOME: home() });
+    expect(r.code).toBe(0);
+    const byType = r.out.split("\n").find((l) => l.includes("By type")) ?? "";
+    expect(byType).toContain("input <1%");
+    expect(byType).not.toMatch(/input 0%/);
+  });
+
+  it("CCW-F5: history with one recorded day says '1 day', not '1 days'", () => {
+    const r = cli(["history", "--path", oneDay()], { HOME: home() });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/\b1 day\b/);
+    expect(r.out).not.toContain("1 days");
+  });
+
+  it("CCW-F5: history with a single week doesn't call it both lightest and heaviest", () => {
+    const r = cli(["history", "--path", oneDay()], { HOME: home() });
+    expect(r.code).toBe(0);
+    const both = r.out.includes("Lightest week") && r.out.includes("Heaviest week");
+    expect(both).toBe(false);
+  });
+
+  it("CCW-F6: --method links the write-up on GitHub, not a bare METHODOLOGY.md", () => {
+    const r = cli(["--method"], { HOME: home() });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/https:\/\/github\.com\/holroydchase-afk\/ccwatts\/\S*METHODOLOGY\.md/);
+    expect(r.out).not.toMatch(/Full write-up: METHODOLOGY\.md\s*$/m);
+  });
+
+  it("CCW-F7: `ccwatts help` behaves like --help", () => {
+    const help = cli(["--help"], { HOME: home() });
+    const r = cli(["help"], { HOME: home() });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("Usage: ccwatts");
+    expect(r.out).toBe(help.out);
+    expect(r.err).not.toContain("Unknown command");
+  });
+});
+

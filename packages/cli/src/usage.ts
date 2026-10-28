@@ -10,6 +10,8 @@ import {
   type UsageRecord,
   type Window,
 } from "@ccwatts/core";
+import { stat } from "node:fs/promises";
+import { basename } from "node:path";
 import { sampleRows } from "./dashboard.js";
 import { reason } from "./errors.js";
 import { defaultLogRoots, loadLogs } from "./logs.js";
@@ -31,6 +33,8 @@ export interface Usage {
   records: UsageRecord[];
   /** Folders searched for logs (full paths: print them to the user's own terminal only). */
   roots: string[];
+  /** .jsonl files found under the roots, so "no usage" can differ from "no logs". */
+  files: number;
   /** Where --since counts back from: today, or the last day of the sample. */
   now: Date;
   sample: boolean;
@@ -39,6 +43,10 @@ export interface Usage {
 /** Loads usage the way every command does: logs, merged with history unless --path, --demo or --no-history. */
 export async function loadUsage(options: UsageOptions): Promise<Usage> {
   const demo = Boolean(options.demo);
+  if (options.path && !demo && !(await stat(options.path).catch(() => null))) {
+    // Basename only: errors can end up in a model's context (mcp) as well as the terminal.
+    throw new Error(`"${basename(options.path)}" doesn't exist. Check the folder or file given to --path.`);
+  }
   const logs = demo ? { roots: [], files: 0, records: [] } : await loadLogs(options.path ? [options.path] : defaultLogRoots());
   const sample = demo ? sampleRows() : [];
   // The sample is a fixed month in the past: count --since back from its last day.
@@ -63,7 +71,7 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
       });
     }
   }
-  return { rows, records: logs.records, roots: logs.roots, now, sample: demo };
+  return { rows, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo };
 }
 
 /** Rows inside a window. Day rollups are cut by date. */
