@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import {
@@ -18,7 +18,7 @@ import {
   type Dimension,
 } from "@ccwatts/core";
 import { openFile, writeDashboard } from "./dashboard.js";
-import { errorLine } from "./errors.js";
+import { errorLine, reason } from "./errors.js";
 import { breakdown, history, historyCsv, json, jsonError, method, statusLine, styles, summary } from "./render.js";
 import { estimateWindow, loadUsage, rowsIn, type UsageOptions } from "./usage.js";
 
@@ -123,6 +123,7 @@ async function main(): Promise<void> {
   const by = values.by as Dimension | undefined;
   if (by && !DIMS.includes(by)) throw new Error(`--by must be one of: ${DIMS.join(", ")}`);
   if (values.export && values.export !== "csv") throw new Error(`--export supports csv only`);
+  if (values.export && command !== "history") throw new Error(`--export works with ${APP_NAME} history. Try: ${APP_NAME} history --export csv`);
 
   const demo = Boolean(values.demo);
   if (demo && (command === "receipt" || command === "dashboard")) {
@@ -139,8 +140,11 @@ async function main(): Promise<void> {
   const window = parseSince(values.since ?? (command === "history" || demo ? "all" : "30d"), usage.now);
   if (rows.length === 0) {
     // Logs were there but held no usage (wrong folder, or only user turns): say so, not "no logs".
+    const oneFile = usage.files === 1 && values.path !== undefined && Boolean((await stat(values.path).catch(() => null))?.isFile());
     const where = values.path ? ` in ${basename(values.path)}` : "";
-    const found = `Found ${usage.files} .jsonl file${usage.files === 1 ? "" : "s"}${where}, but no Claude Code usage in them.`;
+    const found = oneFile
+      ? `${basename(values.path!)} has no Claude Code usage.`
+      : `Found ${usage.files} .jsonl file${usage.files === 1 ? "" : "s"}${where}, but no Claude Code usage in ${usage.files === 1 ? "it" : "them"}.`;
     if (values.json) {
       // Scripts get JSON on stdout and a non-zero exit. No paths: this output is often saved or shared.
       console.log(usage.files > 0 ? jsonError("no_usage", found) : jsonError("no_logs", "No Claude Code logs found."));
@@ -149,16 +153,28 @@ async function main(): Promise<void> {
     }
     if (usage.files > 0) {
       console.log(found);
+      for (const note of usage.notes) console.log(note);
       console.log(`Claude Code keeps its logs in ~/.claude/projects. Point ${APP_NAME} there, or at one session file, with --path.`);
       return;
     }
-    console.log(`No Claude Code logs found. Looked in:\n${usage.roots.map((r) => `  ${r}`).join("\n")}`);
-    console.log(`Point ${APP_NAME} at another folder with --path <dir>.`);
-    console.log(`No Claude Code yet? See it on sample data with ${APP_NAME} --demo, or in your browser: ${PLAYGROUND}`);
+    // Next step first, then where we looked (full paths, but only to the user's own terminal).
+    const { dim } = styles(useColor());
+    console.log(`No Claude Code logs yet. Try ${APP_NAME} --demo, or point at a folder with --path <dir>.`);
+    console.log("");
+    console.log("Looked in:");
+    for (const r of usage.roots) console.log(dim(`  ${r}`));
+    console.log("");
+    console.log(`Or try it in your browser: ${PLAYGROUND}`);
     return;
   }
 
+  // Commands whose output has no Note lines say what was skipped on stderr, so stdout stays clean.
+  const noteToStderr = () => {
+    for (const note of usage.notes) console.error(`Note: ${note}`);
+  };
+
   if (command === "dashboard") {
+    noteToStderr();
     const path = await writeDashboard(rows);
     console.log(`Dashboard written to ${path}. It works offline and makes no network requests.`);
     if (!values["no-open"]) openFile(path);
@@ -172,6 +188,7 @@ async function main(): Promise<void> {
   const opts = { color: !values.json && !values.export && useColor(), now: usage.now };
   const label = demo && !values.json && !values.export ? `${styles(opts.color).yellow("Sample data (synthetic), not your usage.")}\n\n` : "";
   if (command === "history") {
+    if (!values.json) noteToStderr();
     if (values.export) return void console.log(historyCsv(inWindow, params));
     if (values.json) return void console.log(json(est, params, window, demo));
     if (label) process.stdout.write(label);
@@ -180,7 +197,14 @@ async function main(): Promise<void> {
   if (command === "receipt") {
     const input = { estimate: est, params, windowLabel: window.label };
     const out = resolve(values.out ?? `${APP_NAME}-receipt.svg`);
-    await writeFile(out, receiptSvg(input));
+    try {
+      await writeFile(out, receiptSvg(input));
+    } catch (error) {
+      const why = reason(error);
+      const hint = why === "ENOENT" ? " The folder doesn't exist; create it first or pick another." : "";
+      throw new Error(`Couldn't write the card to --out ${basename(out)} (${why}).${hint}`);
+    }
+    noteToStderr();
     console.log(shareLine(input));
     console.log(`\nCard written to ${out} (1200×627, LinkedIn size). Open ${APP_NAME} dashboard to save it as PNG.`);
     console.log(`\nReady-to-paste post:\n\n${linkedInPost(input)}`);
@@ -188,6 +212,7 @@ async function main(): Promise<void> {
   }
   if (values.json) return void console.log(json(est, params, window, demo));
   if (label) process.stdout.write(label);
+  if (by) noteToStderr();
   if (by) console.log(breakdown(est, params, window, by, opts));
   else console.log(summary(est, params, window, demo, opts));
 }

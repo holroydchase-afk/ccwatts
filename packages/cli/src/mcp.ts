@@ -20,6 +20,7 @@ import {
   type TokenCounts,
   type Window,
 } from "@ccwatts/core";
+import { errorLine, reason } from "./errors.js";
 import { estimateWindow, loadUsage, type Usage, type UsageOptions } from "./usage.js";
 
 /**
@@ -148,7 +149,14 @@ export function createServer(options: UsageOptions = {}, params: Params = defaul
 
   const windowed = (build: (usage: Usage, window: Window, params: Params) => unknown, fallback: string) =>
     async ({ since }: { since?: string | undefined }) => {
-      const usage = await loadUsage(options);
+      let usage: Usage;
+      try {
+        usage = await loadUsage(options);
+      } catch (error) {
+        // An fs error's message names the file; send only its code. Our own messages are already plain.
+        const code = (error as { code?: unknown } | null)?.code;
+        return problem(typeof code === "string" ? `${APP_NAME} couldn't read the logs (${reason(error)}).` : errorLine(error));
+      }
       if (usage.rows.length === 0) {
         // No paths here: the answer goes into a model's context, not the user's own terminal.
         return problem(`No Claude Code logs found. ${APP_NAME} reads ~/.claude/projects, or the folders in CLAUDE_CONFIG_DIR.`);

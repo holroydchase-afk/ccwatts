@@ -40,10 +40,19 @@ export function percent(part: number, total: number): string {
 }
 
 function shares(rows: Breakdown[], total: number, label: (key: string) => string, max = 4): string {
-  const shown = rows.slice(0, max).map((r) => `${label(r.key)} ${percent(r.energy.central, total)}`);
+  const shown = rows.slice(0, max).map((r) => `${clip(label(r.key))} ${percent(r.energy.central, total)}`);
   const rest = rows.slice(max).reduce((s, r) => s + r.energy.central, 0);
   if (rest > 0) shown.push(`other ${percent(rest, total)}`);
   return shown.join("   ");
+}
+
+/** Longest name a table or summary line shows; longer ones end in "…" so lines fit a terminal. */
+const LABEL_MAX = 40;
+
+/** A label cut to `max` characters with an ellipsis. Cuts by code point, so an emoji stays whole. */
+export function clip(label: string, max = LABEL_MAX): string {
+  const chars = [...label];
+  return chars.length <= max ? label : `${chars.slice(0, max - 1).join("")}…`;
 }
 
 /** Options for the text renderers. color adds ANSI bold and dim (index.ts turns it on for a TTY); now decides the in-progress week. */
@@ -77,10 +86,10 @@ export function summary(e: Estimate, params: Params, window: Window, sample = fa
   ];
   if (top) {
     const t = energy(top.energy);
-    lines.push(`  Top project   ${projectName(top.key)}   ${t.central} ${dim(`(range ${t.range})`)}`);
+    lines.push(`  Top project   ${clip(projectName(top.key))}   ${t.central} ${dim(`(range ${t.range})`)}`);
   }
   const span = !e.span ? "" : e.span.from === e.span.to ? ` · ${e.span.from}` : ` · ${e.span.from} to ${e.span.to}`;
-  lines.push(`  Based on      ${int(e.responses)} responses, ${int(totalTokens(e.tokens))} tokens${span}`);
+  lines.push(`  Based on      ${int(e.responses)} response${e.responses === 1 ? "" : "s"}, ${int(totalTokens(e.tokens))} tokens${span}`);
   for (const w of e.warnings) lines.push(`  Note          ${w}`);
   const next = sample ? `Your own usage: ${APP_NAME}` : `Share: ${APP_NAME} receipt`;
   lines.push("", dim(`  How this is estimated: ${APP_NAME} --method   ·   ${next}`));
@@ -117,7 +126,7 @@ export function breakdown(e: Estimate, params: Params, window: Window, dim: Dime
   const unit = energy(e.total).unit;
   const scale = unit === "kWh" ? 1000 : 1;
   const label = (key: string) =>
-    dim === "type" ? TYPE_LABELS[key as TokenType] : dim === "project" ? projectName(key) : dim === "model" ? shortModel(key) : key;
+    dim === "type" ? TYPE_LABELS[key as TokenType] : dim === "project" ? clip(projectName(key)) : dim === "model" ? clip(shortModel(key)) : key;
   const body = rows.map((r) => [
     label(r.key),
     int(totalTokens(r.tokens)),
@@ -220,7 +229,7 @@ export function history(e: Estimate, params: Params, window: Window, storedDays:
   const lines = [
     header(params, window),
     "",
-    table(["week", unit, "range", ""], rows, 1, { align: ["left", "right", "right", "left"], dimCols: [2], color: opts.color }),
+    table(["week", unit, "range", "trend"], rows, 1, { align: ["left", "right", "right", "left"], dimCols: [2], color: opts.color }),
     "",
     `  Trend         ${sparkline(weeks.map((w) => w.central))}`,
     `  Total         ${bold(total.central)}   ${dim(`(range ${total.range})`)}`,
@@ -238,7 +247,16 @@ export function history(e: Estimate, params: Params, window: Window, storedDays:
   return lines.join("\n");
 }
 
-const csvCell = (v: string | number) => (typeof v === "number" ? String(v) : /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+/**
+ * One CSV cell. A text cell that starts with = + - @, a tab or a carriage return gets a leading
+ * apostrophe, so a spreadsheet shows it as text and never runs it as a formula (a folder can be
+ * named "=HYPERLINK(…)"). Numbers are written as numbers.
+ */
+const csvCell = (v: string | number) => {
+  if (typeof v === "number") return String(v);
+  const text = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
 
 /** Daily rows as CSV, with energy recomputed under the current method. */
 export function historyCsv(rows: readonly RollupRow[], params: Params): string {

@@ -1,3 +1,4 @@
+import { safeName } from "./sanitize.js";
 import { TOKEN_TYPES, type TokenCounts, type UsageRecord } from "./types.js";
 
 export const HISTORY_SCHEMA = 1;
@@ -107,22 +108,37 @@ export function parseHistory(text: string): RollupRow[] {
     } catch {
       continue;
     }
-    if (isRow(value)) rows.push(value);
+    if (isRow(value)) {
+      // The file is ours, but it can be hand-edited: clean names the same way the log parser does.
+      value.model = safeName(value.model) || "(unnamed)";
+      if (typeof value.projectName === "string") value.projectName = safeName(value.projectName) || "(unnamed)";
+      rows.push(value);
+    }
   }
   return rows;
 }
 
+/** A finite count that isn't negative. */
+const okCount = (n: unknown) => typeof n === "number" && Number.isFinite(n) && n >= 0;
+
+/** A real calendar date written YYYY-MM-DD. */
+const okDate = (d: unknown) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`));
+
+/** A row we can trust: a real date, names that are strings, and counts that are finite and not negative. */
 function isRow(v: unknown): v is RollupRow {
   if (!v || typeof v !== "object") return false;
   const r = v as Partial<RollupRow>;
   return (
-    typeof r.date === "string" &&
+    okDate(r.date) &&
     typeof r.model === "string" &&
     typeof r.source === "string" &&
-    typeof r.responses === "number" &&
+    (r.projectId === undefined || r.projectId === null || typeof r.projectId === "string") &&
+    (r.projectName === undefined || r.projectName === null || typeof r.projectName === "string") &&
+    okCount(r.responses) &&
     !!r.tokens &&
-    TOKEN_TYPES.every((t) => typeof r.tokens![t] === "number") &&
-    (r.outputContext === undefined || typeof r.outputContext === "number")
+    typeof r.tokens === "object" &&
+    TOKEN_TYPES.every((t) => okCount(r.tokens![t])) &&
+    (r.outputContext === undefined || okCount(r.outputContext))
   );
 }
 

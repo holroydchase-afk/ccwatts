@@ -111,7 +111,7 @@ function renderChart(e: Estimate) {
     parts.push(`<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`);
     parts.push(`<text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end">${num(v)}</text>`);
   }
-  parts.push(`<text x="0" y="10">${total.unit} per day</text>`);
+  parts.push(`<text x="0" y="10">${esc(total.unit)} per day</text>`);
   // Each day's energy split by token type, using that day's type shares of the central value.
   days.forEach((d, i) => {
     let acc = 0;
@@ -123,14 +123,14 @@ function renderChart(e: Estimate) {
       const v0 = acc / scale;
       acc += wh;
       const v1 = acc / scale;
-      parts.push(`<rect x="${x.toFixed(1)}" y="${y(v1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.5, y(v0) - y(v1)).toFixed(1)}" fill="var(--t-${type})"><title>${d.key} ${TYPE_LABELS[type]} ${num(wh / scale)} ${total.unit}</title></rect>`);
+      parts.push(`<rect x="${x.toFixed(1)}" y="${y(v1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.5, y(v0) - y(v1)).toFixed(1)}" fill="var(--t-${type})"><title>${esc(d.key)} ${esc(TYPE_LABELS[type])} ${num(wh / scale)} ${esc(total.unit)}</title></rect>`);
     }
   });
   const labelIdx = days.length === 1 ? [0] : [0, Math.floor((days.length - 1) / 2), days.length - 1];
   for (const i of new Set(labelIdx)) {
     const anchor = i === 0 ? "start" : i === days.length - 1 ? "end" : "middle";
     const x = i === 0 ? pad.l : i === days.length - 1 ? W - pad.r : pad.l + (i + 0.5) * bw;
-    parts.push(`<text x="${x}" y="${H - 8}" text-anchor="${anchor}">${days[i]!.key.slice(5)}</text>`);
+    parts.push(`<text x="${x}" y="${H - 8}" text-anchor="${anchor}">${esc(days[i]!.key.slice(5))}</text>`);
   }
   svg.innerHTML = parts.join("");
   $("chart-note").textContent = `Bars show the central estimate per day. The total for this window is ${total.central}, with a range of ${total.range} ${total.unit}.`;
@@ -185,6 +185,7 @@ function renderExplain(e: Estimate) {
 }
 
 let currentSvg = "";
+let fullSizeUrl = "";
 let currentLine = "";
 let currentPost = "";
 
@@ -194,6 +195,10 @@ function renderShare(e: Estimate, label: string) {
   currentLine = shareLine(input);
   currentPost = linkedInPost(input);
   ($("card") as HTMLImageElement).src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(currentSvg)}`;
+  // "Open full size" opens the same card from memory (a blob: URL): nothing is fetched.
+  if (fullSizeUrl) URL.revokeObjectURL(fullSizeUrl);
+  fullSizeUrl = URL.createObjectURL(new Blob([currentSvg], { type: "image/svg+xml" }));
+  ($("card-full") as HTMLAnchorElement).href = fullSizeUrl;
   $("post").textContent = currentPost;
   $("share-status").textContent = state.source === "sample" ? "This card shows sample data. Load your own logs to make yours." : "";
 }

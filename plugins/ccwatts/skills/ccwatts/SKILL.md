@@ -1,7 +1,7 @@
 ---
 description: Estimate the electricity this machine's Claude Code usage consumed, as a sourced kWh range. Use when the user runs /ccwatts or asks about the energy, electricity or footprint of their Claude Code use.
 argument-hint: "[history | receipt | dashboard] [--since 7d] [--by model|day|project|type] [--method]"
-allowed-tools: Bash(node *)
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/bin/ccwatts.js" *)
 ---
 
 Run the bundled ccwatts CLI with the user's arguments and show them the result:

@@ -1,5 +1,7 @@
 import {
+  dropFuture,
   estimate,
+  futureNote,
   mergeHistory,
   rollup,
   rollupRecords,
@@ -14,7 +16,7 @@ import { stat } from "node:fs/promises";
 import { basename } from "node:path";
 import { sampleRows } from "./dashboard.js";
 import { reason } from "./errors.js";
-import { defaultLogRoots, loadLogs } from "./logs.js";
+import { defaultLogRoots, loadLogs, unreadableNote, type LoadedLogs } from "./logs.js";
 import { readHistory, writeHistory } from "./store.js";
 
 export interface UsageOptions {
@@ -38,6 +40,8 @@ export interface Usage {
   /** Where --since counts back from: today, or the last day of the sample. */
   now: Date;
   sample: boolean;
+  /** One-line notes about what was left out (unreadable files, future dates). No paths. */
+  notes: string[];
 }
 
 /** Loads usage the way every command does: logs, merged with history unless --path, --demo or --no-history. */
@@ -47,10 +51,15 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
     // Basename only: errors can end up in a model's context (mcp) as well as the terminal.
     throw new Error(`"${basename(options.path)}" doesn't exist. Check the folder or file given to --path.`);
   }
-  const logs = demo ? { roots: [], files: 0, records: [] } : await loadLogs(options.path ? [options.path] : defaultLogRoots());
+  const logs: LoadedLogs = demo ? { roots: [], files: 0, records: [], unreadable: [] } : await loadLogs(options.path ? [options.path] : defaultLogRoots());
   const sample = demo ? sampleRows() : [];
   // The sample is a fixed month in the past: count --since back from its last day.
   const now = demo ? new Date(`${sample.map((r) => r.date).sort().at(-1)}T23:59:59Z`) : new Date();
+  // A response dated well after now is a wrong clock or a corrupt line: leave it out of the
+  // estimate and of history, so it can't stretch the weekly table into the future.
+  const { kept, future } = dropFuture(logs.records, now);
+  logs.records = kept;
+  const notes = [unreadableNote(logs.unreadable), future ? futureNote(future) : null].filter((n): n is string => n !== null);
 
   // History keeps daily token counts so usage survives Claude Code's log cleanup.
   let rows = demo ? sample : rollup(logs.records);
@@ -71,7 +80,7 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
       });
     }
   }
-  return { rows, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo };
+  return { rows, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo, notes };
 }
 
 /** Rows inside a window. Day rollups are cut by date. */
@@ -79,12 +88,14 @@ export const rowsIn = (rows: readonly RollupRow[], window: Window) =>
   window.start ? rows.filter((r) => r.date >= window.start!.slice(0, 10)) : [...rows];
 
 /** Estimates one window: day rollups normally, raw records for hour-level windows. */
-export function estimateWindow(usage: Pick<Usage, "rows" | "records">, window: Window, params: Params): Estimate {
+export function estimateWindow(usage: Pick<Usage, "rows" | "records"> & Partial<Pick<Usage, "notes">>, window: Window, params: Params): Estimate {
   const hourly = Boolean(window.start && window.label.includes("hour"));
   const inWindow = rowsIn(usage.rows, window);
   // Day rollups are coarse; within the window, raw records give exact hour-level cuts.
   const e = estimate(hourly ? since(usage.records, window.start!) : rollupRecords(inWindow), params);
   // Rollups hold one record per day/model/project, so count responses from the rows instead.
   if (!hourly) e.responses = inWindow.reduce((n, r) => n + r.responses, 0);
+  // Notes about skipped input travel with every estimate, so the summary, --json and MCP all say it.
+  e.warnings.push(...(usage.notes ?? []));
   return e;
 }

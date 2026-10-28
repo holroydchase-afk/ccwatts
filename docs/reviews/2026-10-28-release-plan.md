@@ -52,3 +52,14 @@ New P2s, carried into M2.6.4:
 - **UX-R17** (finishes R10) share-card text ≥11px on phones (crop or "Open full size").
 - **UX-R18** empty `#drop-status` leaves a gap: `:empty{display:none}`.
 - **UX-R19** `history` draws a divider over the unlabeled bar column.
+
+## Harden M2.6.4 (qa-tdd + privacy-security)
+privacy-security found 1 P1 and 6 P2 on the whole product (crafted hostile log, every CLI command, MCP over stdio, dashboard and playground in Chromium):
+- **PS-R1 (P1, fixed)** one unreadable log file stopped every command and put its full path (and the encoded project folder) into the MCP answer. Now skipped and counted by reason code.
+- **PS-R2 (P2, fixed)** a non-date timestamp reached the chart's innerHTML (the CSP blocked loads). Bad timestamps are now dropped and chart keys escaped.
+- **PS-R3 (P2, fixed)** control/bidi characters in model and project names reached the terminal and MCP; names are cleaned in core and capped at 64. Plugin skills no longer pre-approve `Bash(node *)`.
+- **PS-R4 (P2, fixed)** CSV formula injection: cells starting with = + - @ get a leading `'`.
+- **PS-R5 (P2, open, Chase)** project ids are an unsalted hash of the full path, so a guessed path can be confirmed. Options: a per-install salt (changes ids, history keeps working only after a migration) or drop ids from `--json`/MCP.
+- **PS-R6 (P2, fixed)** absurd token counts (1e300, fractions, >1e9) are dropped as malformed.
+- **PS-R7 (P2, open → M2.6.7)** actions pinned by tag not SHA; `publish.yml` dispatchable from any branch; no secret scanning.
+qa-tdd: coverage table for every core flow, 33 red tests (BOM, bad timestamps, corrupt history rows, huge `--since`, future dates ignored with a note, `--export` without history, singular "1 response", long and `/` project names, `receipt --out` to a missing folder, UX-R14/16/17/18/19). 209 tests green 3x.
