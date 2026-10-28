@@ -45,7 +45,7 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 
 ## Privacy
 
-- **The CLI** reads `~/.claude/projects/**/*.jsonl` and keeps only token counts, model, day and project. Projects are stored as a hash plus the folder name, never the full path. It makes no network calls.
+- **The CLI** reads `~/.claude/projects/**/*.jsonl` and keeps only token counts, model, day and project. Projects are stored as a hash plus the folder name, never the full path, and the hash stays in the local history file: `--json`, MCP answers and the dashboard file show only the folder name. It makes no network calls.
 - **The web page** has a Content-Security-Policy of `default-src 'none'` with a hash-pinned script, so the browser itself blocks any request. Tests check this, and `npm run check:browser` confirms zero requests in a real browser.
 - **History** lives in `~/.ccwatts/history.jsonl` (counts only). Delete it any time.
 

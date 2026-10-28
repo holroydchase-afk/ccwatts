@@ -162,7 +162,6 @@ export function json(e: Estimate, params: Params, window: Window, sample = false
   const rows = (list: Breakdown[], dim: Dimension) =>
     list.map((r) => ({
       key: dim === "project" ? projectName(r.key) : r.key,
-      ...(dim === "project" ? { projectId: r.key.split("#")[1] ?? null } : {}),
       wh: r.energy,
       tokens: r.tokens,
     }));
