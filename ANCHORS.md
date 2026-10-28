@@ -42,6 +42,7 @@ Chase comes to this from climate and product. He has about 10 years of product m
 | D11 | The Claude Code plugin (`/ccwatts` and the session status line, PR #21) ships after the npm release (PLAN M2.2), not before. | Decided Oct 22, 2026 |
 | D12 | History may store one extra count per day, model and project: the sum of output tokens × context size. Counts only, never content; not shown until the energy model can price it. | Decided Oct 22, 2026 |
 | D13 | v1 shows kWh only. Carbon may come later as an opt-in line, never on by default. | Decided Oct 22, 2026 |
+| D14 | ccwatts offers a local MCP server, `ccwatts mcp`, so Claude Code can ask about its own energy use. **stdio transport only**: Claude Code starts it on demand and talks over a pipe, so there is no port, no listener and no network, and the "no network calls" rule holds. This answers the "means running a service" worry in IDEAS.md. Tools wrap the pure core, return low/central/high plus the method version, counts only, basenames only. The MCP SDK is bundled into the CLI, so the npm package still has no runtime dependencies. | Decided Oct 27, 2026 (Chase, Polish Freeze exception) |
 
 ## Proposed, not yet decided (Oct 18, 2026)
 

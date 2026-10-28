@@ -186,8 +186,11 @@ IDs follow the studio standard (`docs/planning-ids.md` in holroydchase-afk/studi
 | ID | Task | Done when | Status | Branch |
 |---|---|---|---|---|
 | M2.1 | **Real-log run** on Chase's laptop. | Totals look right and `cleanupPeriodDays` is recorded in `core/README.md` | todo (Chase) | n/a |
-| M2.2 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds | doing: name decided (ccwatts), package ready; publish waits on Chase's go | `m2.2-ship` |
+| M2.2 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds | done (0.1.1 on npm, Oct 26) | `m2.2-ship` |
 | M2.3 | **Friend beta fixes.** | Top 3 issues from beta feedback fixed | todo | `m2.3-beta-fixes` |
+| M2.4 | **Claude Code plugin**: `/ccwatts` and the status line. | Plugin installs from this repo and runs the CLI | done (PR #21) | `claude/project-thread-*` |
+| M2.5 | **MCP server**: `ccwatts mcp` on stdio with `energy_summary`, `energy_by_project`, `energy_weekly`, `methodology` (ANCHORS D14). | All four tools answer in a Vitest test and a manual Claude Code run | done (PR #45) | `claude/project-thread-a66r4n` |
+| M2.6 | **Release: functional, high-quality demo** (Chase's 7-phase plan, Oct 28). One PR per step, stacked: M2.6.1 plan; M2.6.2 works for real (day-one gaps F1–F8: missing `--path`, empty files, `--json` with no logs, `mcp` in a terminal, `help`, plural/one-week copy, `--method` link, playground read errors); M2.6.3 UI to 8/10 (ux-reviewer before 6.5 playground / 6 CLI); M2.6.4 harden (qa-tdd bad-input suite, privacy-security review); M2.6.5 enhancements (cache-read "what if" slider; plugin registers MCP if Chase OKs); M2.6.6 demo check on the live page; M2.6.7 reusable blocks (CI on main + badge, Pages gated on CI, dependabot, privacy pre-commit check). | Each step's PR is green 3x with an `Agents:` line; ux-reviewer scores ≥8 after; live playground loads with sample data | doing | `claude/project-thread-xfle8z*` |
 
 ### M3: Methodology v0.2
 

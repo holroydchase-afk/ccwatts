@@ -10,11 +10,20 @@ npx ccwatts receipt        # share line and card
 npx ccwatts dashboard      # offline HTML dashboard
 npx ccwatts --method       # every parameter and its source
 npx ccwatts --demo         # no Claude Code logs yet? try synthetic sample data
+npx ccwatts help           # every command and option
 ```
+
+Let Claude Code ask it directly, as a local MCP server on stdio (no port, no network):
+
+```
+claude mcp add ccwatts -- npx -y ccwatts mcp
+```
+
+Then ask "how much energy did my sessions use this week?". Tools: `energy_summary`, `energy_by_project`, `energy_weekly`, `methodology`.
 
 - **Local only.** No network calls, no accounts, no telemetry. It reads token counts, never prompt or response text.
 - **Ranges, not false precision.** Every number shows a low–high range and the method version.
-- **No runtime dependencies.** Node 20+.
+- **No runtime dependencies.** Everything, including the MCP SDK, is bundled. Node 20+.
 
 Try it in your browser first, on sample data: https://chaseholroyd.com/ccwatts/
 

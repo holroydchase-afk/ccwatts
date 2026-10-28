@@ -32,6 +32,12 @@ const sample = JSON.stringify(sampleRows(here("../../fixtures/claude-code/demo.j
 // Read from core/src/meta.ts so the URL lives in one place.
 const PLAYGROUND_URL = /PLAYGROUND_URL = "([^"]+)"/.exec(readFileSync(here("../core/src/meta.ts"), "utf8"))[1];
 
+// The "What if?" slider's bounds come from params.json, so it can never leave the published range.
+const cacheRead = JSON.parse(readFileSync(here("../../methodology/params.json"), "utf8")).params.cache_read_vs_input;
+const pct = (v) => `${Math.round(v * 100)}%`;
+const at = (cacheRead.value - cacheRead.low) / (cacheRead.high - cacheRead.low);
+const mark = `calc(${(at * 100).toFixed(2)}% + ${(8 - 16 * at).toFixed(1)}px)`;
+
 const hash = createHash("sha256").update(script).digest("base64");
 // Nothing can be fetched: no connect-src, no external scripts, styles, fonts or frames.
 const csp = [
@@ -46,6 +52,13 @@ const csp = [
 const html = readFileSync(here("src/template.html"), "utf8")
   .replace("__CSP__", () => csp)
   .replaceAll("__PLAYGROUND_URL__", () => PLAYGROUND_URL)
+  .replace("__WHATIF_MIN__", () => String(cacheRead.low))
+  .replace("__WHATIF_MAX__", () => String(cacheRead.high))
+  .replace("__WHATIF_VALUE__", () => String(cacheRead.value))
+  .replace("__WHATIF_MARK__", () => mark)
+  .replaceAll("__WHATIF_PCT__", () => pct(cacheRead.value))
+  .replaceAll("__WHATIF_LOW_PCT__", () => pct(cacheRead.low))
+  .replaceAll("__WHATIF_HIGH_PCT__", () => pct(cacheRead.high))
   .replace("__SAMPLE__", () => sample)
   .replace("__SCRIPT__", () => script);
 writeFileSync(here("dist/ccwatts.html"), html);

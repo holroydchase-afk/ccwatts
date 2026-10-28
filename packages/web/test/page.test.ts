@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { defaultParams, rollup, claudeCodeAdapter, PLAYGROUND_URL, PORTFOLIO_URL } from "@ccwatts/core";
+import { APP_VERSION, defaultParams, rollup, claudeCodeAdapter, PLAYGROUND_URL, PORTFOLIO_URL } from "@ccwatts/core";
 import { DATA_MARKER, injectData, safeJson } from "../src/inject.js";
 
 // Built by `npm test` (node packages/web/build.mjs) before vitest runs.
@@ -132,5 +132,156 @@ describe("export prompt for Claude Code on the web", () => {
     expect(records).toHaveLength(1);
     expect(records[0]!.tokens).toEqual({ input: 2, cacheWrite: 300, cacheRead: 4000, output: 50 });
     expect(records[0]!.project?.name).toBe("ccwatts");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// UI polish (CCW-M2.6.3, docs/reviews/2026-10-28-release-plan.md). Layout and computed-style
+// checks that need a real browser (UX-R4 fonts, UX-R5 phone height, UX-R2 error states, the
+// one-day span) are in scripts/check-no-network.mjs, run with `npm run check:browser`.
+// ---------------------------------------------------------------------------------------------
+const tag = (re: RegExp) => re.exec(html)?.[0] ?? "";
+const at = (s: string) => html.indexOf(s);
+
+describe("UX-R1 errors are announced where they happen", () => {
+  it("UX-R1: #drop-status is a polite live status region", () => {
+    const status = tag(/<[a-z]+[^>]*id="drop-status"[^>]*>/);
+    expect(status).toContain('role="status"');
+    expect(status).toContain('aria-live="polite"');
+  });
+
+  it("UX-R1: the hero is not a live region (it re-renders on every toggle)", () => {
+    const hero = tag(/<section[^>]*class="hero"[^>]*>/);
+    expect(hero).not.toBe("");
+    expect(hero).not.toContain("aria-live");
+  });
+});
+
+describe("UX-R2 error styling", () => {
+  it("UX-R2: the page has an .error style and the empty-paste copy", () => {
+    expect(html).toMatch(/\.error\{[^}]+\}|\.status\.error\{[^}]+\}/);
+    expect(html).toContain("Paste the lines first.");
+    expect(html).toContain("We couldn't find any usage lines in that text. Paste the lines Claude printed, one JSON object per line.");
+    expect(html).not.toContain("had no Claude Code usage in them");
+  });
+});
+
+describe("UX-R3 the result stays with its chart", () => {
+  it("UX-R3: 'Try it on your own logs' comes after the chart and the By model / By project lists", () => {
+    const drop = at('id="drop"');
+    expect(drop).toBeGreaterThan(0);
+    for (const id of ['id="chart"', 'id="by-model"', 'id="by-project"']) expect(drop, id).toBeGreaterThan(at(id));
+  });
+
+  it("UX-R3: the hero links to it with 'Use your own logs'", () => {
+    const hero = /<section[^>]*class="hero"[^>]*>([\s\S]*?)<\/section>/.exec(html)?.[1] ?? "";
+    expect(hero).toMatch(/<a[^>]*href="#drop"[^>]*>\s*Use your own logs\s*<\/a>/);
+  });
+
+  it("UX-R3: the 7 days / 30 days / All time toggle is one labeled group", () => {
+    const groups = html.match(/<[a-z]+[^>]*role="group"[^>]*>(?:(?!<\/div>)[\s\S])*data-window="7d"/g) ?? [];
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatch(/aria-label="[^"]+"/);
+    for (const w of ["7d", "30d", "all"]) expect(html.match(new RegExp(`data-window="${w}"`, "g"))).toHaveLength(1);
+  });
+});
+
+describe("UX-R5 method details fold away", () => {
+  it("UX-R5: the method parameter table sits inside a <details>", () => {
+    const before = html.slice(0, at('id="params"'));
+    const opened = (before.match(/<details[ >]/g) ?? []).length;
+    const closed = (before.match(/<\/details>/g) ?? []).length;
+    expect(opened - closed).toBe(1);
+  });
+});
+
+describe("UX-R11 one version everywhere", () => {
+  it("UX-R11: the footer shows the CLI package version, from the single APP_VERSION constant", () => {
+    const pkg = JSON.parse(readFileSync(new URL("../../cli/package.json", import.meta.url), "utf8"));
+    expect(APP_VERSION).toBe(pkg.version);
+    expect(html).toContain(pkg.version);
+    const app = readFileSync(new URL("../src/app.ts", import.meta.url), "utf8");
+    expect(app).toMatch(/footer-version[\s\S]{0,200}APP_VERSION/);
+    expect(html).not.toMatch(/v0\.1(?![.\d])/);
+  });
+});
+
+describe("UX-R13 the Claude Code on the web summary is styled", () => {
+  it("UX-R13: its <summary> has a class with a 44px minimum height", () => {
+    const m = /<summary class="([\w-]+)[^"]*"[^>]*>\s*Use Claude Code on the web/.exec(html);
+    expect(m, "summary has a class").not.toBeNull();
+    expect(html).toMatch(new RegExp(`\\.${m![1]}\\{[^}]*min-height:44px`));
+  });
+});
+
+describe("UX-R18 an empty status line takes no space (CCW-M2.6.4)", () => {
+  it("UX-R18 RED: the page hides #drop-status (or .status) while it is empty", () => {
+    const css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n");
+    expect(css).toMatch(/(#drop-status|\.status):empty\s*\{[^}]*display\s*:\s*none/);
+  });
+});
+
+// CCW-M2.6.5 "What if?" cache-read slider. The bounds come from methodology/params.json so the
+// slider can never leave the published range. Browser behavior (WI-3, WI-4) is in check-no-network.mjs.
+describe("WI-2 What if? cache-read slider is on the page (CCW-M2.6.5)", () => {
+  const p = defaultParams.params.cache_read_vs_input!;
+  const tag = /<input[^>]*id="whatif-cache"[^>]*>/.exec(html)?.[0] ?? "";
+  const attr = (name: string) => new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+
+  it("WI-2: has <input type=\"range\" id=\"whatif-cache\">", () => {
+    expect(tag, "slider input").not.toBe("");
+    expect(attr("type")).toBe("range");
+  });
+
+  it("WI-2: min, max and value come from params low, high and central; step is fine-grained", () => {
+    expect(Number(attr("min"))).toBeCloseTo(p.low, 9);
+    expect(Number(attr("max"))).toBeCloseTo(p.high, 9);
+    expect(Number(attr("value"))).toBeCloseTo(p.value, 9);
+    const step = Number(attr("step"));
+    expect(step).toBeGreaterThan(0);
+    expect(step).toBeLessThanOrEqual(0.01);
+  });
+
+  it("WI-2: has a visible <label for=\"whatif-cache\">", () => {
+    const label = /<label[^>]*for="whatif-cache"[^>]*>([\s\S]*?)<\/label>/.exec(html);
+    expect(label, "label").not.toBeNull();
+    expect(label![0]).not.toMatch(/class="[^"]*\bvh\b/);
+    expect(label![0]).not.toMatch(/\shidden[\s>]/);
+    expect(label![1]!.replace(/<[^>]+>/g, "").trim().length).toBeGreaterThan(0);
+  });
+
+  it("WI-2: has an <output id=\"whatif-value\"> showing the percent, and a Reset button", () => {
+    const out = /<output[^>]*id="whatif-value"[^>]*>([^<]*)<\/output>/.exec(html);
+    expect(out, "output element").not.toBeNull();
+    expect(out![1]).toContain(`${Math.round(p.value * 100)}%`);
+    expect(html).toMatch(/<button[^>]*id="whatif-reset"[^>]*>\s*Reset\s*<\/button>/);
+  });
+
+  it("WI-2: has a #whatif-note, hidden until the slider moves", () => {
+    expect(html).toMatch(/<[a-z]+[^>]*id="whatif-note"[^>]*\shidden[\s>]/);
+  });
+});
+
+// ux-reviewer / positioning findings on the what-if slider (CCW-M2.6.5).
+describe("WI-R3 what-if explainer wording", () => {
+  const box = /<div class="whatif" id="whatif">[\s\S]*?<button[^>]*id="whatif-reset"/.exec(html)?.[0] ?? "";
+  const text = box.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  it("WI-R3: calls cache reads the least certain assumption and says the source tests 1% to 25%", () => {
+    expect(box, "what-if box").not.toBe("");
+    expect(text).toContain("the least certain assumption");
+    expect(text).toContain("tests 1% to 25%");
+  });
+
+  it("WI-R3: no longer says 'sources disagree'", () => {
+    expect(html).not.toContain("sources disagree");
+  });
+});
+
+describe("WI-R6 what-if scale is readable", () => {
+  it("WI-R6: .whatif-scale font-size is 13px or more in every rule that sets it", () => {
+    const sizes = [...html.matchAll(/\.whatif-scale\{[^}]*font-size:(\d+)px/g)].map((m) => Number(m[1]));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const s of sizes) expect(s).toBeGreaterThanOrEqual(13);
   });
 });

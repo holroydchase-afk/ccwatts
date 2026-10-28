@@ -1,5 +1,7 @@
 # ccwatts
 
+[![CI](https://github.com/holroydchase-afk/ccwatts/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/holroydchase-afk/ccwatts/actions/workflows/ci.yml)
+
 **See how much electricity your AI coding uses.** ccwatts reads the logs Claude Code already keeps on your machine and turns token counts into an electricity estimate. The estimate is always a range, and every assumption is sourced.
 
 **[Try it in your browser](https://chaseholroyd.com/ccwatts/)**: it opens on sample data, needs no install or sign-in, and your own logs never leave the page.
@@ -30,6 +32,8 @@ Developers run AI agents all day, and almost nobody can see what that costs in e
 | Playground on a laptop | Share card | Playground on a phone |
 |---|---|---|
 | ![Playground on a laptop, showing sample data](docs/images/playground-laptop.png) | ![Receipt card](docs/images/receipt-sample.png) | ![Playground on a phone, showing sample data](docs/images/playground-phone.png) |
+
+In the playground, a **"What if?" slider** moves the least certain assumption, what a cache read costs (the method uses 10% of fresh input and tests 1% to 25%), and recomputes your number and its range live. It's a what-if only: the share card and LinkedIn post always use the published estimate.
 
 ## How the estimate works
 
@@ -69,15 +73,39 @@ ccwatts is also a Claude Code plugin, so you can check your number without leavi
 /plugin install ccwatts@ccwatts
 ```
 
-Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same options as the CLI, for example `/ccwatts history` or `/ccwatts --by project`. Run `/ccwatts:statusline` once to add a status line that shows the current session's estimate after every response. The plugin runs the same local CLI, so nothing leaves your machine.
+Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same options as the CLI, for example `/ccwatts history` or `/ccwatts --by project`. Run `/ccwatts:statusline` once to add a status line that shows the current session's estimate after every response. Installing the plugin also adds the MCP tools below, so you can just ask Claude. The plugin runs the same local CLI, so nothing leaves your machine.
+
+### Ask Claude about it (MCP server)
+
+`ccwatts mcp` is a local [MCP](https://modelcontextprotocol.io) server, so Claude Code can answer "how much energy did my sessions use this week?" itself. It has four read-only tools: `energy_summary`, `energy_by_project`, `energy_weekly` (each takes an optional `since`, like `7d` or `all`) and `methodology`. Every answer is a low/central/high range in Wh with the method version, counts only, and projects by folder name, never the full path.
+
+It runs on stdio: Claude Code starts it when it needs it and talks to it over a pipe. There is no port, no listener and no network. You don't run it by hand: `ccwatts mcp --help` prints the line to add it, and typed in a terminal it says what it is waiting for.
+
+Installing the plugin (above) also adds the MCP tools: the plugin registers the server itself, so there is nothing else to run. `/mcp` lists it as `plugin:ccwatts:ccwatts`, and you can switch it off there.
+
+Without the plugin, once the next version is on npm:
+
+```
+claude mcp add ccwatts -- npx -y ccwatts mcp
+```
+
+From a clone of this repo, before that release (after `npm install && npm run build`):
+
+```
+claude mcp add ccwatts -- node /path/to/ccwatts/packages/cli/dist/index.js mcp
+```
+
+`-y` matters: without it `npx` can stop to ask before installing, and that prompt would land in the MCP pipe.
 
 ## How it's built
 
-TypeScript monorepo: `packages/core` holds the pure parsing, energy model and receipt code, shared by `packages/cli` (terminal) and `packages/web` (one static HTML page). `plugins/ccwatts` wraps the same CLI as a Claude Code plugin. Log parsing sits behind a small adapter interface, so other agent CLIs can be added later without touching the energy model. The product reasoning is written down: [VISION.md](VISION.md) (problems and answers), [ANCHORS.md](ANCHORS.md) (decisions and what was cut), [PLAN.md](PLAN.md) (build plan) and [IDEAS.md](IDEAS.md) (ideas and lessons).
+TypeScript monorepo: `packages/core` holds the pure parsing, energy model and receipt code, shared by `packages/cli` (terminal) and `packages/web` (one static HTML page). `plugins/ccwatts` wraps the same CLI as a Claude Code plugin, and `ccwatts mcp` serves the same numbers to Claude Code as MCP tools. Log parsing sits behind a small adapter interface, so other agent CLIs can be added later without touching the energy model. The product reasoning is written down: [VISION.md](VISION.md) (problems and answers), [ANCHORS.md](ANCHORS.md) (decisions and what was cut), [PLAN.md](PLAN.md) (build plan) and [IDEAS.md](IDEAS.md) (ideas and lessons).
+
+If you clone it to contribute, `npm install` turns on a pre-commit hook (`.githooks/pre-commit`) that refuses a commit containing a home path, an email address, a token or key, or a `.env` file. `npm test` and CI run the same check (`scripts/check-private.mjs`) over the whole repo.
 
 ## Status
 
-v0.1.1 on npm, plus a Claude Code plugin from this repo. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
+v0.1.1 on npm, plus a Claude Code plugin from this repo. The MCP server (`ccwatts mcp`) is on `main` and ships in the next npm version. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 

@@ -1,6 +1,6 @@
 ---
 description: Set up the ccwatts status line, which shows the current Claude Code session's estimated electricity after every response. Use only when the user runs /ccwatts:statusline or asks for it.
-allowed-tools: Bash(node *), Bash(mkdir *), Bash(cp *), Read, Edit, Write
+allowed-tools: Bash(node ~/.ccwatts/bin/ccwatts.js statusline), Bash(echo '{}' | node ~/.ccwatts/bin/ccwatts.js statusline), Bash(mkdir -p ~/.ccwatts/bin), Bash(cp "${CLAUDE_PLUGIN_ROOT}/bin/ccwatts.js" ~/.ccwatts/bin/ccwatts.js), Read, Edit, Write
 disable-model-invocation: true
 ---
 

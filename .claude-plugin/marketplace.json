@@ -6,7 +6,7 @@
     {
       "name": "ccwatts",
       "source": "./plugins/ccwatts",
-      "description": "/ccwatts for your kWh range, plus an optional status line for the current session."
+      "description": "/ccwatts for your kWh range, four MCP tools so Claude can answer energy questions itself, and an optional status line for the current session."
     }
   ]
 }

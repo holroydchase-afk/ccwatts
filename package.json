@@ -13,11 +13,13 @@
   "scripts": {
     "build": "npm run build -w packages/core -w packages/web -w packages/cli && node scripts/build-plugin.mjs",
     "typecheck": "tsc -p packages/core && tsc -p packages/web && tsc -p packages/cli",
-    "test": "node packages/web/build.mjs && vitest run",
+    "test": "bash scripts/check-agents.sh && node scripts/check-logs.mjs && node scripts/check-private.mjs && node packages/web/build.mjs && vitest run",
     "check:browser": "node scripts/check-no-network.mjs",
     "check:kit": "node tools/showcase-check/selftest.mjs",
     "check:page": "node tools/showcase-check/cli.mjs",
-    "start": "npm run build && node packages/cli/dist/index.js"
+    "check:live": "node scripts/check-live.mjs",
+    "start": "npm run build && node packages/cli/dist/index.js",
+    "prepare": "[ -d .git ] && git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

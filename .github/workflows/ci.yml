@@ -1,24 +1,57 @@
-# Builds, typechecks and tests every PR, and checks the committed plugin bundle is current.
+# Builds, typechecks and tests every PR and every push to main, checks the committed plugin bundle
+# is current, and runs the browser no-network check. Pages deploys only after this passes on main.
 name: CI
 
 on:
-  pull_request:
+  pull_request: {}
+  push:
+    branches: [main]
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Agent roster matches CLAUDE.md
+        run: bash scripts/check-agents.sh
+      - name: No secrets, URLs or raw errors in logs
+        run: node scripts/check-logs.mjs
+      - name: No home paths, emails, tokens or keys in the repo
+        run: node scripts/check-private.mjs
       - run: npm run build
       - run: npm run typecheck
       - run: npm test
       - name: Plugin bundle is up to date
-        run: git diff --exit-code plugins/ccwatts/bin/ccwatts.js || (echo "::error::Run npm run build and commit plugins/ccwatts/bin/ccwatts.js" && exit 1)
+        run: git diff --exit-code plugins/ccwatts/bin/ccwatts.js plugins/ccwatts/bin/mcp.js || (echo "::error::Run npm run build and commit plugins/ccwatts/bin/ccwatts.js and plugins/ccwatts/bin/mcp.js" && exit 1)
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci && npm run build
+      - name: Install Playwright (outside the repo, not a project dependency)
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" --no-save playwright@1.64.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps --only-shell chromium
+      - name: The playground makes no network requests
+        run: PLAYWRIGHT_MODULE="$RUNNER_TEMP/pw/node_modules/playwright/index.mjs" npm run check:browser

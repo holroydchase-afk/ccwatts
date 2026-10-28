@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ccwatts": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/ccwatts.js", "mcp"]
+    }
+  }
+}
