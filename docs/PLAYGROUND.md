@@ -1,6 +1,6 @@
 # Hosting the playground
 
-The playground is `packages/web/dist/ccwatts.html`, built by `npm run build`. It's one self-contained file with no server code, so any static host works. Hosting (Chase, Oct 21): GitHub Pages via `.github/workflows/pages.yml`, which builds, tests and publishes on every push to `main`, at https://holroydchase-afk.github.io/ccwatts/. The portfolio at chaseholroyd.com links to it.
+The playground is `packages/web/dist/ccwatts.html`, built by `npm run build`. It's one self-contained file with no server code, so any static host works. Hosting (Chase, Oct 21): GitHub Pages via `.github/workflows/pages.yml`, which builds, tests and publishes after CI passes on a push to `main`, at https://holroydchase-afk.github.io/ccwatts/. The portfolio at chaseholroyd.com links to it.
 
 ## What a visitor gets
 - The page opens on **sample data** (synthetic, clearly labeled), so a phone visitor understands it in about 10 seconds without installing anything.

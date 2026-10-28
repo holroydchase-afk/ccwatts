@@ -1,5 +1,7 @@
 # ccwatts
 
+[![CI](https://github.com/holroydchase-afk/ccwatts/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/holroydchase-afk/ccwatts/actions/workflows/ci.yml)
+
 **See how much electricity your AI coding uses.** ccwatts reads the logs Claude Code already keeps on your machine and turns token counts into an electricity estimate. The estimate is always a range, and every assumption is sourced.
 
 **[Try it in your browser](https://chaseholroyd.com/ccwatts/)**: it opens on sample data, needs no install or sign-in, and your own logs never leave the page.
@@ -96,6 +98,8 @@ claude mcp add ccwatts -- node /path/to/ccwatts/packages/cli/dist/index.js mcp
 ## How it's built
 
 TypeScript monorepo: `packages/core` holds the pure parsing, energy model and receipt code, shared by `packages/cli` (terminal) and `packages/web` (one static HTML page). `plugins/ccwatts` wraps the same CLI as a Claude Code plugin, and `ccwatts mcp` serves the same numbers to Claude Code as MCP tools. Log parsing sits behind a small adapter interface, so other agent CLIs can be added later without touching the energy model. The product reasoning is written down: [VISION.md](VISION.md) (problems and answers), [ANCHORS.md](ANCHORS.md) (decisions and what was cut), [PLAN.md](PLAN.md) (build plan) and [IDEAS.md](IDEAS.md) (ideas and lessons).
+
+If you clone it to contribute, `npm install` turns on a pre-commit hook (`.githooks/pre-commit`) that refuses a commit containing a home path, an email address, a token or key, or a `.env` file. `npm test` and CI run the same check (`scripts/check-private.mjs`) over the whole repo.
 
 ## Status
 
