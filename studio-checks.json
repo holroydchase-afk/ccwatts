@@ -1,10 +1,43 @@
 {
   "logs": {
-    "roots": ["packages/core/src", "packages/cli/src", "packages/web/src"],
+    "roots": [
+      "packages/core/src",
+      "packages/cli/src",
+      "packages/web/src"
+    ],
     "banned": []
   },
   "private": {
-    "allowUsers": ["demo", "dev", "someone", "secret-person", "a"],
+    "allowUsers": [
+      "demo",
+      "dev",
+      "someone",
+      "secret-person",
+      "a"
+    ],
     "allowEmails": []
+  },
+  "release": {
+    "package": "packages/cli",
+    "allowFiles": [
+      "package.json",
+      "README.md",
+      "LICENSE",
+      "dist/**"
+    ],
+    "smoke": [
+      [
+        "--version"
+      ],
+      [
+        "--help"
+      ],
+      [
+        "--demo"
+      ]
+    ],
+    "versions": [
+      "plugins/ccwatts/.claude-plugin/plugin.json"
+    ]
   }
 }
