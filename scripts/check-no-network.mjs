@@ -9,6 +9,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { showcaseCheck } from "../tools/showcase-check/check.mjs";
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
 const page_ = fileURLToPath(new URL("../packages/web/dist/ccwatts.html", import.meta.url));
@@ -287,6 +288,18 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if (await page.$("#xss")) problems.push("PS-R2: a row's date was rendered as markup (found <i id=xss> in the page)");
   await page.close();
 }
+
+// Generic checks from the showcase kit (unfinished text, broken images, tiny text, plus light and
+// dark mode), on the same browser. Everything above is specific to this page.
+for (const p of await showcaseCheck({
+  url: pathToFileURL(page_).href,
+  browser,
+  viewports: [{ width: 1280, height: 900 }, { width: 390, height: 844 }],
+  tapTargets: "button, label.btn", // RR-9
+  keyboardReach: ["pick-folder", "pick-files"], // RR-5
+  tabPresses: 12,
+  minTextPx: 11, // the chart-label floor from RR-8
+})) problems.push(`showcase kit: ${p}`);
 
 await browser.close();
 rmSync(scratch, { recursive: true, force: true });
