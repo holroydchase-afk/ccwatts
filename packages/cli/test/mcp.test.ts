@@ -194,4 +194,19 @@ describe("ccwatts mcp (CCW-M2.5)", () => {
     expect(r.status).toBe(1);
     expect(r.stderr).toContain("claude mcp add ccwatts -- npx ccwatts mcp");
   });
+
+  it("CCW-F4: `ccwatts mcp --help` prints MCP help with the install line and exits without serving", () => {
+    const start = Date.now();
+    const r = spawnSync(process.execPath, [bin, "mcp", "--help"], {
+      encoding: "utf8",
+      timeout: 5000,
+      env: { PATH: process.env.PATH ?? "", HOME: home() },
+    });
+    expect(r.error).toBeUndefined(); // a timeout means it started the server instead
+    expect(Date.now() - start).toBeLessThan(5000);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("claude mcp add");
+    expect(r.stdout).toMatch(/MCP/);
+  });
 });
+
