@@ -13,7 +13,7 @@
   "scripts": {
     "build": "npm run build -w packages/core -w packages/web -w packages/cli && node scripts/build-plugin.mjs",
     "typecheck": "tsc -p packages/core && tsc -p packages/web && tsc -p packages/cli",
-    "test": "node packages/web/build.mjs && vitest run",
+    "test": "bash scripts/check-agents.sh && node scripts/check-logs.mjs && node packages/web/build.mjs && vitest run",
     "check:browser": "node scripts/check-no-network.mjs",
     "start": "npm run build && node packages/cli/dist/index.js"
   },

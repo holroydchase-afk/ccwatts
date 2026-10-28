@@ -1,11 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { APP_VERSION } from "@ccwatts/core";
+import { APP_VERSION, PLAYGROUND_URL } from "@ccwatts/core";
 
 // End-to-end: bundle the CLI the way tsup does, then run it as a user would, in a throwaway home.
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -132,6 +132,7 @@ describe("ccwatts CLI", () => {
     const r = cli(["receipt", "--demo"], { HOME: home() });
     expect(r.code).toBe(1);
     expect(r.err).toMatch(/your own usage/);
+    expect(r.err).toContain(PLAYGROUND_URL); // CCW-H8: the URL must survive the error printer's URL cutting
     expect(existsSync(join(work, "ccwatts-receipt.svg"))).toBe(false);
   });
 
@@ -139,5 +140,58 @@ describe("ccwatts CLI", () => {
     const r = cli([], { HOME: home() });
     expect(r.out).toContain("ccwatts --demo");
     expect(r.out).toContain("chaseholroyd.com/ccwatts");
+  });
+
+  // CCW-H8: error lines print a short reason (the error's code or name), never the raw message,
+  // which for fs errors holds the full path of your home folder. Directories stand in for the
+  // history file because chmod doesn't stop root (this container and many CI runners).
+  function withLogs() {
+    const h = home();
+    mkdirSync(join(h, "claude", "projects"), { recursive: true });
+    cpSync(sample, join(h, "claude", "projects", "s.jsonl"));
+    return { h, env: { HOME: h, CCWATTS_HOME: join(h, ".ccwatts"), CLAUDE_CONFIG_DIR: join(h, "claude") } };
+  }
+
+  it("CCW-H8 unreadable history: says why in one word, no full path, still estimates", () => {
+    const { h, env } = withLogs();
+    mkdirSync(join(h, ".ccwatts", "history.jsonl"), { recursive: true }); // reading it throws EISDIR
+    const r = cli(["--since", "all"], env);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain("Couldn't read history (EISDIR). Using current logs only.");
+    expect(r.err).not.toContain(h);
+    expect(r.out).toMatch(/Electricity\s+[\d.]+ k?Wh/);
+  });
+
+  it("CCW-H8 history that can't be saved: says why in one word, no full path, still estimates", () => {
+    const { h, env } = withLogs();
+    mkdirSync(join(h, ".ccwatts", "history.jsonl.tmp"), { recursive: true }); // read is fine (ENOENT), the temp write throws EISDIR
+    const r = cli(["--since", "all"], env);
+    expect(r.code).toBe(0);
+    expect(r.err).not.toContain("Couldn't read history");
+    expect(r.err).toContain("Couldn't save history (EISDIR). Continuing without it.");
+    expect(r.err).not.toContain(h);
+    expect(r.out).toMatch(/Electricity\s+[\d.]+ k?Wh/);
+  });
+
+  it("CCW-H8 history folder that is really a file: reason codes only, no full path", () => {
+    const { h, env } = withLogs();
+    writeFileSync(join(h, ".ccwatts"), ""); // CCWATTS_HOME is a regular file: read and mkdir both fail
+    const r = cli(["--since", "all"], env);
+    expect(r.code).toBe(0);
+    expect(r.err).toMatch(/Couldn't read history \(ENOTDIR\)\. Using current logs only\./);
+    expect(r.err).toMatch(/Couldn't save history \((EEXIST|ENOTDIR)\)\. Continuing without it\./);
+    expect(r.err).not.toContain(h);
+  });
+
+  it("CCW-H8 dashboard --demo refuses and still shows the playground URL", () => {
+    const r = cli(["dashboard", "--demo", "--no-open"], { HOME: home() });
+    expect(r.code).toBe(1);
+    expect(r.err).toMatch(/your own usage/);
+    expect(r.err).toContain(PLAYGROUND_URL);
+  });
+
+  it("CCW-H8 the no-logs message still shows the full playground URL", () => {
+    const r = cli([], { HOME: home() });
+    expect(r.out).toContain(PLAYGROUND_URL);
   });
 });

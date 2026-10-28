@@ -17,6 +17,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Agent roster matches CLAUDE.md
+        run: bash scripts/check-agents.sh
+      - name: No secrets, URLs or raw errors in logs
+        run: node scripts/check-logs.mjs
       - run: npm run build
       - run: npm run typecheck
       - run: npm test
