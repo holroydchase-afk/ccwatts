@@ -63,11 +63,11 @@ function home() {
   return dir;
 }
 
-async function connect(args: string[], env: Record<string, string> = {}) {
+async function connect(args: string[], env: Record<string, string> = {}, entry = bin) {
   const h = home();
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [bin, "mcp", ...args],
+    args: [entry, "mcp", ...args],
     env: { PATH: process.env.PATH ?? "", HOME: h, CCWATTS_HOME: join(h, ".ccwatts"), ...env },
     stderr: "pipe",
   });
@@ -210,6 +210,23 @@ describe("ccwatts mcp (CCW-M2.5)", () => {
   });
 });
 
+// PM-3 (CCW-M2.6.5b): the committed plugin bundle serves MCP itself, launched the way the plugin's
+// MCP config launches it (node <plugin>/bin/ccwatts.js mcp), so /plugin install brings the tools.
+describe("PM-3 the plugin bundle's MCP server (CCW-M2.6.5b)", () => {
+  const pluginBin = join(root, "plugins/ccwatts/bin/ccwatts.js");
+
+  it("PM-3 RED: node plugins/ccwatts/bin/ccwatts.js mcp --demo lists the four tools and answers with methodVersion", async () => {
+    const { client, home: h } = await connect(["--demo"], {}, pluginBin);
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
+    const r = (await call(client, "energy_summary", { since: "all" })).json();
+    expect(r.methodVersion).toBe(defaultParams.version);
+    expect(r.sample).toBe(true);
+    expect(ordered(r.wh)).toBe(true);
+    await client.close();
+    expect(existsSync(join(h, ".ccwatts"))).toBe(false);
+  });
+});
 
 // PS-R1 (privacy-security, CCW-M2.6.4): one unreadable log must not stop any tool or leak its path.
 // Root ignores chmod, so a preload module makes readFile throw EISDIR (full path in the message,

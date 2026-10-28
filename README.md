@@ -73,7 +73,7 @@ ccwatts is also a Claude Code plugin, so you can check your number without leavi
 /plugin install ccwatts@ccwatts
 ```
 
-Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same options as the CLI, for example `/ccwatts history` or `/ccwatts --by project`. Run `/ccwatts:statusline` once to add a status line that shows the current session's estimate after every response. The plugin runs the same local CLI, so nothing leaves your machine.
+Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same options as the CLI, for example `/ccwatts history` or `/ccwatts --by project`. Run `/ccwatts:statusline` once to add a status line that shows the current session's estimate after every response. Installing the plugin also adds the MCP tools below, so you can just ask Claude. The plugin runs the same local CLI, so nothing leaves your machine.
 
 ### Ask Claude about it (MCP server)
 
@@ -81,7 +81,9 @@ Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same opt
 
 It runs on stdio: Claude Code starts it when it needs it and talks to it over a pipe. There is no port, no listener and no network. You don't run it by hand: `ccwatts mcp --help` prints the line to add it, and typed in a terminal it says what it is waiting for.
 
-Once the next version is on npm:
+Installing the plugin (above) also adds the MCP tools: the plugin registers the server itself, so there is nothing else to run. `/mcp` lists it as `plugin:ccwatts:ccwatts`, and you can switch it off there.
+
+Without the plugin, once the next version is on npm:
 
 ```
 claude mcp add ccwatts -- npx -y ccwatts mcp
