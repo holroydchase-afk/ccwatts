@@ -16,7 +16,9 @@
     "prepack": "cp ../../LICENSE LICENSE"
   },
   "devDependencies": {
-    "@ccwatts/core": "0.0.0"
+    "@ccwatts/core": "0.0.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^3.25.76"
   },
   "license": "MIT",
   "repository": {

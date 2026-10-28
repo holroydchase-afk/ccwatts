@@ -188,6 +188,8 @@ IDs follow the studio standard (`docs/planning-ids.md` in holroydchase-afk/studi
 | M2.1 | **Real-log run** on Chase's laptop. | Totals look right and `cleanupPeriodDays` is recorded in `core/README.md` | todo (Chase) | n/a |
 | M2.2 | **Ship**: npm publish, README with GIF, test on a clean machine. | A friend installs it in under 60 seconds | doing: name decided (ccwatts), package ready; publish waits on Chase's go | `m2.2-ship` |
 | M2.3 | **Friend beta fixes.** | Top 3 issues from beta feedback fixed | todo | `m2.3-beta-fixes` |
+| M2.4 | **Claude Code plugin**: `/ccwatts` and the status line. | Plugin installs from this repo and runs the CLI | done (PR #21) | `claude/project-thread-*` |
+| M2.5 | **MCP server**: `ccwatts mcp` on stdio with `energy_summary`, `energy_by_project`, `energy_weekly`, `methodology` (ANCHORS D14). | All four tools answer in a Vitest test and a manual Claude Code run | doing (PR open) | `claude/project-thread-a66r4n` |
 
 ### M3: Methodology v0.2
 
