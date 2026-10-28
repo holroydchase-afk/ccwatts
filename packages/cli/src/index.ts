@@ -19,8 +19,15 @@ import {
 } from "@ccwatts/core";
 import { openFile, writeDashboard } from "./dashboard.js";
 import { errorLine } from "./errors.js";
-import { breakdown, history, historyCsv, json, jsonError, method, statusLine, summary } from "./render.js";
+import { breakdown, history, historyCsv, json, jsonError, method, statusLine, styles, summary } from "./render.js";
 import { estimateWindow, loadUsage, rowsIn, type UsageOptions } from "./usage.js";
+
+/** Bold and dim only in a terminal: on for a TTY or FORCE_COLOR, off for NO_COLOR (https://no-color.org) and when piped. */
+function useColor(env: NodeJS.ProcessEnv = process.env, isTTY = Boolean(process.stdout.isTTY)): boolean {
+  if (env.NO_COLOR) return false;
+  if (env.FORCE_COLOR !== undefined && env.FORCE_COLOR !== "") return env.FORCE_COLOR !== "0" && env.FORCE_COLOR !== "false";
+  return isTTY;
+}
 
 const MCP_ADD = `claude mcp add ${APP_NAME} -- npx -y ${APP_NAME} mcp`;
 
@@ -161,12 +168,14 @@ async function main(): Promise<void> {
   const inWindow = rowsIn(rows, window);
   const est = estimateWindow(usage, window, params);
 
-  const label = demo && !values.json && !values.export ? "Sample data (synthetic), not your usage.\n\n" : "";
+  // --json and --export never get color: they are read by scripts.
+  const opts = { color: !values.json && !values.export && useColor(), now: usage.now };
+  const label = demo && !values.json && !values.export ? `${styles(opts.color).yellow("Sample data (synthetic), not your usage.")}\n\n` : "";
   if (command === "history") {
     if (values.export) return void console.log(historyCsv(inWindow, params));
     if (values.json) return void console.log(json(est, params, window, demo));
     if (label) process.stdout.write(label);
-    return void console.log(history(est, params, window, new Set(rows.map((r) => r.date)).size));
+    return void console.log(history(est, params, window, new Set(rows.map((r) => r.date)).size, opts));
   }
   if (command === "receipt") {
     const input = { estimate: est, params, windowLabel: window.label };
@@ -179,8 +188,8 @@ async function main(): Promise<void> {
   }
   if (values.json) return void console.log(json(est, params, window, demo));
   if (label) process.stdout.write(label);
-  if (by) console.log(breakdown(est, params, window, by));
-  else console.log(summary(est, params, window, demo));
+  if (by) console.log(breakdown(est, params, window, by, opts));
+  else console.log(summary(est, params, window, demo, opts));
 }
 
 function parseArgsPlain<T extends ParseArgsConfig>(config: T): ReturnType<typeof parseArgs<T>> {

@@ -12,6 +12,7 @@ import {
   energyForCounts,
   tierFor,
   weekly,
+  weekStart,
   type RollupRow,
   projectName,
   TOKEN_TYPES,
@@ -45,12 +46,22 @@ function shares(rows: Breakdown[], total: number, label: (key: string) => string
   return shown.join("   ");
 }
 
+/** Options for the text renderers. color adds ANSI bold and dim (index.ts turns it on for a TTY); now decides the in-progress week. */
+export type RenderOptions = { color?: boolean | undefined; now?: Date | undefined };
+
+/** ANSI styles written by hand (no dependency). Every one is a no-op when color is off. */
+export function styles(on = false) {
+  const wrap = (open: string, close: string) => (s: string) => (on && s ? `\u001b[${open}m${s}\u001b[${close}m` : s);
+  return { bold: wrap("1", "22"), dim: wrap("2", "22"), yellow: wrap("33", "39") };
+}
+
 export function header(params: Params, window: Window): string {
   return `${APP_NAME} v${APP_VERSION} · method v${params.version} · ${window.label}`;
 }
 
-export function summary(e: Estimate, params: Params, window: Window, sample = false): string {
+export function summary(e: Estimate, params: Params, window: Window, sample = false, opts: RenderOptions = {}): string {
   if (e.responses === 0) return `${header(params, window)}\n\n  No Claude Code usage found in this window. Try --since all.`;
+  const { bold, dim } = styles(opts.color);
   const total = energy(e.total);
   const kwh = e.total.central / 1000;
   const compare = everyday(kwh, params);
@@ -58,7 +69,7 @@ export function summary(e: Estimate, params: Params, window: Window, sample = fa
   const lines = [
     header(params, window),
     "",
-    `  Electricity   ${total.central}   (range ${total.range})`,
+    `  Electricity   ${bold(total.central)}   ${dim(`(range ${total.range})`)}`,
     `  ≈ ${compare}`,
     "",
     `  By model      ${shares(e.byModel, e.total.central, shortModel, 3)}`,
@@ -66,29 +77,42 @@ export function summary(e: Estimate, params: Params, window: Window, sample = fa
   ];
   if (top) {
     const t = energy(top.energy);
-    lines.push(`  Top project   ${projectName(top.key)}   ${t.central} (range ${t.range})`);
+    lines.push(`  Top project   ${projectName(top.key)}   ${t.central} ${dim(`(range ${t.range})`)}`);
   }
   const span = !e.span ? "" : e.span.from === e.span.to ? ` · ${e.span.from}` : ` · ${e.span.from} to ${e.span.to}`;
   lines.push(`  Based on      ${int(e.responses)} responses, ${int(totalTokens(e.tokens))} tokens${span}`);
   for (const w of e.warnings) lines.push(`  Note          ${w}`);
   const next = sample ? `Your own usage: ${APP_NAME}` : `Share: ${APP_NAME} receipt`;
-  lines.push("", `  How this is estimated: ${APP_NAME} --method   ·   ${next}`);
+  lines.push("", dim(`  How this is estimated: ${APP_NAME} --method   ·   ${next}`));
   return lines.join("\n");
 }
 
-function table(head: string[], rows: string[][], alignLeft = 1): string {
+type Align = "left" | "right";
+
+/**
+ * A plain-text table, indented 2 spaces like the summary (the --method listing passes no indent). Column i is left-aligned when i < alignLeft
+ * or align[i] says so. dimCols are dimmed after padding, so ANSI codes never upset the widths.
+ */
+function table(head: string[], rows: string[][], alignLeft = 1, o: { align?: Align[]; dimCols?: number[]; color?: boolean | undefined; indent?: string } = {}): string {
+  const { dim } = styles(o.color);
+  const indent = o.indent ?? "  ";
   const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
-  const line = (cells: string[]) =>
+  const left = (i: number) => (o.align?.[i] ?? (i < alignLeft ? "left" : "right")) === "left";
+  const line = (cells: string[], styled: boolean) =>
+    indent +
     cells
-      .map((c, i) => (i < alignLeft ? c.padEnd(widths[i]!) : c.padStart(widths[i]!)))
+      .map((c, i) => {
+        const padded = left(i) ? c.padEnd(widths[i]!) : c.padStart(widths[i]!);
+        return styled && o.dimCols?.includes(i) ? dim(padded) : padded;
+      })
       .join("   ")
       .trimEnd();
-  return [line(head), widths.map((w) => "-".repeat(w)).join("   "), ...rows.map(line)].join("\n");
+  return [line(head, false), dim(indent + widths.map((w) => "-".repeat(w)).join("   ")), ...rows.map((r) => line(r, true))].join("\n");
 }
 
 const DIM_ROWS: Record<Dimension, keyof Estimate> = { model: "byModel", type: "byType", day: "byDay", project: "byProject" };
 
-export function breakdown(e: Estimate, params: Params, window: Window, dim: Dimension): string {
+export function breakdown(e: Estimate, params: Params, window: Window, dim: Dimension, opts: RenderOptions = {}): string {
   const rows = e[DIM_ROWS[dim]] as Breakdown[];
   const unit = energy(e.total).unit;
   const scale = unit === "kWh" ? 1000 : 1;
@@ -103,7 +127,7 @@ export function breakdown(e: Estimate, params: Params, window: Window, dim: Dime
   ]);
   const t = energy(e.total);
   body.push(["total", int(totalTokens(e.tokens)), num(e.total.central / scale), t.range, "100%"]);
-  return [header(params, window), "", table([dim, "tokens", unit, "range", "share"], body)].join("\n");
+  return [header(params, window), "", table([dim, "tokens", unit, "range", "share"], body, 1, { dimCols: [3], color: opts.color })].join("\n");
 }
 
 export function method(params: Params): string {
@@ -115,7 +139,7 @@ export function method(params: Params): string {
     "",
   ];
   const rows = Object.entries(params.params).map(([id, p]) => [id, `${p.value}`, `${p.low} – ${p.high}`, p.unit, p.label]);
-  lines.push(table(["parameter", "value", "range", "unit", "label"], rows, 1));
+  lines.push(table(["parameter", "value", "range", "unit", "label"], rows, 1, { indent: "" }));
   lines.push("", "Sources:");
   for (const [id, p] of Object.entries(params.params)) lines.push(`  ${id}: ${p.source}`);
   lines.push("", "Comparisons (central value only):");
@@ -170,38 +194,46 @@ export function sparkline(values: number[]): string {
   return values.map((v) => (max === 0 ? BARS[0] : BARS[Math.min(7, Math.round((v / max) * 7))])).join("");
 }
 
-export function history(e: Estimate, params: Params, window: Window, storedDays: number): string {
+export function history(e: Estimate, params: Params, window: Window, storedDays: number, opts: RenderOptions = {}): string {
   if (e.responses === 0) return `${header(params, window)}\n\n  No history yet. Run ${APP_NAME} once to start recording.`;
+  const { bold, dim } = styles(opts.color);
   const weeks = weekly(e.byDay);
   const unit = energy(e.total).unit;
   const scale = unit === "kWh" ? 1000 : 1;
+  // The week that holds "now" is still running, so it is marked and never called the lightest.
+  const current = weekStart((opts.now ?? new Date()).toISOString().slice(0, 10));
+  const partial = (start: string) => start === current;
+  const tag = (start: string) => (partial(start) ? `${start} (partial)` : start);
+  const peak = Math.max(...weeks.map((x) => x.central), 1e-9);
   const rows = weeks.map((w) => [
-    `week of ${w.start}`,
+    `week of ${tag(w.start)}`,
     num(w.central / scale),
     `${num(w.low / scale)} – ${num(w.high / scale)}`,
-    "█".repeat(Math.round((w.central / Math.max(...weeks.map((x) => x.central), 1e-9)) * 20)),
+    "█".repeat(Math.round((w.central / peak) * 20)),
   ]);
   const active = weeks.filter((w) => w.central > 0);
-  const best = active.reduce((a, b) => (b.central < a.central ? b : a), active[0]!);
+  const complete = active.filter((w) => !partial(w.start));
+  const pool = complete.length ? complete : active;
+  const best = pool.reduce((a, b) => (b.central < a.central ? b : a), pool[0]!);
   const worst = active.reduce((a, b) => (b.central > a.central ? b : a), active[0]!);
   const total = energy(e.total);
   const lines = [
     header(params, window),
     "",
-    table(["week", unit, "range", ""], rows),
+    table(["week", unit, "range", ""], rows, 1, { align: ["left", "right", "right", "left"], dimCols: [2], color: opts.color }),
     "",
     `  Trend         ${sparkline(weeks.map((w) => w.central))}`,
-    `  Total         ${total.central}   (range ${total.range})`,
+    `  Total         ${bold(total.central)}   ${dim(`(range ${total.range})`)}`,
     // With one week of use, "lightest" and "heaviest" would name the same week.
-    ...(active.length > 1
+    ...(active.length > 1 && best !== worst
       ? [
-          `  Lightest week ${best.start}   ${energy(best).central} (range ${energy(best).range})`,
-          `  Heaviest week ${worst.start}   ${energy(worst).central} (range ${energy(worst).range})`,
+          `  Lightest week ${tag(best.start)}   ${energy(best).central} ${dim(`(range ${energy(best).range})`)}`,
+          `  Heaviest week ${tag(worst.start)}   ${energy(worst).central} ${dim(`(range ${energy(worst).range})`)}`,
         ]
       : []),
     `  Recorded      ${storedDays} day${storedDays === 1 ? "" : "s"}, kept in your local history even after Claude Code deletes old logs`,
     "",
-    `  Energy is recalculated from stored token counts with method v${params.version}.`,
+    dim(`  Energy is recalculated from stored token counts with method v${params.version}.`),
   ];
   return lines.join("\n");
 }
