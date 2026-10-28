@@ -36,7 +36,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - name: Plugin bundle is up to date
-        run: git diff --exit-code plugins/ccwatts/bin/ccwatts.js || (echo "::error::Run npm run build and commit plugins/ccwatts/bin/ccwatts.js" && exit 1)
+        run: git diff --exit-code plugins/ccwatts/bin/ccwatts.js plugins/ccwatts/bin/mcp.js || (echo "::error::Run npm run build and commit plugins/ccwatts/bin/ccwatts.js and plugins/ccwatts/bin/mcp.js" && exit 1)
 
   browser:
     runs-on: ubuntu-latest
