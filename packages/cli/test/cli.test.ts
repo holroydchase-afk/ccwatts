@@ -313,3 +313,33 @@ describe("ccwatts CLI day-one gaps (CCW-M2.6.2)", () => {
   });
 });
 
+
+// UX-R6 (docs/reviews/2026-10-28-release-plan.md): bold in a terminal, nothing when piped.
+// Tests can't open a real TTY, so FORCE_COLOR=1 stands in for one (the same switch chalk and Node use).
+describe("ccwatts CLI color (UX-R6)", () => {
+  const ESC = "\u001b[";
+
+  it("UX-R6: FORCE_COLOR=1 bolds the headline number", () => {
+    const r = cli(["--demo"], { HOME: home(), FORCE_COLOR: "1" });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/\u001b\[1m[^\u001b]*\d[^\u001b]*k?Wh/);
+  });
+
+  it("UX-R6: piped output (the default here) has no ANSI codes", () => {
+    for (const args of [["--demo"], ["--demo", "--by", "project"], ["history", "--demo"], ["--method"]]) {
+      const r = cli(args, { HOME: home() });
+      expect(r.out, args.join(" ")).not.toContain(ESC);
+    }
+  });
+
+  it("UX-R6: NO_COLOR=1 means no ANSI codes", () => {
+    const r = cli(["--demo"], { HOME: home(), NO_COLOR: "1" });
+    expect(r.out).not.toContain(ESC);
+  });
+
+  it("UX-R6: --json is never colored, even with FORCE_COLOR=1", () => {
+    const r = cli(["--demo", "--json"], { HOME: home(), FORCE_COLOR: "1" });
+    expect(r.out).not.toContain(ESC);
+    expect(() => JSON.parse(r.out)).not.toThrow();
+  });
+});

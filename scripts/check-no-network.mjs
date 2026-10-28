@@ -5,8 +5,9 @@
 // Needs Playwright, which is not a project dependency:  npx playwright@1 install chromium
 // Run after `npm run build`:                            node scripts/check-no-network.mjs
 // Set PLAYWRIGHT_MODULE to a Playwright path and CHROMIUM_PATH to a browser binary if needed.
-import { readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
@@ -23,6 +24,14 @@ const counts = readFileSync(log, "utf8").split("\n").flatMap((l) => {
     return JSON.stringify({ type: d.type, timestamp: d.timestamp, requestId: d.requestId, cwd: basename(d.cwd ?? ""),
       message: { id: d.message.id, model: d.message.model, usage: { input_tokens: u.input_tokens, cache_creation_input_tokens: u.cache_creation_input_tokens, cache_read_input_tokens: u.cache_read_input_tokens, output_tokens: u.output_tokens } } });
   }).join("\n");
+
+// UX-R11: the footer's version is the CLI package version.
+const cliVersion = JSON.parse(readFileSync(new URL("../packages/cli/package.json", import.meta.url), "utf8")).version;
+// UX-R1, UX-R2: a .jsonl file with no usage in it (a user line only).
+const scratch = mkdtempSync(join(tmpdir(), "ccwatts-check-"));
+const noUsage = join(scratch, "empty-session.jsonl");
+writeFileSync(noUsage, JSON.stringify({ type: "user", timestamp: "2026-10-01T10:00:00.000Z", cwd: "proj", message: { role: "user", content: "" } }) + "\n");
+const MONO = /monospace|Menlo|Consolas|SF Mono|Courier/i;
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const problems = [];
@@ -64,6 +73,60 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if (metaParts.length < 3) problems.push("hero meta line isn't split into items");
   for (const m of metaParts) if (m.lines > 1) problems.push(`hero meta item "${m.t}" wraps at ${viewport.width}px`);
   if (short.length) problems.push(`buttons under 44px at ${viewport.width}px: ${short.join(", ")}`);
+
+  // UX-R4: reading text is in the sans stack; mono is for numbers and code only.
+  const fonts = await page.evaluate(() => {
+    const ff = (el) => (el ? getComputedStyle(el).fontFamily : "(missing)");
+    return {
+      body: ff(document.body),
+      paragraphs: [...document.querySelectorAll("main p")].filter((p) => p.textContent.trim()).map((p) => ({ id: p.id || p.className || p.textContent.slice(0, 30), f: ff(p) })),
+      chartNote: ff(document.querySelector("#chart-note")),
+      methodNotes: [...document.querySelectorAll("#params td[data-label='Parameter'] div")].map(ff),
+      post: ff(document.querySelector("#post")),
+    };
+  });
+  if (MONO.test(fonts.body) || !/Helvetica|Arial|sans-serif/i.test(fonts.body)) problems.push(`UX-R4: body font is ${fonts.body}, want the sans stack`);
+  for (const p of fonts.paragraphs) if (MONO.test(p.f)) problems.push(`UX-R4: paragraph ${p.id} is monospace at ${viewport.width}px`);
+  if (MONO.test(fonts.chartNote)) problems.push("UX-R4: chart caption is monospace");
+  if (!fonts.methodNotes.length || fonts.methodNotes.some((f) => MONO.test(f))) problems.push("UX-R4: method descriptions are monospace (or missing)");
+  if (MONO.test(fonts.post)) problems.push("UX-R4: LinkedIn post preview is monospace");
+
+  // UX-R5: method cards fold into a <details>; the phone page stays short.
+  if (!(await page.$eval("#params", (t) => !!t.closest("details")))) problems.push("UX-R5: method parameter table is not inside a <details>");
+  if (viewport.width < 600) {
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    if (height >= 4500) problems.push(`UX-R5: page is ${height}px tall at ${viewport.width}x${viewport.height} (want under 4500)`);
+  }
+
+  // UX-R3: the hero links to the "Try it" box, which comes after the chart and the rankings.
+  const order = await page.evaluate(() => {
+    const drop = document.querySelector("#drop");
+    const after = (sel) => !!(document.querySelector(sel).compareDocumentPosition(drop) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const link = [...document.querySelectorAll(".hero a")].find((a) => a.textContent.trim() === "Use your own logs");
+    return { after: after("#chart") && after("#by-model") && after("#by-project"), link: link?.getAttribute("href") ?? null };
+  });
+  if (!order.after) problems.push("UX-R3: 'Try it on your own logs' is not after the chart and the By model/By project lists");
+  if (order.link !== "#drop") problems.push(`UX-R3: hero has no 'Use your own logs' link to #drop (got ${order.link})`);
+
+  // UX-R1: errors are announced from #drop-status, and the hero isn't a live region.
+  const live = await page.evaluate(() => ({
+    role: document.querySelector("#drop-status")?.getAttribute("role"),
+    polite: document.querySelector("#drop-status")?.getAttribute("aria-live"),
+    hero: document.querySelector(".hero")?.getAttribute("aria-live"),
+  }));
+  if (live.role !== "status" || live.polite !== "polite") problems.push(`UX-R1: #drop-status role=${live.role} aria-live=${live.polite}`);
+  if (live.hero) problems.push(`UX-R1: .hero still has aria-live=${live.hero}`);
+
+  // UX-R11: footer version matches the CLI package.
+  if (!(await page.textContent("#footer-version")).includes(`v${cliVersion}`)) problems.push(`UX-R11: footer doesn't show v${cliVersion}`);
+
+  // UX-R1, UX-R2: a file with no usage keeps the sample pill and shows the next-step error, styled as an error.
+  await page.setInputFiles("#pick-files", noUsage);
+  await page.waitForFunction(() => !/Reading/.test(document.querySelector("#drop-status")?.textContent ?? "Reading"));
+  const failed = await page.evaluate(() => ({ pill: document.querySelector("#source-pill").textContent, status: document.querySelector("#drop-status").textContent, error: document.querySelector("#drop-status").classList.contains("error") }));
+  if (failed.pill !== "Sample data") problems.push(`UX-R1: pill says "${failed.pill}" after a file with no usage`);
+  if (failed.status !== "We couldn't find any Claude Code usage in that file. Pick the .jsonl files inside ~/.claude/projects, or use the prompt below.") problems.push(`UX-R2: no-usage file says "${failed.status}"`);
+  if (!failed.error) problems.push("UX-R2: no-usage error has no .error class");
   const sampleHeadline = await page.textContent("#hero-big");
   await page.setInputFiles("#pick-files", log);
   await page.waitForFunction(() => document.querySelector("#source-pill")?.textContent === "Your files");
@@ -81,12 +144,33 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.click("#read-paste");
   await page.waitForFunction(() => document.querySelector("#source-pill")?.textContent === "Your files");
   if (!(await page.textContent("#drop-status")).includes("pasted text")) problems.push("pasted lines did not load");
+  if (await page.$eval("#drop-status", (s) => s.classList.contains("error"))) problems.push("UX-R2: success status still has the .error class");
+
+  // UX-R2: empty paste and paste with no usage get their own next-step copy, styled as errors.
+  for (const [text, want] of [
+    ["   ", "Paste the lines first."],
+    ["hello, not a log", "We couldn't find any usage lines in that text. Paste the lines Claude printed, one JSON object per line."],
+  ]) {
+    await page.fill("#paste-log", text);
+    await page.click("#read-paste");
+    const got = await page.evaluate(() => ({ t: document.querySelector("#drop-status").textContent, error: document.querySelector("#drop-status").classList.contains("error") }));
+    if (got.t !== want) problems.push(`UX-R2: paste ${JSON.stringify(text)} says "${got.t}", want "${want}"`);
+    if (!got.error) problems.push(`UX-R2: paste ${JSON.stringify(text)} error has no .error class`);
+  }
+
+  // One day of usage: the meta line shows the date once, not "D to D".
+  await page.fill("#paste-log", counts.split("\n").filter((l) => l.includes('"timestamp":"2026-10-01')).join("\n"));
+  await page.click("#read-paste");
+  const meta = await page.textContent("#hero-meta");
+  if (/(\d{4}-\d{2}-\d{2}) to \1/.test(meta)) problems.push(`one-day span printed twice in the meta line: "${meta}"`);
+  if (!meta.includes("2026-10-01")) problems.push(`one-day meta line lost its date: "${meta}"`);
 
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   if (width > viewport.width) problems.push(`horizontal scroll at ${viewport.width}px (${width}px wide)`);
   await page.close();
 }
 await browser.close();
+rmSync(scratch, { recursive: true, force: true });
 
 if (problems.length) {
   console.error(problems.join("\n"));
