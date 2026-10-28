@@ -24,9 +24,12 @@ import {
   type Estimate,
   type RollupRow,
   type TokenType,
+  type Params,
   type UsageRecord,
+  withOverrides,
 } from "@ccwatts/core";
 import type { PagePayload } from "./inject.js";
+import { noUsageStatus, readLogFiles, readPaste, type ReadResult } from "./read.js";
 
 type WindowId = "7d" | "30d" | "all";
 
@@ -64,8 +67,15 @@ function windowRows(rows: RollupRow[], id: WindowId): RollupRow[] {
   return rows.filter((r) => r.date >= start);
 }
 
-function estimateFor(rows: RollupRow[]): Estimate {
-  const e = estimate(rollupRecords(rows), params);
+/** Published cache-read ratio, and the params the page views (published unless a what-if is active). */
+const CACHE_ID = "cache_read_vs_input";
+const publishedCache = params.params[CACHE_ID]!.value;
+let viewParams: Params = params;
+const whatIfActive = () => viewParams !== params;
+const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+function estimateFor(rows: RollupRow[], p: Params = params): Estimate {
+  const e = estimate(rollupRecords(rows), p);
   e.responses = rows.reduce((n, r) => n + r.responses, 0);
   return e;
 }
@@ -73,13 +83,14 @@ function estimateFor(rows: RollupRow[]): Estimate {
 function renderHero(e: Estimate, label: string) {
   const t = formatEnergy(e.total);
   const [value, unit] = t.central.split(" ");
-  $("hero-eyebrow").textContent = `Claude Code electricity · ${label}`;
+  $("hero-eyebrow").innerHTML = `Claude Code electricity · ${esc(label)}${whatIfActive() ? ` · <span class="whatif-flag">what-if: cache reads ${pct(viewParams.params[CACHE_ID]!.value)} · not published</span>` : ""}`;
   $("hero-big").innerHTML = e.responses ? `${esc(value ?? "")}<small>${esc(unit ?? "")}</small>` : "–";
-  $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}, from the bounds on every assumption.` : "No usage in this window.";
+  const fixed = whatIfActive() ? `, with cache reads fixed at ${pct(viewParams.params[CACHE_ID]!.value)} and every other assumption at its bounds.` : ", from the bounds on every assumption.";
+  $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}${fixed}` : "No usage in this window.";
   $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   // One span per item, kept whole, so a phone wraps between items and never inside a date.
-  const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [`${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
+  const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [e.span.from === e.span.to ? e.span.from : `${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
   $("hero-meta").innerHTML = items.map((i) => `<span>${esc(i)}</span>`).join(" · ");
   for (const id of ["7d", "30d", "all"] as WindowId[]) $(`w-${id}`).setAttribute("aria-pressed", String(state.window === id));
 }
@@ -110,7 +121,7 @@ function renderChart(e: Estimate) {
     parts.push(`<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`);
     parts.push(`<text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end">${num(v)}</text>`);
   }
-  parts.push(`<text x="0" y="10">${total.unit} per day</text>`);
+  parts.push(`<text x="0" y="10">${esc(total.unit)} per day</text>`);
   // Each day's energy split by token type, using that day's type shares of the central value.
   days.forEach((d, i) => {
     let acc = 0;
@@ -122,14 +133,14 @@ function renderChart(e: Estimate) {
       const v0 = acc / scale;
       acc += wh;
       const v1 = acc / scale;
-      parts.push(`<rect x="${x.toFixed(1)}" y="${y(v1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.5, y(v0) - y(v1)).toFixed(1)}" fill="var(--t-${type})"><title>${d.key} ${TYPE_LABELS[type]} ${num(wh / scale)} ${total.unit}</title></rect>`);
+      parts.push(`<rect x="${x.toFixed(1)}" y="${y(v1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.5, y(v0) - y(v1)).toFixed(1)}" fill="var(--t-${type})"><title>${esc(d.key)} ${esc(TYPE_LABELS[type])} ${num(wh / scale)} ${esc(total.unit)}</title></rect>`);
     }
   });
   const labelIdx = days.length === 1 ? [0] : [0, Math.floor((days.length - 1) / 2), days.length - 1];
   for (const i of new Set(labelIdx)) {
     const anchor = i === 0 ? "start" : i === days.length - 1 ? "end" : "middle";
     const x = i === 0 ? pad.l : i === days.length - 1 ? W - pad.r : pad.l + (i + 0.5) * bw;
-    parts.push(`<text x="${x}" y="${H - 8}" text-anchor="${anchor}">${days[i]!.key.slice(5)}</text>`);
+    parts.push(`<text x="${x}" y="${H - 8}" text-anchor="${anchor}">${esc(days[i]!.key.slice(5))}</text>`);
   }
   svg.innerHTML = parts.join("");
   $("chart-note").textContent = `Bars show the central estimate per day. The total for this window is ${total.central}, with a range of ${total.range} ${total.unit}.`;
@@ -143,10 +154,10 @@ function typeShare(day: Breakdown, type: TokenType): number {
 }
 let dayTypeCache = new Map<string, Record<TokenType, number>>();
 
-function buildDayTypeCache(rows: RollupRow[]) {
+function buildDayTypeCache(rows: RollupRow[], p: Params) {
   dayTypeCache = new Map();
   for (const r of rows) {
-    const e = estimate(rollupRecords([r]), params);
+    const e = estimate(rollupRecords([r]), p);
     let entry = dayTypeCache.get(r.date);
     if (!entry) dayTypeCache.set(r.date, (entry = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 }));
     for (const b of e.byType) entry[b.key as TokenType] += b.energy.central;
@@ -184,6 +195,7 @@ function renderExplain(e: Estimate) {
 }
 
 let currentSvg = "";
+let fullSizeUrl = "";
 let currentLine = "";
 let currentPost = "";
 
@@ -193,6 +205,10 @@ function renderShare(e: Estimate, label: string) {
   currentLine = shareLine(input);
   currentPost = linkedInPost(input);
   ($("card") as HTMLImageElement).src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(currentSvg)}`;
+  // "Open full size" opens the same card from memory (a blob: URL): nothing is fetched.
+  if (fullSizeUrl) URL.revokeObjectURL(fullSizeUrl);
+  fullSizeUrl = URL.createObjectURL(new Blob([currentSvg], { type: "image/svg+xml" }));
+  ($("card-full") as HTMLAnchorElement).href = fullSizeUrl;
   $("post").textContent = currentPost;
   $("share-status").textContent = state.source === "sample" ? "This card shows sample data. Load your own logs to make yours." : "";
 }
@@ -211,7 +227,7 @@ function renderMethod() {
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>
-        `<tr><td data-label="Parameter"><code>${esc(id)}</code><div class="meta">${esc(p.note)}</div></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
+        `<tr><td data-label="Parameter"><code>${esc(id)}</code><div class="note">${esc(p.note)}</div></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
     )
     .join("");
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
@@ -225,10 +241,12 @@ const LEDE: Record<typeof state.source, string> = {
 
 let lastEstimate: Estimate | null = null;
 
-function render() {
+/** Hero, chart and breakdowns follow the what-if; the share card and post always use the published estimate. */
+function render(share = true) {
   const rows = windowRows(state.rows, state.window);
-  buildDayTypeCache(rows);
-  const e = estimateFor(rows);
+  buildDayTypeCache(rows, viewParams);
+  const published = estimateFor(rows);
+  const e = whatIfActive() ? estimateFor(rows, viewParams) : published;
   lastEstimate = e;
   const label = WINDOW_LABEL[state.window];
   const pill = $("source-pill");
@@ -240,35 +258,54 @@ function render() {
   renderRank("by-model", e.byModel, shortModel, e);
   renderRank("by-project", e.byProject, projectName, e);
   renderExplain(e);
-  renderShare(e, label);
+  renderWhatIf(e, published);
+  if (share) renderShare(published, label);
+}
+
+function renderWhatIf(e: Estimate, published: Estimate) {
+  const value = viewParams.params[CACHE_ID]!.value;
+  const slider = $<HTMLInputElement>("whatif-cache");
+  slider.setAttribute("aria-valuetext", `${pct(value)} of fresh input`);
+  $("whatif-value").textContent = pct(value);
+  const note = $("whatif-note");
+  note.hidden = !whatIfActive();
+  $("whatif-reset").hidden = !whatIfActive();
+  if (!whatIfActive()) return void (note.textContent = "");
+  const t = formatEnergy(e.total);
+  const pub = formatEnergy(published.total);
+  const totals = e.responses ? ` ${t.central} (range ${t.range} ${t.unit}). Published: ${pub.central} (range ${pub.range} ${pub.unit}).` : " Not the published estimate.";
+  note.textContent = `What-if at ${pct(value)}:${totals} The share card keeps ${pct(publishedCache)}. Method v${params.version}.`;
+}
+
+function setWhatIf(value: number) {
+  viewParams = Math.abs(value - publishedCache) < 1e-9 ? params : withOverrides(params, { [CACHE_ID]: value }, { pin: true });
+  render(false);
+}
+
+/** Shows a line under the "Try it" box; errors are styled as errors and scrolled into view. */
+function setStatus(text: string, error = false) {
+  const status = $("drop-status");
+  status.textContent = text;
+  status.classList.toggle("error", error);
+  if (error) status.scrollIntoView({ block: "nearest" });
 }
 
 async function loadFiles(files: FileList | File[]) {
-  const logs = [...files].filter((f) => f.name.endsWith(".jsonl"));
-  const status = $("drop-status");
-  if (!logs.length) {
-    status.textContent = "No .jsonl files found there. Claude Code keeps them in ~/.claude/projects.";
-    return;
-  }
-  const what = `${logs.length} file${logs.length === 1 ? "" : "s"}`;
-  status.textContent = `Reading ${what} on this device…`;
-  loadTexts(await Promise.all(logs.map((f) => f.text())), what);
+  setStatus("Reading files on this device…");
+  load(await readLogFiles(files));
 }
 
-/** Parses log text (from files or the paste box) on this device and shows it. */
-function loadTexts(texts: string[], what: string) {
-  const status = $("drop-status");
+/** Parses log text (from files or the paste box) on this device and shows it. A failure leaves the current data on screen. */
+function load(read: ReadResult) {
+  if (!read.ok) return setStatus(read.status, true);
   const records: UsageRecord[] = [];
-  for (const text of texts) records.push(...claudeCodeAdapter.parse(text));
+  for (const text of read.texts) records.push(...claudeCodeAdapter.parse(text));
   const rows = rollup(dedupe(records));
-  if (!rows.length) {
-    status.textContent = `${what === "pasted text" ? "That text" : "Those files"} had no Claude Code usage in them.`;
-    return;
-  }
+  if (!rows.length) return setStatus(noUsageStatus(read.what), true);
   state.rows = rows;
   state.source = "files";
   state.window = "all";
-  status.textContent = `Read ${int(records.length)} responses from ${what}. Nothing was uploaded.`;
+  setStatus(`Read ${int(records.length)} responses from ${read.what}. Nothing was uploaded.`);
   render();
 }
 
@@ -284,10 +321,13 @@ function download(name: string, blob: Blob) {
 
 async function copy(text: string, what: string, statusId = "share-status", fallbackId = "post") {
   const status = $(statusId);
+  status.classList.remove("error");
   try {
     await navigator.clipboard.writeText(text);
     status.textContent = `Copied the ${what}.`;
   } catch {
+    const box = $(fallbackId).closest("details");
+    if (box) box.open = true;
     const range = document.createRange();
     range.selectNodeContents($(fallbackId));
     getSelection()?.removeAllRanges();
@@ -326,7 +366,7 @@ function wire() {
     $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
     $("read-paste").addEventListener("click", () => {
       // Pasted from a chat, the lines may sit inside a ``` code fence; the adapter skips those lines.
-      loadTexts([$<HTMLTextAreaElement>("paste-log").value], "pasted text");
+      load(readPaste($<HTMLTextAreaElement>("paste-log").value));
     });
     for (const id of ["pick-folder", "pick-files"]) {
       $<HTMLInputElement>(id).addEventListener("change", (ev) => {
@@ -338,7 +378,7 @@ function wire() {
       state.rows = sample;
       state.source = "sample";
       state.window = "30d";
-      $("drop-status").textContent = "";
+      setStatus("");
       render();
     });
     const over = (on: boolean) => (e: DragEvent) => {
@@ -364,6 +404,15 @@ function wire() {
     }, 150);
   });
 
+  const slider = $<HTMLInputElement>("whatif-cache");
+  slider.addEventListener("input", () => setWhatIf(Number(slider.value)));
+  $("whatif-reset").addEventListener("click", () => {
+    slider.value = String(publishedCache);
+    setWhatIf(publishedCache);
+    // Reset hides itself, so hand focus back to the slider (click or Enter).
+    slider.focus();
+  });
+
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;
   $("cli-cmd").textContent = `npx ${APP_NAME}`;
   ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
@@ -371,6 +420,7 @@ function wire() {
     const back = $<HTMLAnchorElement>("back-link");
     back.href = PORTFOLIO_URL;
     back.hidden = false;
+    $("jump").hidden = false;
   }
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;

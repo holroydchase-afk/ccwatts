@@ -1,0 +1,10 @@
+{
+  "logs": {
+    "roots": ["packages/core/src", "packages/cli/src", "packages/web/src"],
+    "banned": []
+  },
+  "private": {
+    "allowUsers": ["demo", "dev", "someone", "secret-person", "a"],
+    "allowEmails": []
+  }
+}

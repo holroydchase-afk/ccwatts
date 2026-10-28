@@ -18,6 +18,10 @@ The estimate uses the **comprehensive** boundary: the AI accelerators, plus host
 
 It does **not** include training the model, manufacturing hardware, your own laptop, or the network. It covers electricity only, not carbon or water.
 
+## What counts as usage
+
+Each billed response in the Claude Code logs is counted once (deduped on message id and request id). Lines that can't be trusted are left out, not guessed at: a timestamp that isn't a date, a token count that isn't a whole number from 0 to 1 billion (1e9) for one response, and responses dated more than a day after the time you run it (a wrong clock or a corrupt line). The output says how many future-dated responses were left out. Details: `packages/core/README.md`.
+
 ## The model
 
 ```
@@ -62,6 +66,8 @@ low  = central ÷ exp( √Σ ln(valueᵢ / lowᵢ)² )
 Across token types and models, ranges simply add up (lows with lows, highs with highs). That treats them as fully correlated, which is the cautious choice, since the same unknowns drive all of them.
 
 The comparison line ("about X miles in an EV") always uses the central value and says "about".
+
+The playground's "What if?" slider lets you move `cache_read_vs_input` within its published low and high. The chosen value is pinned (its low and high both equal it), so the what-if range comes only from the other parameters' bounds. A what-if never changes the published estimate: the share card, LinkedIn post, CLI and params.json always use the values above.
 
 ## Sanity checks
 

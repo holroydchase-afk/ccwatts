@@ -22,17 +22,17 @@
 :root{
   --bg:#f4f2ea; --surface:#fbfaf6; --ink:#1f2a24; --muted:#5e6b63; --line:#d9ddd3; --accent:#2f6b4f; --accent-ink:#ffffff;
   --t-cacheRead:#2f6b4f; --t-cacheWrite:#c08a2e; --t-output:#b4553a; --t-input:#4a6fa5;
-  --sample:#8a5a12; --control:#7f8a83;
+  --sample:#8a5a12; --control:#7f8a83; --danger:#a8321f;
   --sans:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#10201a; --surface:#16291f; --ink:#e8eee9; --muted:#9fb3a6; --line:#29402f; --accent:#7cc4a0; --accent-ink:#10201a;
-  --t-cacheRead:#7cc4a0; --t-cacheWrite:#e0b56a; --t-output:#e58a6e; --t-input:#8fb2e8; --sample:#e0b56a; --control:#5d7a68; color-scheme:dark}}
+  --t-cacheRead:#7cc4a0; --t-cacheWrite:#e0b56a; --t-output:#e58a6e; --t-input:#8fb2e8; --sample:#e0b56a; --control:#5d7a68; --danger:#ff9a85; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#10201a; --surface:#16291f; --ink:#e8eee9; --muted:#9fb3a6; --line:#29402f; --accent:#7cc4a0; --accent-ink:#10201a;
-  --t-cacheRead:#7cc4a0; --t-cacheWrite:#e0b56a; --t-output:#e58a6e; --t-input:#8fb2e8; --sample:#e0b56a; --control:#5d7a68; color-scheme:dark}
+  --t-cacheRead:#7cc4a0; --t-cacheWrite:#e0b56a; --t-output:#e58a6e; --t-input:#8fb2e8; --sample:#e0b56a; --control:#5d7a68; --danger:#ff9a85; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55}
@@ -54,9 +54,14 @@ h1{font-size:clamp(26px,5vw,36px);line-height:1.15;margin:0;letter-spacing:-.01e
 .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .big{font-weight:700;font-size:clamp(56px,13vw,112px);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .big small{font-size:.42em;font-weight:500;margin-left:.2em;letter-spacing:0}
-.range{font-size:clamp(18px,3vw,22px)}
+.range{font-size:clamp(18px,3vw,22px);font-variant-numeric:tabular-nums}
 .compare{color:var(--muted);font-size:17px}
 .meta{font-family:var(--mono);font-size:13px;color:var(--muted)}
+/* Reading text (captions, method notes, the post preview) stays in the sans stack; mono is for numbers and code. */
+.note{font-family:var(--sans);font-size:15px;line-height:1.5;color:var(--muted);margin:0}
+.hero-foot{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.jump{display:inline-flex;align-items:center;min-height:44px;font-size:15px}
+.jump::after{content:"\00a0↓"}
 .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 button,.btn{font:inherit;font-size:15px;min-height:44px;display:inline-flex;align-items:center;border:1px solid var(--control);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;cursor:pointer}
 button:hover,.btn:hover{border-color:var(--accent)}
@@ -107,13 +112,39 @@ a.src{display:inline-flex;align-items:center;min-height:44px}
   td.num{white-space:normal}
 }
 .card{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line);display:block}
+/* On a phone the 1200px card's text shrinks under 11px, so it links to the card at full size (UX-R17). */
+.full-size{min-height:44px;line-height:44px;font-size:15px;align-self:flex-start}
 .sharetext{font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre-wrap;margin:0}
+#post{font-family:var(--sans);font-size:15px;line-height:1.5}
 .status{font-size:14px;color:var(--muted);min-height:1.4em}
-.export>summary{cursor:pointer;min-height:44px;padding:11px 0;box-sizing:border-box;font-size:15px;color:var(--ink)}
-.export>*+*{margin-top:10px}
+.status:empty{display:none}
+.status.error{color:var(--danger);border-left:3px solid;padding-left:10px}
+/* Disclosures: a 44px tap target with a chevron that turns when open. */
+.disclose{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ink);list-style:none;border-radius:6px}
+.disclose::-webkit-details-marker{display:none}
+.disclose::before{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);flex:none;margin-right:2px}
+details[open]>.disclose::before{transform:rotate(45deg)}
+.disclose:hover{color:var(--accent)}
+.disclose:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details>*+*{margin-top:10px}
+@media (prefers-reduced-motion:no-preference){.disclose::before{transition:transform .15s ease}}
 .export label{display:block;font-size:14px;color:var(--muted)}
 .export textarea{display:block;font-family:var(--mono);font-size:13px;width:100%;box-sizing:border-box;border:1px solid var(--control);border-radius:8px;padding:10px;background:var(--surface);color:var(--ink)}
 kbd{font-family:var(--mono);font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+/* "What if?" cache-read slider (M2.6.5): a what-if view, never the published estimate. */
+.whatif{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:65ch}
+.whatif-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.whatif-head label{font-weight:700;font-size:16px}
+.whatif output{font-family:var(--mono);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums;color:var(--accent)}
+.whatif input[type=range]{width:100%;height:48px;margin:0;accent-color:var(--accent);cursor:pointer;background:transparent}
+.whatif-scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:-8px}
+/* The "published" tick sits where the published value is on the track (thumb is about 16px wide). */
+.whatif-scale{position:relative}
+.whatif-scale .mark{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.whatif-scale .mark::before{content:"";position:absolute;left:50%;top:-6px;height:5px;border-left:1px solid var(--muted)}
+.whatif-note{margin:0;font-size:15px;line-height:1.5;border-left:3px solid var(--sample);padding-left:10px}
+.whatif button{align-self:flex-start}
+#hero-eyebrow .whatif-flag{color:var(--sample)}
 footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:6px}
 @media (prefers-reduced-motion:no-preference){.rank .bar span{transition:width .3s ease}}
 </style>
@@ -133,18 +164,33 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 
   <div class="privacy" id="privacy"><span aria-hidden="true">🔒</span><div><b>Your logs never leave this browser.</b> This page makes no network requests. It reads token counts only, never your prompts or code.</div></div>
 
-  <section class="hero" aria-live="polite">
+  <section class="hero">
     <span class="eyebrow" id="hero-eyebrow">Claude Code electricity</span>
     <div class="big" id="hero-big">–</div>
     <div class="range" id="hero-range"></div>
     <div class="compare" id="hero-compare"></div>
     <div class="meta" id="hero-meta"></div>
-    <div class="controls" role="group" aria-label="Time window">
-      <button type="button" data-window="7d" id="w-7d">7 days</button>
-      <button type="button" data-window="30d" id="w-30d">30 days</button>
-      <button type="button" data-window="all" id="w-all">All time</button>
+    <div class="hero-foot">
+      <div class="controls" role="group" aria-label="Time window">
+        <button type="button" data-window="7d" id="w-7d">7 days</button>
+        <button type="button" data-window="30d" id="w-30d">30 days</button>
+        <button type="button" data-window="all" id="w-all">All time</button>
+      </div>
+      <a class="jump" id="jump" href="#drop" hidden>Use your own logs</a>
     </div>
   </section>
+
+  <section>
+    <h2>Over time</h2>
+    <div class="legend" id="legend"></div>
+    <svg class="chart" id="chart" viewBox="0 0 720 240" role="img" aria-label="Daily electricity by token type"></svg>
+    <p class="note" id="chart-note"></p>
+  </section>
+
+  <div class="grid2">
+    <section><h2>By model</h2><ul class="rank" id="by-model"></ul></section>
+    <section><h2>By project</h2><ul class="rank" id="by-project"></ul></section>
+  </div>
 
   <section class="drop" id="drop" hidden>
     <h2>Try it on your own logs</h2>
@@ -159,7 +205,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
     <p id="cli-line">Prefer the terminal? Run <code id="cli-cmd">npx ccwatts</code> with Node 20+. Same numbers, plus a history that outlasts Claude Code's log cleanup.</p>
     <p class="phone-only" id="phone-hint">On a phone? Claude Code keeps its logs on the computer it runs on. Open this page there, or use the prompt below if you run Claude Code on the web.</p>
     <details class="export" id="export">
-      <summary>Use Claude Code on the web, or can't find the folder?</summary>
+      <summary class="disclose">Use Claude Code on the web, or can't find the folder?</summary>
       <p>Paste this prompt into a Claude Code session. It writes a copy of that machine's usage with token counts only, and no prompts or code. Then drop the file here, or paste what it prints into the box below.</p>
       <pre class="sharetext" id="export-prompt">Make a counts-only copy of my Claude Code usage for ccwatts.
 
@@ -179,29 +225,29 @@ Leave out everything else, especially message content. Save the lines as ccwatts
         <button type="button" id="read-paste">Read pasted lines</button>
       </div>
     </details>
-    <div class="status" id="drop-status"></div>
+    <div class="status" id="drop-status" role="status" aria-live="polite"></div>
   </section>
-
-  <section>
-    <h2>Over time</h2>
-    <div class="legend" id="legend"></div>
-    <svg class="chart" id="chart" viewBox="0 0 720 240" role="img" aria-label="Daily electricity by token type"></svg>
-    <p class="meta" id="chart-note"></p>
-  </section>
-
-  <div class="grid2">
-    <section><h2>By model</h2><ul class="rank" id="by-model"></ul></section>
-    <section><h2>By project</h2><ul class="rank" id="by-project"></ul></section>
-  </div>
 
   <section>
     <h2>What drives your number</h2>
     <p class="explain" id="explain"></p>
+    <div class="whatif" id="whatif">
+      <div class="whatif-head">
+        <label for="whatif-cache">What if? Cache-read cost</label>
+        <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
+      </div>
+      <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
+      <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
+      <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
+      <p class="whatif-note" id="whatif-note" role="status" hidden></p>
+      <button type="button" id="whatif-reset" hidden>Reset</button>
+    </div>
   </section>
 
   <section>
     <h2>Share it</h2>
     <img class="card" id="card" alt="Electricity receipt card" width="1200" height="627">
+    <a class="phone-only full-size" id="card-full" href="#" target="_blank" rel="noopener noreferrer">Open full size</a>
     <div class="controls">
       <button type="button" class="primary" id="save-png">Save PNG for LinkedIn</button>
       <button type="button" id="save-svg">Save SVG</button>
@@ -209,13 +255,19 @@ Leave out everything else, especially message content. Save the lines as ccwatts
       <button type="button" id="copy-post">Copy LinkedIn post</button>
     </div>
     <div class="status" id="share-status"></div>
-    <pre class="sharetext" id="post"></pre>
+    <details id="post-box">
+      <summary class="disclose">Show the LinkedIn post</summary>
+      <pre class="sharetext" id="post"></pre>
+    </details>
   </section>
 
   <section>
     <h2>How this is estimated</h2>
     <p class="explain" id="method-intro"></p>
-    <div class="tablewrap"><table id="params"></table></div>
+    <details id="params-box">
+      <summary class="disclose">Show all parameters and sources</summary>
+      <div class="tablewrap"><table id="params"></table></div>
+    </details>
   </section>
 
   <footer>
