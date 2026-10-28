@@ -45,7 +45,7 @@ exports[`breakdown > --by type 1`] = `
 exports[`history > renders weeks, a trend and ranges 1`] = `
 "ccwatts v0.1.1 · method v0.1.0 · all time
 
-  week                  Wh        range
+  week                  Wh        range   trend
   ------------------   ---   ----------   --------------------
   week of 2026-09-28   9.1   2.3 – 27.5   ████████████████████
 
