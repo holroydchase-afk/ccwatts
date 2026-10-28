@@ -10,6 +10,7 @@ npx ccwatts receipt        # share line and card
 npx ccwatts dashboard      # offline HTML dashboard
 npx ccwatts --method       # every parameter and its source
 npx ccwatts --demo         # no Claude Code logs yet? try synthetic sample data
+npx ccwatts help           # every command and option
 ```
 
 Let Claude Code ask it directly, as a local MCP server on stdio (no port, no network):

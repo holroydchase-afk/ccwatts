@@ -7,6 +7,7 @@ import {
   num,
   shortModel,
   APP_VERSION,
+  REPO_URL,
   comparisons,
   energyForCounts,
   tierFor,
@@ -30,11 +31,17 @@ export { num };
 
 const totalTokens = (t: TokenCounts) => TOKEN_TYPES.reduce((s, k) => s + t[k], 0);
 
+/** A share as a whole percent, but "<1%" when it is above zero and would round to 0. */
+export function percent(part: number, total: number): string {
+  if (!(total > 0)) return "0%";
+  const p = Math.round((part / total) * 100);
+  return p === 0 && part > 0 ? "<1%" : `${p}%`;
+}
+
 function shares(rows: Breakdown[], total: number, label: (key: string) => string, max = 4): string {
-  const pct = (r: Breakdown) => (total > 0 ? Math.round((r.energy.central / total) * 100) : 0);
-  const shown = rows.slice(0, max).map((r) => `${label(r.key)} ${pct(r)}%`);
+  const shown = rows.slice(0, max).map((r) => `${label(r.key)} ${percent(r.energy.central, total)}`);
   const rest = rows.slice(max).reduce((s, r) => s + r.energy.central, 0);
-  if (rest > 0) shown.push(`other ${Math.round((rest / total) * 100)}%`);
+  if (rest > 0) shown.push(`other ${percent(rest, total)}`);
   return shown.join("   ");
 }
 
@@ -61,7 +68,7 @@ export function summary(e: Estimate, params: Params, window: Window, sample = fa
     const t = energy(top.energy);
     lines.push(`  Top project   ${projectName(top.key)}   ${t.central} (range ${t.range})`);
   }
-  const span = e.span ? ` · ${e.span.from} to ${e.span.to}` : "";
+  const span = !e.span ? "" : e.span.from === e.span.to ? ` · ${e.span.from}` : ` · ${e.span.from} to ${e.span.to}`;
   lines.push(`  Based on      ${int(e.responses)} responses, ${int(totalTokens(e.tokens))} tokens${span}`);
   for (const w of e.warnings) lines.push(`  Note          ${w}`);
   const next = sample ? `Your own usage: ${APP_NAME}` : `Share: ${APP_NAME} receipt`;
@@ -92,7 +99,7 @@ export function breakdown(e: Estimate, params: Params, window: Window, dim: Dime
     int(totalTokens(r.tokens)),
     num(r.energy.central / scale),
     `${num(r.energy.low / scale)} – ${num(r.energy.high / scale)}`,
-    e.total.central > 0 ? `${Math.round((r.energy.central / e.total.central) * 100)}%` : "0%",
+    percent(r.energy.central, e.total.central),
   ]);
   const t = energy(e.total);
   body.push(["total", int(totalTokens(e.tokens)), num(e.total.central / scale), t.range, "100%"]);
@@ -113,7 +120,7 @@ export function method(params: Params): string {
   for (const [id, p] of Object.entries(params.params)) lines.push(`  ${id}: ${p.source}`);
   lines.push("", "Comparisons (central value only):");
   for (const [id, c] of Object.entries(params.comparisons)) lines.push(`  ${id}: ${c.value} ${c.unit} · ${c.source}`);
-  lines.push("", "Full write-up: METHODOLOGY.md");
+  lines.push("", `Full write-up: ${REPO_URL}/blob/main/METHODOLOGY.md`);
   return lines.join("\n");
 }
 
@@ -150,6 +157,11 @@ export function json(e: Estimate, params: Params, window: Window, sample = false
   );
 }
 
+/** What --json prints when there is nothing to estimate: a code for scripts and a plain message, no paths. */
+export function jsonError(error: "no_logs" | "no_usage", message: string): string {
+  return JSON.stringify({ app: APP_NAME, version: APP_VERSION, error, message }, null, 2);
+}
+
 const BARS = "▁▂▃▄▅▆▇█";
 
 /** Terminal sparkline, one character per value, scaled to the largest. */
@@ -180,9 +192,14 @@ export function history(e: Estimate, params: Params, window: Window, storedDays:
     "",
     `  Trend         ${sparkline(weeks.map((w) => w.central))}`,
     `  Total         ${total.central}   (range ${total.range})`,
-    `  Lightest week ${best.start}   ${energy(best).central} (range ${energy(best).range})`,
-    `  Heaviest week ${worst.start}   ${energy(worst).central} (range ${energy(worst).range})`,
-    `  Recorded      ${storedDays} days, kept in your local history even after Claude Code deletes old logs`,
+    // With one week of use, "lightest" and "heaviest" would name the same week.
+    ...(active.length > 1
+      ? [
+          `  Lightest week ${best.start}   ${energy(best).central} (range ${energy(best).range})`,
+          `  Heaviest week ${worst.start}   ${energy(worst).central} (range ${energy(worst).range})`,
+        ]
+      : []),
+    `  Recorded      ${storedDays} day${storedDays === 1 ? "" : "s"}, kept in your local history even after Claude Code deletes old logs`,
     "",
     `  Energy is recalculated from stored token counts with method v${params.version}.`,
   ];

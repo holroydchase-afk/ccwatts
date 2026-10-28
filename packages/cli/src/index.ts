@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import {
   APP_NAME,
@@ -8,6 +8,7 @@ import {
   dedupe,
   APP_VERSION,
   PLAYGROUND_URL,
+  REPO_URL,
   defaultParams,
   estimate,
   parseSince,
@@ -18,8 +19,10 @@ import {
 } from "@ccwatts/core";
 import { openFile, writeDashboard } from "./dashboard.js";
 import { errorLine } from "./errors.js";
-import { breakdown, history, historyCsv, json, method, statusLine, summary } from "./render.js";
+import { breakdown, history, historyCsv, json, jsonError, method, statusLine, summary } from "./render.js";
 import { estimateWindow, loadUsage, rowsIn, type UsageOptions } from "./usage.js";
+
+const MCP_ADD = `claude mcp add ${APP_NAME} -- npx -y ${APP_NAME} mcp`;
 
 const HELP = `Usage: ${APP_NAME} [command] [options]
 
@@ -33,6 +36,7 @@ Commands:
   receipt           Share line, LinkedIn post text and a 1200×627 card (SVG)
   statusline        One line for the Claude Code status line (reads its JSON on stdin)
   mcp               MCP server on stdio, so Claude Code can ask about its own energy use
+  help              Show this help
 
 Options:
   --since <when>    7d, 12h, 4w, 2026-10-01 or all (default 30d; history defaults to all)
@@ -50,11 +54,21 @@ Options:
 
 Logs somewhere else? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep your history.`;
 
+const MCP_HELP = `Usage: ${APP_NAME} mcp [--path <dir>] [--demo] [--no-history]
+
+Runs an MCP server on stdio, so Claude Code can ask about its own energy use.
+Claude Code starts it for you; you don't run it by hand. To add it:
+
+  ${MCP_ADD}
+
+Tools: energy_summary, energy_by_project, energy_weekly, methodology.
+Reads local logs only. No port, no network.`;
+
 // Public page, not a secret: a plain name so the studio log check (which bans URL-named values in logs) reads it as fixed text.
 const PLAYGROUND = PLAYGROUND_URL;
 
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
-const COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline", "mcp"];
+const COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline", "mcp", "help"];
 
 /** parseArgs errors are written for developers; say the same thing in plain words. */
 function plainArgError(error: unknown): Error | undefined {
@@ -85,7 +99,8 @@ async function main(): Promise<void> {
       help: { type: "boolean", short: "h" },
     },
   });
-  if (values.help) return void console.log(HELP);
+  if (positionals[0] === "help") return void console.log(HELP);
+  if (values.help) return void console.log(positionals[0] === "mcp" ? MCP_HELP : HELP);
   if (values.version) return void console.log(`${APP_NAME} ${APP_VERSION}`);
   const params = defaultParams;
   if (values.method) return void console.log(method(params));
@@ -116,6 +131,20 @@ async function main(): Promise<void> {
   const { rows } = usage;
   const window = parseSince(values.since ?? (command === "history" || demo ? "all" : "30d"), usage.now);
   if (rows.length === 0) {
+    // Logs were there but held no usage (wrong folder, or only user turns): say so, not "no logs".
+    const where = values.path ? ` in ${basename(values.path)}` : "";
+    const found = `Found ${usage.files} .jsonl file${usage.files === 1 ? "" : "s"}${where}, but no Claude Code usage in them.`;
+    if (values.json) {
+      // Scripts get JSON on stdout and a non-zero exit. No paths: this output is often saved or shared.
+      console.log(usage.files > 0 ? jsonError("no_usage", found) : jsonError("no_logs", "No Claude Code logs found."));
+      process.exitCode = 1;
+      return;
+    }
+    if (usage.files > 0) {
+      console.log(found);
+      console.log(`Claude Code keeps its logs in ~/.claude/projects. Point ${APP_NAME} there, or at one session file, with --path.`);
+      return;
+    }
     console.log(`No Claude Code logs found. Looked in:\n${usage.roots.map((r) => `  ${r}`).join("\n")}`);
     console.log(`Point ${APP_NAME} at another folder with --path <dir>.`);
     console.log(`No Claude Code yet? See it on sample data with ${APP_NAME} --demo, or in your browser: ${PLAYGROUND}`);
@@ -192,6 +221,9 @@ async function runMcp(options: UsageOptions): Promise<void> {
     if ((error as { code?: string }).code !== "ERR_MODULE_NOT_FOUND") throw error;
     throw new Error(`This copy of ${APP_NAME} doesn't include the MCP server. Use the npm package: claude mcp add ${APP_NAME} -- npx ${APP_NAME} mcp`);
   }
+  // Typed in a terminal, the server would wait silently for MCP messages. Say what it is on
+  // stderr (stdout carries the protocol) and keep serving, so a pipe from Claude Code is untouched.
+  if (process.stdin.isTTY) console.error(`${APP_NAME} mcp is an MCP server for Claude Code, waiting on stdin (Ctrl+C to stop). Add it with: ${MCP_ADD}`);
   await mod.serveStdio(options);
 }
 
