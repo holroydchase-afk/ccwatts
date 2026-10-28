@@ -33,6 +33,7 @@ The adapter never throws on a bad line; it skips it. What it skips or changes:
 - **Timestamp.** It must start with a `YYYY-MM-DD` date and parse as a date. Otherwise the line is dropped, so it can't reach a day rollup.
 - **Token counts.** Each must be a whole number from 0 to 1e9 (`MAX_TOKENS_PER_RESPONSE`). A fraction, a non-finite number or more than 1e9 makes the whole line malformed and it is dropped. A missing, negative or non-numeric count is 0. `input_tokens` and `output_tokens` are always numbers in real logs, and JSON writes a number it can't hold (Infinity) as `null`, so `null` there drops the line; `null` cache counts are 0.
 - **Names.** `message.model` and the cwd basename have C0/C1 control characters, DEL and bidi marks/overrides/isolates removed and are cut to 64 characters (`safeName`). The project id hashes the full original path first, so two folders never merge. A cwd of `/` is named `(root)`.
+- **Ids stay in history.json only (PS-R5).** The id is an unsalted path hash, so `--json` and MCP answers drop it (same-name folders are still separate rows) and the dashboard file swaps it for a per-file label (`1`, `2`, ...).
 - **Future dates.** `dropFuture(records, now)` leaves out responses dated more than one day after `now` (a little clock skew is fine). The CLI and MCP server note it as "Ignored N response(s) dated in the future."
 - **History file.** `parseHistory` skips rows whose date isn't a real `YYYY-MM-DD`, or whose counts are negative or not finite, and cleans names the same way.
 

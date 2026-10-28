@@ -7,7 +7,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { build } from "esbuild";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defaultParams } from "@ccwatts/core";
+import { defaultParams, projectRef } from "@ccwatts/core";
 
 // End-to-end, the way Claude Code runs it: bundle the CLI like tsup does (index.js plus mcp.js),
 // start `ccwatts mcp` as a child process and talk to it over stdio with the official MCP client.
@@ -111,7 +111,7 @@ describe("ccwatts mcp (CCW-M2.5)", () => {
     for (const p of projects.projects) {
       expect(ordered(p.wh)).toBe(true);
       expect(p.name).not.toContain("/");
-      expect(p.projectId).toMatch(/^[0-9a-f]+$/);
+      expect(p).not.toHaveProperty("projectId"); // PS-R5: no path hash
     }
     // Same total either way you slice it.
     expect(projects.wh).toEqual(summary.wh);
@@ -266,6 +266,45 @@ syncBuiltinESMExports();
       for (const secret of [logs, h, ENCODED, "unreadable.jsonl"]) expect(r.text, name).not.toContain(secret);
     }
     expect((await call(client, "energy_summary", { since: "all" })).text).toMatch(/1 log file couldn't be read \(EISDIR\)/);
+    await client.close();
+  });
+});
+
+/** PS-R5: every string value in parsed JSON (numbers can look like hex digits, so only strings count). */
+function strings(v: unknown): string[] {
+  if (typeof v === "string") return [v];
+  if (Array.isArray(v)) return v.flatMap(strings);
+  if (v && typeof v === "object") return Object.entries(v).flatMap(([k, x]) => [k, ...strings(x)]);
+  return [];
+}
+
+describe("PS-R5 no path hash in MCP answers", () => {
+  it("PS-R5 energy_by_project keeps same-name folders apart without a projectId or any path hash", async () => {
+    const A = "/synthetic/work/app";
+    const B = "/synthetic/play/app";
+    const line = (id: string, cwd: string) =>
+      JSON.stringify({
+        type: "assistant",
+        timestamp: now,
+        cwd,
+        requestId: `req_${id}`,
+        message: { id: `msg_${id}`, model: "claude-opus-4-6", usage: { input_tokens: 10, cache_creation_input_tokens: 100, cache_read_input_tokens: 1000, output_tokens: 50 } },
+      });
+    const logs = join(home(), "logs");
+    mkdirSync(logs);
+    writeFileSync(join(logs, "s.jsonl"), [line("a", A), line("b", B)].join("\n"));
+    const { client } = await connect(["--path", logs]);
+    const answers = await Promise.all(TOOLS.map((t) => call(client, t, t === "methodology" || t === "energy_weekly" ? {} : { since: "all" })));
+    expect(answers.every((a) => !a.isError)).toBe(true);
+    const projects = answers[TOOLS.indexOf("energy_by_project")].json();
+    expect(projects.projects).toHaveLength(2);
+    for (const p of projects.projects) {
+      expect(p.name).toBe("app");
+      expect(p).not.toHaveProperty("projectId");
+    }
+    const all = answers.map((a) => a.text).join("\n");
+    for (const id of [projectRef(A).id, projectRef(B).id]) expect(all).not.toContain(id);
+    for (const a of answers) for (const str of strings(a.json())) expect(str).not.toMatch(/^[0-9a-f]{16}$/);
     await client.close();
   });
 });

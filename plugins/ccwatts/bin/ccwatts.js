@@ -722,10 +722,19 @@ async function writeHistory(rows, dir = dataDir()) {
 }
 
 // src/dashboard.ts
+function opaqueProjectIds(rows) {
+  const labels = /* @__PURE__ */ new Map();
+  return rows.map((r) => {
+    if (r.projectId === null) return r;
+    let label = labels.get(r.projectId);
+    if (!label) labels.set(r.projectId, label = String(labels.size + 1));
+    return { ...r, projectId: label };
+  });
+}
 async function writeDashboard(rows, dir = dataDir()) {
   await mkdir2(dir, { recursive: true });
   const path = join2(dir, "dashboard.html");
-  const html = injectData(ccwatts_default, { mode: "dashboard", generatedAt: (/* @__PURE__ */ new Date()).toISOString(), rows });
+  const html = injectData(ccwatts_default, { mode: "dashboard", generatedAt: (/* @__PURE__ */ new Date()).toISOString(), rows: opaqueProjectIds(rows) });
   await writeFile2(path, html, { mode: 384 });
   return path;
 }
@@ -858,7 +867,6 @@ function method(params) {
 function json(e, params, window, sample = false) {
   const rows = (list, dim) => list.map((r) => ({
     key: dim === "project" ? projectName(r.key) : r.key,
-    ...dim === "project" ? { projectId: r.key.split("#")[1] ?? null } : {},
     wh: r.energy,
     tokens: r.tokens
   }));
