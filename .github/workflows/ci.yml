@@ -40,8 +40,6 @@ jobs:
 
   browser:
     runs-on: ubuntu-latest
-    env:
-      PLAYWRIGHT_MODULE: ${{ runner.temp }}/pw/node_modules/playwright/index.mjs
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -56,4 +54,4 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/pw" --no-save playwright@1.64.1
           "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps --only-shell chromium
       - name: The playground makes no network requests
-        run: npm run check:browser
+        run: PLAYWRIGHT_MODULE="$RUNNER_TEMP/pw/node_modules/playwright/index.mjs" npm run check:browser
