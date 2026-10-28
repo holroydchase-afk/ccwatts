@@ -136,8 +136,8 @@ kbd{font-family:var(--mono);font-size:.85em;border:1px solid var(--line);border-
 .whatif-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .whatif-head label{font-weight:700;font-size:16px}
 .whatif output{font-family:var(--mono);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums;color:var(--accent)}
-.whatif input[type=range]{width:100%;height:44px;margin:0;accent-color:var(--accent);cursor:pointer;background:transparent}
-.whatif-scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:-8px}
+.whatif input[type=range]{width:100%;height:48px;margin:0;accent-color:var(--accent);cursor:pointer;background:transparent}
+.whatif-scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:-8px}
 /* The "published" tick sits where the published value is on the track (thumb is about 16px wide). */
 .whatif-scale{position:relative}
 .whatif-scale .mark{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
@@ -236,7 +236,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
         <label for="whatif-cache">What if? Cache-read cost</label>
         <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
       </div>
-      <p class="note">Cache reads are most of your tokens and the least certain parameter: sources disagree from __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__ of the cost of fresh input.</p>
+      <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
       <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
       <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
       <p class="whatif-note" id="whatif-note" role="status" hidden></p>

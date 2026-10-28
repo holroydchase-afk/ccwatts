@@ -83,9 +83,10 @@ function estimateFor(rows: RollupRow[], p: Params = params): Estimate {
 function renderHero(e: Estimate, label: string) {
   const t = formatEnergy(e.total);
   const [value, unit] = t.central.split(" ");
-  $("hero-eyebrow").innerHTML = `Claude Code electricity · ${esc(label)}${whatIfActive() ? ` · <span class="whatif-flag">what-if, not published</span>` : ""}`;
+  $("hero-eyebrow").innerHTML = `Claude Code electricity · ${esc(label)}${whatIfActive() ? ` · <span class="whatif-flag">what-if: cache reads ${pct(viewParams.params[CACHE_ID]!.value)} · not published</span>` : ""}`;
   $("hero-big").innerHTML = e.responses ? `${esc(value ?? "")}<small>${esc(unit ?? "")}</small>` : "–";
-  $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}, from the bounds on every assumption.` : "No usage in this window.";
+  const fixed = whatIfActive() ? `, with cache reads fixed at ${pct(viewParams.params[CACHE_ID]!.value)} and every other assumption at its bounds.` : ", from the bounds on every assumption.";
+  $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}${fixed}` : "No usage in this window.";
   $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   // One span per item, kept whole, so a phone wraps between items and never inside a date.
@@ -272,12 +273,12 @@ function renderWhatIf(e: Estimate, published: Estimate) {
   if (!whatIfActive()) return void (note.textContent = "");
   const t = formatEnergy(e.total);
   const pub = formatEnergy(published.total);
-  const total = e.responses ? ` Your total would be ${t.central} (range ${t.range} ${t.unit}) instead of ${pub.central} (range ${pub.range} ${pub.unit}).` : "";
-  note.textContent = `What if: cache reads cost ${pct(value)} of fresh input.${total} Not the published estimate; the share card still uses ${pct(publishedCache)}. Method v${params.version}.`;
+  const totals = e.responses ? ` ${t.central} (range ${t.range} ${t.unit}). Published: ${pub.central} (range ${pub.range} ${pub.unit}).` : " Not the published estimate.";
+  note.textContent = `What-if at ${pct(value)}:${totals} The share card keeps ${pct(publishedCache)}. Method v${params.version}.`;
 }
 
 function setWhatIf(value: number) {
-  viewParams = Math.abs(value - publishedCache) < 1e-9 ? params : withOverrides(params, { [CACHE_ID]: value });
+  viewParams = Math.abs(value - publishedCache) < 1e-9 ? params : withOverrides(params, { [CACHE_ID]: value }, { pin: true });
   render(false);
 }
 
@@ -408,6 +409,8 @@ function wire() {
   $("whatif-reset").addEventListener("click", () => {
     slider.value = String(publishedCache);
     setWhatIf(publishedCache);
+    // Reset hides itself, so hand focus back to the slider (click or Enter).
+    slider.focus();
   });
 
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;

@@ -31,7 +31,7 @@ Developers run AI agents all day, and almost nobody can see what that costs in e
 |---|---|---|
 | ![Playground on a laptop, showing sample data](docs/images/playground-laptop.png) | ![Receipt card](docs/images/receipt-sample.png) | ![Playground on a phone, showing sample data](docs/images/playground-phone.png) |
 
-In the playground, a **"What if?" slider** moves the cache-read cost between its published low and high (1% to 25% of fresh input) and recomputes the range live. It is a what-if only: the share card and LinkedIn post always use the published estimate.
+In the playground, a **"What if?" slider** moves the least certain assumption, what a cache read costs (the method uses 10% of fresh input and tests 1% to 25%), and recomputes your number and its range live. It's a what-if only: the share card and LinkedIn post always use the published estimate.
 
 ## How the estimate works
 
