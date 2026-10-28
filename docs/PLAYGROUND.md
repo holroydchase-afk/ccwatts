@@ -18,3 +18,6 @@ The playground is `packages/web/dist/ccwatts.html`, built by `npm run build`. It
 3. **chaseholroyd.com/ccwatts:** upload the one file to the portfolio site. Best for the portfolio story.
 
 Whichever host you use, avoid adding analytics snippets, because that would break the "nothing leaves this browser" promise. The CSP would block them anyway.
+
+## Checking the live page
+After a deploy, `npm run check:live` loads https://chaseholroyd.com/ccwatts/ in headless Chromium at phone and laptop width. It fails on a non-200, a request to another host, a console error, sideways scroll, unlabeled sample data, a footer version that doesn't match `packages/cli/package.json`, a load over 3 s, or a page over 150 KB. Needs Playwright (not a dependency; set `PLAYWRIGHT_MODULE`), and passes `HTTPS_PROXY` to the browser.
