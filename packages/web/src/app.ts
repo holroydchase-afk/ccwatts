@@ -27,7 +27,7 @@ import {
   type UsageRecord,
 } from "@ccwatts/core";
 import type { PagePayload } from "./inject.js";
-import { readLogFiles } from "./read.js";
+import { noUsageStatus, readLogFiles, readPaste, type ReadResult } from "./read.js";
 
 type WindowId = "7d" | "30d" | "all";
 
@@ -80,7 +80,7 @@ function renderHero(e: Estimate, label: string) {
   $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   // One span per item, kept whole, so a phone wraps between items and never inside a date.
-  const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [`${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
+  const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [e.span.from === e.span.to ? e.span.from : `${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
   $("hero-meta").innerHTML = items.map((i) => `<span>${esc(i)}</span>`).join(" · ");
   for (const id of ["7d", "30d", "all"] as WindowId[]) $(`w-${id}`).setAttribute("aria-pressed", String(state.window === id));
 }
@@ -212,7 +212,7 @@ function renderMethod() {
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>
-        `<tr><td data-label="Parameter"><code>${esc(id)}</code><div class="meta">${esc(p.note)}</div></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
+        `<tr><td data-label="Parameter"><code>${esc(id)}</code><div class="note">${esc(p.note)}</div></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
     )
     .join("");
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
@@ -244,31 +244,30 @@ function render() {
   renderShare(e, label);
 }
 
-async function loadFiles(files: FileList | File[]) {
+/** Shows a line under the "Try it" box; errors are styled as errors and scrolled into view. */
+function setStatus(text: string, error = false) {
   const status = $("drop-status");
-  status.textContent = "Reading files on this device…";
-  const read = await readLogFiles(files);
-  if (!read.ok) {
-    status.textContent = read.status;
-    return;
-  }
-  loadTexts(read.texts, read.what);
+  status.textContent = text;
+  status.classList.toggle("error", error);
+  if (error) status.scrollIntoView({ block: "nearest" });
 }
 
-/** Parses log text (from files or the paste box) on this device and shows it. */
-function loadTexts(texts: string[], what: string) {
-  const status = $("drop-status");
+async function loadFiles(files: FileList | File[]) {
+  setStatus("Reading files on this device…");
+  load(await readLogFiles(files));
+}
+
+/** Parses log text (from files or the paste box) on this device and shows it. A failure leaves the current data on screen. */
+function load(read: ReadResult) {
+  if (!read.ok) return setStatus(read.status, true);
   const records: UsageRecord[] = [];
-  for (const text of texts) records.push(...claudeCodeAdapter.parse(text));
+  for (const text of read.texts) records.push(...claudeCodeAdapter.parse(text));
   const rows = rollup(dedupe(records));
-  if (!rows.length) {
-    status.textContent = `${what === "pasted text" ? "That text" : "Those files"} had no Claude Code usage in them.`;
-    return;
-  }
+  if (!rows.length) return setStatus(noUsageStatus(read.what), true);
   state.rows = rows;
   state.source = "files";
   state.window = "all";
-  status.textContent = `Read ${int(records.length)} responses from ${what}. Nothing was uploaded.`;
+  setStatus(`Read ${int(records.length)} responses from ${read.what}. Nothing was uploaded.`);
   render();
 }
 
@@ -284,10 +283,13 @@ function download(name: string, blob: Blob) {
 
 async function copy(text: string, what: string, statusId = "share-status", fallbackId = "post") {
   const status = $(statusId);
+  status.classList.remove("error");
   try {
     await navigator.clipboard.writeText(text);
     status.textContent = `Copied the ${what}.`;
   } catch {
+    const box = $(fallbackId).closest("details");
+    if (box) box.open = true;
     const range = document.createRange();
     range.selectNodeContents($(fallbackId));
     getSelection()?.removeAllRanges();
@@ -326,7 +328,7 @@ function wire() {
     $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
     $("read-paste").addEventListener("click", () => {
       // Pasted from a chat, the lines may sit inside a ``` code fence; the adapter skips those lines.
-      loadTexts([$<HTMLTextAreaElement>("paste-log").value], "pasted text");
+      load(readPaste($<HTMLTextAreaElement>("paste-log").value));
     });
     for (const id of ["pick-folder", "pick-files"]) {
       $<HTMLInputElement>(id).addEventListener("change", (ev) => {
@@ -338,7 +340,7 @@ function wire() {
       state.rows = sample;
       state.source = "sample";
       state.window = "30d";
-      $("drop-status").textContent = "";
+      setStatus("");
       render();
     });
     const over = (on: boolean) => (e: DragEvent) => {
@@ -371,6 +373,7 @@ function wire() {
     const back = $<HTMLAnchorElement>("back-link");
     back.href = PORTFOLIO_URL;
     back.hidden = false;
+    $("jump").hidden = false;
   }
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;

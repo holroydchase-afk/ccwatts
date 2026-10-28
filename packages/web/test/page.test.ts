@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { defaultParams, rollup, claudeCodeAdapter, PLAYGROUND_URL, PORTFOLIO_URL } from "@ccwatts/core";
+import { APP_VERSION, defaultParams, rollup, claudeCodeAdapter, PLAYGROUND_URL, PORTFOLIO_URL } from "@ccwatts/core";
 import { DATA_MARKER, injectData, safeJson } from "../src/inject.js";
 
 // Built by `npm test` (node packages/web/build.mjs) before vitest runs.
@@ -132,5 +132,84 @@ describe("export prompt for Claude Code on the web", () => {
     expect(records).toHaveLength(1);
     expect(records[0]!.tokens).toEqual({ input: 2, cacheWrite: 300, cacheRead: 4000, output: 50 });
     expect(records[0]!.project?.name).toBe("ccwatts");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// UI polish (CCW-M2.6.3, docs/reviews/2026-10-28-release-plan.md). Layout and computed-style
+// checks that need a real browser (UX-R4 fonts, UX-R5 phone height, UX-R2 error states, the
+// one-day span) are in scripts/check-no-network.mjs, run with `npm run check:browser`.
+// ---------------------------------------------------------------------------------------------
+const tag = (re: RegExp) => re.exec(html)?.[0] ?? "";
+const at = (s: string) => html.indexOf(s);
+
+describe("UX-R1 errors are announced where they happen", () => {
+  it("UX-R1: #drop-status is a polite live status region", () => {
+    const status = tag(/<[a-z]+[^>]*id="drop-status"[^>]*>/);
+    expect(status).toContain('role="status"');
+    expect(status).toContain('aria-live="polite"');
+  });
+
+  it("UX-R1: the hero is not a live region (it re-renders on every toggle)", () => {
+    const hero = tag(/<section[^>]*class="hero"[^>]*>/);
+    expect(hero).not.toBe("");
+    expect(hero).not.toContain("aria-live");
+  });
+});
+
+describe("UX-R2 error styling", () => {
+  it("UX-R2: the page has an .error style and the empty-paste copy", () => {
+    expect(html).toMatch(/\.error\{[^}]+\}|\.status\.error\{[^}]+\}/);
+    expect(html).toContain("Paste the lines first.");
+    expect(html).toContain("We couldn't find any usage lines in that text. Paste the lines Claude printed, one JSON object per line.");
+    expect(html).not.toContain("had no Claude Code usage in them");
+  });
+});
+
+describe("UX-R3 the result stays with its chart", () => {
+  it("UX-R3: 'Try it on your own logs' comes after the chart and the By model / By project lists", () => {
+    const drop = at('id="drop"');
+    expect(drop).toBeGreaterThan(0);
+    for (const id of ['id="chart"', 'id="by-model"', 'id="by-project"']) expect(drop, id).toBeGreaterThan(at(id));
+  });
+
+  it("UX-R3: the hero links to it with 'Use your own logs'", () => {
+    const hero = /<section[^>]*class="hero"[^>]*>([\s\S]*?)<\/section>/.exec(html)?.[1] ?? "";
+    expect(hero).toMatch(/<a[^>]*href="#drop"[^>]*>\s*Use your own logs\s*<\/a>/);
+  });
+
+  it("UX-R3: the 7 days / 30 days / All time toggle is one labeled group", () => {
+    const groups = html.match(/<[a-z]+[^>]*role="group"[^>]*>(?:(?!<\/div>)[\s\S])*data-window="7d"/g) ?? [];
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatch(/aria-label="[^"]+"/);
+    for (const w of ["7d", "30d", "all"]) expect(html.match(new RegExp(`data-window="${w}"`, "g"))).toHaveLength(1);
+  });
+});
+
+describe("UX-R5 method details fold away", () => {
+  it("UX-R5: the method parameter table sits inside a <details>", () => {
+    const before = html.slice(0, at('id="params"'));
+    const opened = (before.match(/<details[ >]/g) ?? []).length;
+    const closed = (before.match(/<\/details>/g) ?? []).length;
+    expect(opened - closed).toBe(1);
+  });
+});
+
+describe("UX-R11 one version everywhere", () => {
+  it("UX-R11: the footer shows the CLI package version, from the single APP_VERSION constant", () => {
+    const pkg = JSON.parse(readFileSync(new URL("../../cli/package.json", import.meta.url), "utf8"));
+    expect(APP_VERSION).toBe(pkg.version);
+    expect(html).toContain(pkg.version);
+    const app = readFileSync(new URL("../src/app.ts", import.meta.url), "utf8");
+    expect(app).toMatch(/footer-version[\s\S]{0,200}APP_VERSION/);
+    expect(html).not.toMatch(/v0\.1(?![.\d])/);
+  });
+});
+
+describe("UX-R13 the Claude Code on the web summary is styled", () => {
+  it("UX-R13: its <summary> has a class with a 44px minimum height", () => {
+    const m = /<summary class="([\w-]+)[^"]*"[^>]*>\s*Use Claude Code on the web/.exec(html);
+    expect(m, "summary has a class").not.toBeNull();
+    expect(html).toMatch(new RegExp(`\\.${m![1]}\\{[^}]*min-height:44px`));
   });
 });

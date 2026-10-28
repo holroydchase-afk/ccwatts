@@ -22,3 +22,18 @@ export async function readLogFiles(files: Iterable<LogFile>): Promise<ReadResult
   }
   return { ok: true, texts, what: `${logs.length} file${logs.length === 1 ? "" : "s"}` };
 }
+
+export const EMPTY_PASTE = "Paste the lines first.";
+
+/** What to say when files or pasted text held no usage: what to try next, not just what failed (UX-R2). */
+export function noUsageStatus(what: string): string {
+  if (what === "pasted text") return "We couldn't find any usage lines in that text. Paste the lines Claude printed, one JSON object per line.";
+  const those = what === "1 file" ? "that file" : "those files";
+  return `We couldn't find any Claude Code usage in ${those}. Pick the .jsonl files inside ~/.claude/projects, or use the prompt below.`;
+}
+
+/** The paste box, as a ReadResult: an empty or blank paste asks for the lines first. */
+export function readPaste(text: string): ReadResult {
+  if (!text.trim()) return { ok: false, status: EMPTY_PASTE };
+  return { ok: true, texts: [text], what: "pasted text" };
+}
