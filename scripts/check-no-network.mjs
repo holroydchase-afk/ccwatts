@@ -120,6 +120,32 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // UX-R11: footer version matches the CLI package.
   if (!(await page.textContent("#footer-version")).includes(`v${cliVersion}`)) problems.push(`UX-R11: footer doesn't show v${cliVersion}`);
 
+  // CCW-M2.6.4 coverage: the 7 days / 30 days / All time toggle marks one button pressed and
+  // changes the total; going back to All time gives the same total as before.
+  const total = () => page.evaluate(() => `${document.querySelector("#hero-big")?.textContent}|${document.querySelector("#hero-range")?.textContent}`);
+  const pressed = () => page.$$eval("[data-window]", (bs) => bs.filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.id));
+  await page.click("#w-all");
+  const allTime = await total();
+  if ((await pressed()).join() !== "w-all") problems.push(`window toggle: pressed is ${(await pressed()).join()} after All time`);
+  await page.click("#w-7d");
+  if ((await pressed()).join() !== "w-7d") problems.push(`window toggle: pressed is ${(await pressed()).join()} after 7 days`);
+  if ((await total()) === allTime) problems.push("window toggle: 7 days shows the same total as All time");
+  await page.click("#w-all");
+  if ((await total()) !== allTime) problems.push("window toggle: All time total changed after a round trip");
+
+  // UX-R17 (CCW-M2.6.4): on a phone the 1200px share card shrinks its text under 11px, so an
+  // "Open full size" link sits under the card preview.
+  if (viewport.width <= 600) {
+    const full = await page.evaluate(() => {
+      const card = document.querySelector("#card");
+      const link = [...document.querySelectorAll("a")].find((a) => /open full size/i.test(a.textContent ?? ""));
+      if (!card || !link) return null;
+      return { after: !!(card.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING), visible: link.getBoundingClientRect().height > 0 };
+    });
+    if (!full) problems.push(`UX-R17: no "Open full size" link for the share card at ${viewport.width}px`);
+    else if (!full.after || !full.visible) problems.push(`UX-R17: "Open full size" link is ${full.visible ? "above the card" : "hidden"} at ${viewport.width}px`);
+  }
+
   // UX-R1, UX-R2: a file with no usage keeps the sample pill and shows the next-step error, styled as an error.
   await page.setInputFiles("#pick-files", noUsage);
   await page.waitForFunction(() => !/Reading/.test(document.querySelector("#drop-status")?.textContent ?? "Reading"));
@@ -169,6 +195,24 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if (width > viewport.width) problems.push(`horizontal scroll at ${viewport.width}px (${width}px wide)`);
   await page.close();
 }
+// PS-R2 (privacy-security, CCW-M2.6.4): the chart writes day keys into svg.innerHTML. A dashboard
+// row with markup for a date (a hand-edited or corrupt history file; the dashboard reads rows
+// without the parser's checks) must render as text, never as an element.
+{
+  const xssRow = (date) => ({ date, source: "claude-code", model: "claude-opus-4-6", projectId: "0000000000000000", projectName: "proj", responses: 1, tokens: { input: 10, cacheWrite: 100, cacheRead: 1000, output: 50 } });
+  const rows = [xssRow("2026-10-01"), xssRow("<i id=xss>")];
+  const json = JSON.stringify({ mode: "dashboard", generatedAt: new Date().toISOString(), rows }).replace(/</g, "\\u003c");
+  const html = readFileSync(page_, "utf8").replace(/(<script id="ccwatts-data" type="application\/json">)([\s\S]*?)(<\/script>)/, (_m, open, _old, close) => `${open}${json}${close}`);
+  const crafted = join(scratch, "ps-r2-dashboard.html");
+  writeFileSync(crafted, html);
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  page.on("pageerror", (e) => problems.push(`PS-R2 page error: ${e}`));
+  await page.goto(pathToFileURL(crafted).href);
+  await page.click("#w-all");
+  if (await page.$("#xss")) problems.push("PS-R2: a row's date was rendered as markup (found <i id=xss> in the page)");
+  await page.close();
+}
+
 await browser.close();
 rmSync(scratch, { recursive: true, force: true });
 

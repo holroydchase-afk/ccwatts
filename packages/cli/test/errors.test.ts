@@ -42,3 +42,12 @@ describe("errorLine", () => {
     expect(line.length).toBeGreaterThan(0);
   });
 });
+
+describe("PS-R1 errorLine never prints a path from an fs error (CCW-M2.6.4)", () => {
+  it("PS-R1 RED: an fs error whose message holds a full path prints no part of that path", () => {
+    const error = Object.assign(new Error("EISDIR: illegal operation on a directory, read '/tmp/a/b/c.jsonl'"), { code: "EISDIR", path: "/tmp/a/b/c.jsonl" });
+    const line = errorLine(error);
+    expect(line).not.toContain("/tmp/a/b");
+    expect(line).toContain("EISDIR");
+  });
+});

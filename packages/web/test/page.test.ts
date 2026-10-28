@@ -213,3 +213,10 @@ describe("UX-R13 the Claude Code on the web summary is styled", () => {
     expect(html).toMatch(new RegExp(`\\.${m![1]}\\{[^}]*min-height:44px`));
   });
 });
+
+describe("UX-R18 an empty status line takes no space (CCW-M2.6.4)", () => {
+  it("UX-R18 RED: the page hides #drop-status (or .status) while it is empty", () => {
+    const css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n");
+    expect(css).toMatch(/(#drop-status|\.status):empty\s*\{[^}]*display\s*:\s*none/);
+  });
+});

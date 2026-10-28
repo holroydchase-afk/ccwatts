@@ -2,7 +2,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { build } from "esbuild";
@@ -210,3 +210,45 @@ describe("ccwatts mcp (CCW-M2.5)", () => {
   });
 });
 
+
+// PS-R1 (privacy-security, CCW-M2.6.4): one unreadable log must not stop any tool or leak its path.
+// Root ignores chmod, so a preload module makes readFile throw EISDIR (full path in the message,
+// as Node does) for files named unreadable.jsonl under a Claude Code-style encoded project folder.
+describe("PS-R1 an unreadable log file over MCP (RED)", () => {
+  const ENCODED = "-home-alice-clientX";
+  function setup() {
+    const preload = join(work, "unreadable-preload.mjs");
+    writeFileSync(
+      preload,
+      `import fs from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
+const readFile = fs.readFile;
+fs.readFile = async (p, ...rest) => {
+  if (String(p).endsWith("unreadable.jsonl")) throw Object.assign(new Error("EISDIR: illegal operation on a directory, read '" + p + "'"), { code: "EISDIR", path: String(p) });
+  return readFile(p, ...rest);
+};
+syncBuiltinESMExports();
+`,
+    );
+    const logs = home();
+    const dir = join(logs, "projects", ENCODED);
+    mkdirSync(dir, { recursive: true });
+    const line = (id: string) =>
+      JSON.stringify({ type: "assistant", timestamp: now, cwd: "/synthetic/proj", requestId: `req_${id}`, message: { id: `msg_${id}`, model: "claude-opus-4-6", usage: { input_tokens: 10, cache_creation_input_tokens: 100, cache_read_input_tokens: 1000, output_tokens: 50 } } });
+    writeFileSync(join(dir, "good.jsonl"), line("good") + "\n");
+    writeFileSync(join(dir, "unreadable.jsonl"), line("bad") + "\n");
+    return { logs, env: { CLAUDE_CONFIG_DIR: logs, NODE_OPTIONS: `--import=${pathToFileURL(preload).href}` } };
+  }
+
+  it("PS-R1 RED: every tool still answers from the other files, with no path or encoded folder", async () => {
+    const { logs, env } = setup();
+    const { client, home: h } = await connect([], env);
+    for (const [name, args] of [["energy_summary", { since: "all" }], ["energy_by_project", { since: "all" }], ["energy_weekly", { since: "all" }], ["methodology", {}]] as const) {
+      const r = await call(client, name, args);
+      expect(r.isError, `${name}: ${r.text.slice(0, 200)}`).toBe(false);
+      for (const secret of [logs, h, ENCODED, "unreadable.jsonl"]) expect(r.text, name).not.toContain(secret);
+    }
+    expect((await call(client, "energy_summary", { since: "all" })).text).toMatch(/1 log file couldn't be read \(EISDIR\)/);
+    await client.close();
+  });
+});

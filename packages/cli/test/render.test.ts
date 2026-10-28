@@ -209,3 +209,14 @@ describe("UX-R9 the week still in progress isn't called the lightest", () => {
     expect(lightest).not.toContain("(partial)");
   });
 });
+
+describe("UX-R19 history draws no divider over a column without a header (CCW-M2.6.4)", () => {
+  // Decided (coordinator, CCW-M2.6.4): the bar column is named "trend".
+  it("UX-R19 RED: every dashed span under history's header sits under a header label, and the bars are 'trend'", () => {
+    const t = tableOf(history(big, params, window, 28));
+    expect(t.head.trimEnd().split(/\s{2,}/).at(-1)).toBe("trend");
+    t.spans.forEach(({ s, e: end }, i) => {
+      expect(t.head.slice(s, end).trim(), `divider ${i} has no header above it: ${JSON.stringify(t.head)}`).not.toBe("");
+    });
+  });
+});
