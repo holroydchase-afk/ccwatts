@@ -39,5 +39,9 @@
     "versions": [
       "plugins/ccwatts/.claude-plugin/plugin.json"
     ]
+  },
+  "agents": {
+    "verify": "npm test",
+    "runs": 3
   }
 }
