@@ -2,6 +2,10 @@ node_modules/
 dist/
 coverage/
 *.log
+# Agent run log (studio-agents hook): names and times only, committed so CI can check the Agents: line.
+!.claude/agent-runs/*.log
+.claude/agent-runs/main.log
+.claude/agent-runs/detached.log
 .DS_Store
 .env*
 
