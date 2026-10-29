@@ -1,5 +1,5 @@
 # Weekly dependency updates, grouped so minor and patch bumps arrive as one PR per ecosystem.
-# Majors come one PR each. Bot PRs skip the agents-check and handoff-check workflows.
+# Majors come one PR each, except the ones ignored below. Bot PRs skip the agents-check and handoff-check workflows.
 version: 2
 updates:
   - package-ecosystem: "npm"
@@ -9,6 +9,20 @@ updates:
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    # Majors that need a planned migration (Oct 29: TS 7 and tsup 9 break the build,
+    # vitest 5 needs Node 22 types, zod 4 sits under the bundled MCP server).
+    # @types/node stays on 20 because the CLI supports Node >=20.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tsup"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
