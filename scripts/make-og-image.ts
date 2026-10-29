@@ -1,10 +1,11 @@
 // Renders packages/web/src/og.svg to packages/web/public/og.png (the playground's link preview).
 // Run by hand when the SVG changes and commit both files. Needs Playwright, which is not a
-// project dependency (same setup as check-no-network.mjs: PLAYWRIGHT_MODULE, CHROMIUM_PATH).
+// project dependency (same setup as check-no-network.ts: PLAYWRIGHT_MODULE, CHROMIUM_PATH).
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { loadChromium } from "../tools/showcase-check/check.ts";
 
-const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
+const chromium = await loadChromium();
 const svg = readFileSync(fileURLToPath(new URL("../packages/web/src/og.svg", import.meta.url)), "utf8");
 const out = fileURLToPath(new URL("../packages/web/public/og.png", import.meta.url));
 

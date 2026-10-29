@@ -29,9 +29,9 @@ jobs:
       - name: Agent roster matches CLAUDE.md
         run: bash scripts/check-agents.sh
       - name: No secrets, URLs or raw errors in logs
-        run: node scripts/check-logs.mjs
+        run: npx tsx scripts/check-logs.ts
       - name: No home paths, emails, tokens or keys in the repo
-        run: node scripts/check-private.mjs
+        run: npx tsx scripts/check-private.ts
       - run: npm run build
       - run: npm run typecheck
       - run: npm test

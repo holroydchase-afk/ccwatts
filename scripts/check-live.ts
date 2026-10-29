@@ -4,11 +4,12 @@
 // CLI package, or a slow load. Reads only; never sends anything but the page request.
 //
 // Needs Playwright (not a project dependency) and network access to the playground's host.
-// Run by hand after a deploy:  node scripts/check-live.mjs [url]
+// Run by hand after a deploy:  tsx scripts/check-live.ts [url]
 // Behind a proxy, HTTPS_PROXY is passed to the browser. Set PLAYWRIGHT_MODULE / CHROMIUM_PATH if needed.
 import { readFileSync } from "node:fs";
+import { loadChromium } from "../tools/showcase-check/check.ts";
 
-const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
+const chromium = await loadChromium();
 const url = process.argv[2] ?? "https://chaseholroyd.com/ccwatts/";
 const host = new URL(url).host;
 const cliVersion = JSON.parse(readFileSync(new URL("../packages/cli/package.json", import.meta.url), "utf8")).version;
@@ -20,12 +21,12 @@ const browser = await chromium.launch({
   ...(proxy ? { proxy } : {}),
   ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
 });
-const problems = [];
-const notes = [];
+const problems: string[] = [];
+const notes: string[] = [];
 for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   const page = await browser.newPage({ viewport });
-  const errors = [];
-  const offHost = [];
+  const errors: string[] = [];
+  const offHost: string[] = [];
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
   page.on("pageerror", (e) => errors.push(String(e)));
   page.on("request", (r) => { if (new URL(r.url()).host !== host) offHost.push(r.url()); });

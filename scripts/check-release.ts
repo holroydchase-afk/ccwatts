@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 // Release check (release-captain agent). Proves a package is safe to publish, without publishing:
 //   1. no runtime dependency that can't install from npm (workspace:, file:, link:, or a workspace name)
 //   2. `npm pack` ships only the allowlisted files
@@ -9,55 +9,75 @@
 // Config: studio-checks.json at the repo root, section "release":
 //   { "release": { "package": "packages/cli", "allowFiles": ["package.json", "dist/**"],
 //                  "smoke": [["--version"], ["--demo"]], "versions": ["plugins/x/plugin.json"] } }
-// Usage, after the build: node scripts/check-release.mjs
+// Usage, after the build: npx tsx scripts/check-release.ts
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+interface PackageJson {
+  name: string;
+  version: string;
+  bin?: string | Record<string, string>;
+  dependencies?: Record<string, string>;
+  workspaces?: string[];
+}
+interface ReleaseConfig {
+  package: string;
+  allowFiles: string[];
+  smoke?: string[][];
+  versions?: string[];
+}
+interface PackResult {
+  filename: string;
+  size: number;
+  files: { path: string }[];
+}
+const readJson = <T>(p: string): T => JSON.parse(readFileSync(p, "utf8"));
+
 /** `dir/**` matches anything under dir; anything else must match exactly. */
-export const matchesAny = (file, globs) =>
+export const matchesAny = (file: string, globs: string[]) =>
   globs.some((g) => (g.endsWith("/**") ? file.startsWith(g.slice(0, -2)) : file === g));
 
-export const unexpectedFiles = (files, allow) => files.filter((f) => !matchesAny(f, allow));
+export const unexpectedFiles = (files: string[], allow: string[]) => files.filter((f) => !matchesAny(f, allow));
 
-export function badDeps(pkg, workspaceNames) {
+export function badDeps(pkg: Pick<PackageJson, "dependencies">, workspaceNames: string[]): string[] {
   return Object.entries(pkg.dependencies ?? {})
     .filter(([name, range]) => /^(workspace|file|link):/.test(range) || workspaceNames.includes(name))
     .map(([name]) => name);
 }
 
-export const versionDrift = (version, others) =>
+export const versionDrift = (version: string, others: Record<string, string>) =>
   Object.entries(others).filter(([, v]) => v !== version).map(([file, v]) => `${file} is ${v}, package is ${version}`);
 
-function workspaceNames(root) {
-  const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+function workspaceNames(root: string): string[] {
+  const rootPkg = readJson<PackageJson>(join(root, "package.json"));
   return (rootPkg.workspaces ?? [])
     .map((w) => join(root, w, "package.json"))
-    .filter(existsSync)
-    .map((p) => JSON.parse(readFileSync(p, "utf8")).name);
+    .filter((p) => existsSync(p))
+    .map((p) => readJson<PackageJson>(p).name);
 }
 
 async function main() {
   const root = fileURLToPath(new URL("..", import.meta.url));
   const configFile = resolve(root, process.env.STUDIO_CHECKS || "studio-checks.json");
-  const config = existsSync(configFile) ? JSON.parse(readFileSync(configFile, "utf8")).release : null;
+  const config: ReleaseConfig | undefined = existsSync(configFile) ? readJson<{ release?: ReleaseConfig }>(configFile).release : undefined;
   if (!config) {
     console.error('No "release" section in studio-checks.json; nothing to check.');
     process.exit(2);
   }
   const dir = resolve(root, config.package);
-  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-  const problems = [];
-  const warnings = [];
+  const pkg = readJson<PackageJson>(join(dir, "package.json"));
+  const problems: string[] = [];
+  const warnings: string[] = [];
 
   const deps = badDeps(pkg, workspaceNames(root).filter((n) => n !== pkg.name));
   if (deps.length) problems.push(`runtime dependencies that won't install from npm: ${deps.join(", ")}`);
 
   const tmp = mkdtempSync(join(tmpdir(), "release-check-"));
   try {
-    const packed = JSON.parse(execFileSync("npm", ["pack", "--json", "--pack-destination", tmp], { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }))[0];
+    const packed: PackResult = JSON.parse(execFileSync("npm", ["pack", "--json", "--pack-destination", tmp], { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }))[0];
     const extra = unexpectedFiles(packed.files.map((f) => f.path), config.allowFiles);
     if (extra.length) problems.push(`tarball ships files outside allowFiles: ${extra.join(", ")}`);
     console.log(`packed ${packed.filename}: ${packed.files.length} files, ${(packed.size / 1024).toFixed(0)} KB`);
@@ -72,7 +92,7 @@ async function main() {
     if (install.status !== 0) {
       problems.push(`tarball doesn't install in an empty project offline: ${install.stderr.trim().split("\n").pop()}`);
     } else {
-      const bin = Object.keys(typeof pkg.bin === "string" ? { [pkg.name]: pkg.bin } : pkg.bin ?? {})[0];
+      const bin = Object.keys(typeof pkg.bin === "string" ? { [pkg.name]: pkg.bin } : pkg.bin ?? {})[0] ?? pkg.name;
       for (const args of config.smoke ?? [["--version"]]) {
         const run = spawnSync(join(project, "node_modules/.bin", bin), args, { cwd: project, env, encoding: "utf8", timeout: 30000 });
         const out = `${run.stdout}${run.stderr}`;
@@ -87,7 +107,7 @@ async function main() {
     rmSync(tmp, { recursive: true, force: true });
   }
 
-  const others = Object.fromEntries((config.versions ?? []).map((f) => [f, JSON.parse(readFileSync(join(root, f), "utf8")).version]));
+  const others = Object.fromEntries((config.versions ?? []).map((f) => [f, readJson<PackageJson>(join(root, f)).version]));
   warnings.push(...versionDrift(pkg.version, others));
 
   for (const w of warnings) console.log(`warning: ${w}`);

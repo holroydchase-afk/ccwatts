@@ -1,11 +1,11 @@
 // Writes fixtures/claude-code/demo.jsonl: 30 days of synthetic, counts-only Claude Code usage
 // for screenshots, the playground's "Try sample data" and tests. Deterministic (seeded).
-// Run: node scripts/make-demo-fixture.mjs
+// Run: tsx scripts/make-demo-fixture.ts
 import { mkdirSync, writeFileSync } from "node:fs";
 
 let seed = 20261021;
 const rand = () => ((seed = (seed * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32);
-const pick = (items) => items[Math.floor(rand() * items.length)];
+const pick = <T>(items: T[]): T => items[Math.floor(rand() * items.length)]!;
 
 const projects = ["/home/demo/code/ccwatts", "/home/demo/code/hearth", "/home/demo/code/portfolio-site", "/home/demo/code/dotfiles"];
 const models = ["claude-opus-4-6", "claude-opus-4-6", "claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"];

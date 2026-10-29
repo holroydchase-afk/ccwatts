@@ -50,7 +50,7 @@ describe("plugin MCP server (CCW-M2.6.5b)", () => {
     const built = join(repoRoot, "packages/cli/dist/mcp.js");
     // CI runs `npm run build` before `npm test`; locally the dist may not exist yet.
     if (existsSync(built)) expect(readFileSync(bundled).equals(readFileSync(built)), "bin/mcp.js differs from packages/cli/dist/mcp.js").toBe(true);
-    expect(readFileSync(join(repoRoot, "scripts/build-plugin.mjs"), "utf8")).toMatch(/mcp\.js/);
+    expect(readFileSync(join(repoRoot, "scripts/build-plugin.ts"), "utf8")).toMatch(/mcp\.js/);
   });
 
   it("PM-4 RED: CI's plugin-bundle step also checks bin/mcp.js", () => {

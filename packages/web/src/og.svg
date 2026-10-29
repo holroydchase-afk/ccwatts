@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="627" viewBox="0 0 1200 627">
-  <!-- Link preview card for the hosted playground. Render to public/og.png with scripts/make-og-image.mjs. -->
+  <!-- Link preview card for the hosted playground. Render to public/og.png with scripts/make-og-image.ts. -->
   <rect width="1200" height="627" fill="#f4f2ea"/>
   <g font-family="Helvetica Neue, Helvetica, Arial, Liberation Sans, sans-serif" fill="#1f2a24">
     <text x="72" y="118" font-family="SF Mono, Menlo, DejaVu Sans Mono, monospace" font-size="34" font-weight="700">cc<tspan fill="#2f6b4f">watts</tspan></text>
