@@ -18,12 +18,13 @@
     "check:kit": "node tools/showcase-check/selftest.mjs",
     "check:page": "node tools/showcase-check/cli.mjs",
     "check:live": "node scripts/check-live.mjs",
+    "check:release": "node scripts/check-release.mjs",
     "start": "npm run build && node packages/cli/dist/index.js",
     "prepare": "[ -d .git ] && git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
-    "esbuild": "^0.27.7",
+    "esbuild": "^0.28.2",
     "tsup": "^8.3.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

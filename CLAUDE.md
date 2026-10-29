@@ -29,6 +29,7 @@ The main session is Chase's **chief of staff**: it doesn't do specialist work it
 | Any screen, word or CLI output a user sees; before anything goes public (showcase review mode) | `ux-reviewer` |
 | Personal data, sign-in, secrets, telemetry, vendors; before a public demo, deploy or repo going public | `privacy-security` |
 | A new dependency, vendor, paid service, schema change or CI/deploy workflow; picking a new project's stack | `architect` |
+| Before any publish or release (npm, plugin, store, deploy tag); after a version bump | `release-captain` |
 | README, landing or portfolio copy; a name or tagline; after a milestone, the "why I built it" story | `positioning` |
 
 **One task, in order:** staff-pm scopes it, qa-tdd writes the failing test (red), engineer builds, qa-tdd runs all suites 3x (green), then ux-reviewer and privacy-security if users or the public will see it, positioning for any copy. Review findings get IDs (`<CODE>-R<n>`, P0 to P2) and each fix gets its own failing test first.
