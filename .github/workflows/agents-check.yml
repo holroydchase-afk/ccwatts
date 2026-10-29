@@ -1,6 +1,7 @@
 name: agents-check
 # Studio rule (templates/CLAUDE-agents.md): the agent table matches .claude/agents/, every PR body has
 # an "Agents:" line, and a PR that changes more than docs names qa-tdd on it (or "qa-tdd skipped: why").
+# Each agent the line names must be in .claude/agent-runs/<branch>.log (written by the Agent-tool hook).
 # Bot PRs (Dependabot) and titles with [skip agents] are exempt.
 on:
   pull_request:
@@ -34,3 +35,16 @@ jobs:
             exit 1
           fi
           echo "ok: $line"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 20
+          cache: npm
+      # qa-tdd's verify command (studio-checks.json agents.verify) needs the workspace installed and built.
+      - run: npm ci && npm run build
+      - name: Agents line matches the run log (and qa-tdd's suites rerun on CI)
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          f=scripts/check-agent-runs.sh; [ -f "$f" ] || f=templates/scripts/check-agent-runs.sh
+          if [ -f "$f" ]; then bash "$f"; else echo "no scripts/check-agent-runs.sh (install it with studio-agents scripts/install-rules.sh)"; fi

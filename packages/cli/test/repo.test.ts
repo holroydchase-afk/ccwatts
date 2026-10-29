@@ -132,6 +132,33 @@ describe("repo hygiene (RB-2, RB-3)", () => {
     expect(pkg.scripts.prepare ?? "").toMatch(/core\.hooksPath \.githooks/);
     expect(pkg.scripts.test).toMatch(/node scripts\/check-private\.mjs/);
   });
+
+  it("RB-3c the Agent-tool hook is wired and its run log is committable (not caught by *.log)", () => {
+    const settings = JSON.parse(read(".claude/settings.json"));
+    const pre = (settings.hooks?.PreToolUse ?? []) as { matcher?: string; hooks?: { command?: string }[] }[];
+    const entry = pre.find((h) => /\bAgent\b/.test(h.matcher ?? ""));
+    expect(entry, "PreToolUse entry matching Agent").toBeTruthy();
+    expect(entry!.hooks?.map((h) => h.command).join(" ")).toMatch(/scripts\/log-agent-run\.sh/);
+    expect(existsSync(join(root, "scripts/log-agent-run.sh")), "scripts/log-agent-run.sh exists").toBe(true);
+    const ig = spawnSync("git", ["check-ignore", "-q", "--no-index", ".claude/agent-runs/some-branch.log"], { cwd: root });
+    expect(ig.status, ".claude/agent-runs/*.log must not be gitignored").toBe(1);
+  });
+
+  it("RB-3d the hook logs the agent name only, never the prompt", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ccw-hook-"));
+    tmps.push(dir);
+    git(dir, "init", "-q", "-b", "feat/x");
+    const input = JSON.stringify({ tool_input: { subagent_type: "qa-tdd", prompt: "SECRET-PROMPT-TEXT" } });
+    const r = spawnSync("bash", [join(root, "scripts/log-agent-run.sh")], {
+      input,
+      encoding: "utf8",
+      env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+    });
+    expect(r.status, r.stderr).toBe(0);
+    const log = readFileSync(join(dir, ".claude/agent-runs/feat-x.log"), "utf8");
+    expect(log).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ qa-tdd\n$/);
+    expect(log).not.toContain("SECRET");
+  });
 });
 
 describe("workflows (RB-4)", () => {
