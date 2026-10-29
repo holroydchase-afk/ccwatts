@@ -1,15 +1,16 @@
 // Records the README's terminal GIF (docs/images/cli-demo.gif) and its still (docs/images/cli-summary.png)
 // from the real CLI output on the synthetic demo fixture. Run by hand after `npm run build` when the
 // summary changes, and commit both images. Needs Playwright and ffmpeg, which are not project
-// dependencies (same Playwright setup as check-no-network.mjs: PLAYWRIGHT_MODULE, CHROMIUM_PATH).
+// dependencies (same Playwright setup as check-no-network.ts: PLAYWRIGHT_MODULE, CHROMIUM_PATH).
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadChromium } from "../tools/showcase-check/check.ts";
 
-const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
-const here = (p) => fileURLToPath(new URL(p, import.meta.url));
+const chromium = await loadChromium();
+const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
 // What the GIF types, and the arguments that reproduce it from a clone. A throwaway CCWATTS_HOME keeps
 // the run from reading or writing anyone's real history.
@@ -23,7 +24,7 @@ const output = execFileSync(
 if (!output.includes("kWh") || !output.includes("range")) throw new Error("unexpected CLI output:\n" + output);
 const lines = output.split("\n");
 
-const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const page = `<!doctype html><meta charset="utf-8"><style>
   body { margin: 0; background: #0d1a14; font: 15px/1.6 ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", monospace; }
   .win { margin: 28px; background: #13241c; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px #0006; }
@@ -39,8 +40,8 @@ await tab.setContent(page);
 const width = await tab.$eval(".win", (el) => Math.ceil(el.getBoundingClientRect().right + 28));
 await tab.setViewportSize({ width: Math.max(860, width), height: 400 });
 
-const frames = [];
-async function frame(typedSoFar, shown, cursor, seconds) {
+const frames: { file: string; seconds: number }[] = [];
+async function frame(typedSoFar: string, shown: string[], cursor: boolean, seconds: number) {
   const prompt = `<span class="p">$ ${esc(typedSoFar)}</span>${cursor ? '<span class="cur"> </span>' : ""}`;
   await tab.$eval("#t", (el, html) => (el.innerHTML = html), [prompt, ...shown.map(esc)].join("\n"));
   const file = join(work, `f${String(frames.length).padStart(3, "0")}.png`);
@@ -57,7 +58,7 @@ await browser.close();
 
 // ffmpeg's concat list sets each frame's duration; one shared palette keeps the GIF small and sharp.
 const list = join(work, "frames.txt");
-writeFileSync(list, frames.map((f) => `file '${f.file}'\nduration ${f.seconds}`).join("\n") + `\nfile '${frames.at(-1).file}'\n`);
+writeFileSync(list, frames.map((f) => `file '${f.file}'\nduration ${f.seconds}`).join("\n") + `\nfile '${frames.at(-1)!.file}'\n`);
 execFileSync("ffmpeg", [
   "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list,
   "-vf", "split[a][b];[a]palettegen=max_colors=64:stats_mode=full[p];[b][p]paletteuse=dither=none",

@@ -1,8 +1,8 @@
-// Release captain's mechanical checks (scripts/check-release.mjs): the pure parts. The full run
+// Release captain's mechanical checks (scripts/check-release.ts): the pure parts. The full run
 // (pack, install in an empty HOME, smoke commands) is `npm run check:release` after a build.
 import { describe, expect, it } from "vitest";
 // @ts-expect-error plain ESM script, no types
-import { badDeps, matchesAny, unexpectedFiles, versionDrift } from "../../../scripts/check-release.mjs";
+import { badDeps, matchesAny, unexpectedFiles, versionDrift } from "../../../scripts/check-release.ts";
 
 describe("check-release (REL)", () => {
   it("REL-1 file globs: dist/** matches nested files, exact names match only themselves", () => {

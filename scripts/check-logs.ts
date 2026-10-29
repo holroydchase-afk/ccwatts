@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 // Log check (from holroydchase-afk/studio-agents; proved in Hearth). Static check of every console.*
 // call: never log keys, URLs, emails or raw errors. Its own test is tests/check_logs_test.sh in studio-agents.
 // Rules, applied to the call's arguments with string literals blanked (template ${...} parts are kept):
@@ -9,29 +9,33 @@
 //   4. no JSON.stringify: it dumps whatever the object holds
 // Config: studio-checks.json at the repo root, section "logs":
 //   { "logs": { "roots": ["src"], "banned": ["caption"] } }   ("banned" adds to the defaults)
-// Usage: node scripts/check-logs.mjs [file or dir ...]   (default: the configured roots, else src)
+// Usage: tsx scripts/check-logs.ts [file or dir ...]   (default: the configured roots, else src)
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const DEFAULT_BANNED = ["key", "secret", "token", "url", "uri", "email", "password", "header", "authorization", "body"];
 const configFile = process.env.STUDIO_CHECKS || "studio-checks.json";
-const config = existsSync(configFile) ? JSON.parse(readFileSync(configFile, "utf8")).logs ?? {} : {};
+interface LogsConfig {
+  roots?: string[];
+  banned?: string[];
+}
+const config: LogsConfig = existsSync(configFile) ? JSON.parse(readFileSync(configFile, "utf8")).logs ?? {} : {};
 const BANNED = [...new Set([...DEFAULT_BANNED, ...(config.banned ?? [])])];
 
 const args = process.argv.slice(2);
-const ROOTS = args.length ? args : config.roots?.length ? config.roots : ["src"];
+const ROOTS: string[] = args.length ? args : config.roots?.length ? config.roots : ["src"];
 const SKIP = /(__tests__|\/test\/|\.test\.[jt]sx?$|_test\.ts$|node_modules)/;
-const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const SECRETISH = new RegExp(`\\b[A-Za-z_$]*(${BANNED.map(escapeRe).join("|")})[A-Za-z_$]*\\b`, "i");
 
-function files(p) {
+function files(p: string): string[] {
   if (statSync(p).isDirectory()) return readdirSync(p).flatMap((f) => files(join(p, f)));
   return /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(p) && !SKIP.test(p) ? [p] : [];
 }
 
 // The argument text of a call that starts at `open` (the "("), or null if unbalanced.
-function callArgs(src, open) {
-  let depth = 0, q = null;
+function callArgs(src: string, open: number): string | null {
+  let depth = 0, q: string | null = null;
   for (let i = open; i < src.length; i++) {
     const c = src[i];
     if (q) { if (c === "\\") i++; else if (c === q) q = null; continue; }
@@ -43,7 +47,7 @@ function callArgs(src, open) {
 }
 
 // Blank out string literals; keep ${...} expressions inside template literals.
-function code(args) {
+function code(args: string): string {
   let out = "", i = 0;
   while (i < args.length) {
     const c = args[i];
@@ -69,7 +73,7 @@ function code(args) {
   return out;
 }
 
-const problems = [];
+const problems: string[] = [];
 let scanned = 0;
 for (const root of ROOTS) {
   if (!existsSync(root)) { console.log(`log check: ${root} not found, skipped (fix "logs.roots" in ${configFile})`); continue; }
@@ -77,7 +81,7 @@ for (const root of ROOTS) {
     scanned++;
     const src = readFileSync(f, "utf8");
     const re = /console\.(log|info|warn|error|debug|trace)\s*\(/g;
-    let m;
+    let m: RegExpExecArray | null;
     while ((m = re.exec(src))) {
       const raw = callArgs(src, m.index + m[0].length - 1);
       if (raw === null) continue;

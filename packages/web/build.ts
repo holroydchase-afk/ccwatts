@@ -5,7 +5,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
-const here = (p) => fileURLToPath(new URL(p, import.meta.url));
+const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const alias = { "@ccwatts/core": here("../core/src/index.ts") };
 
 const app = await build({
@@ -19,7 +19,7 @@ const app = await build({
   alias,
   legalComments: "none",
 });
-const script = app.outputFiles[0].text.trim();
+const script = app.outputFiles![0]!.text.trim();
 
 // Sample rollups are computed here from the synthetic demo fixture, so the page ships counts only.
 mkdirSync(here("dist"), { recursive: true });
@@ -30,11 +30,12 @@ rmSync(tmp);
 const sample = JSON.stringify(sampleRows(here("../../fixtures/claude-code/demo.jsonl"))).replace(/</g, "\\u003c");
 
 // Read from core/src/meta.ts so the URL lives in one place.
-const PLAYGROUND_URL = /PLAYGROUND_URL = "([^"]+)"/.exec(readFileSync(here("../core/src/meta.ts"), "utf8"))[1];
+const PLAYGROUND_URL = /PLAYGROUND_URL = "([^"]+)"/.exec(readFileSync(here("../core/src/meta.ts"), "utf8"))?.[1];
+if (!PLAYGROUND_URL) throw new Error("PLAYGROUND_URL not found in core/src/meta.ts");
 
 // The "What if?" slider's bounds come from params.json, so it can never leave the published range.
-const cacheRead = JSON.parse(readFileSync(here("../../methodology/params.json"), "utf8")).params.cache_read_vs_input;
-const pct = (v) => `${Math.round(v * 100)}%`;
+const cacheRead: { value: number; low: number; high: number } = JSON.parse(readFileSync(here("../../methodology/params.json"), "utf8")).params.cache_read_vs_input;
+const pct = (v: number) => `${Math.round(v * 100)}%`;
 const at = (cacheRead.value - cacheRead.low) / (cacheRead.high - cacheRead.low);
 const mark = `calc(${(at * 100).toFixed(2)}% + ${(8 - 16 * at).toFixed(1)}px)`;
 

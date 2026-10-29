@@ -1,6 +1,7 @@
 // Showcase check kit: loads a page in headless Chromium at phone and laptop sizes, in light and
 // dark mode, and returns a list of problems a recruiter or first-time user would hit. Product
-// specific checks plug in through `extra`. No dependencies; Playwright is loaded at run time.
+// specific checks plug in through `extra`. No runtime dependencies; Playwright is loaded at run time
+// (its types come from the playwright-core dev dependency).
 //
 // Built-in checks, each one a plain sentence in the returned list:
 //   network requests (anything but file:, data:, blob:, about: and the page's own origin),
@@ -8,41 +9,55 @@
 //   reaches (keyboardReach), unfinished text (TODO, lorem ipsum, coming soon, example.com),
 //   broken images, and text under minTextPx (off when 0).
 
-export const DEFAULT_VIEWPORTS = [{ width: 390, height: 844 }, { width: 1280, height: 800 }];
+export const DEFAULT_VIEWPORTS: Viewport[] = [{ width: 390, height: 844 }, { width: 1280, height: 800 }];
 export const DEFAULT_TAP_TARGETS = "button, label.btn, a.btn, [role=button], input[type=submit], input[type=button]";
+import type { Browser, BrowserType, Page } from "playwright-core";
+
+export type Viewport = { width: number; height: number };
+export type ColorScheme = "light" | "dark";
+
 const UNFINISHED = /\b(TODO|TBD|FIXME|lorem ipsum|coming soon)\b|example\.com/i;
 
 /** Playwright, from PLAYWRIGHT_MODULE when set (a path to its index.mjs), else the installed package. */
-export async function loadChromium() {
-  const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
-  return chromium;
+export async function loadChromium(): Promise<BrowserType> {
+  const pw: typeof import("playwright-core") = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
+  return pw.chromium;
 }
 
-export async function launch() {
+export async function launch(): Promise<Browser> {
   const chromium = await loadChromium();
   return chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 }
 
-function defaultAllow(pageUrl) {
+function defaultAllow(pageUrl: string): (url: string) => boolean {
   const origin = /^https?:/.test(pageUrl) ? new URL(pageUrl).origin : null;
-  return (url) => /^(file|data|blob|about):/.test(url) || (origin !== null && url.startsWith(`${origin}/`));
+  return (url: string) => /^(file|data|blob|about):/.test(url) || (origin !== null && url.startsWith(`${origin}/`));
 }
 
-/**
- * @param {object} o
- * @param {string} o.url  file:// or http(s):// address of the built page
- * @param {{width:number,height:number}[]} [o.viewports]
- * @param {("light"|"dark")[]} [o.colorSchemes]
- * @param {(url: string) => boolean} [o.allowRequest]  requests that are fine; default local only
- * @param {string} [o.tapTargets]  selector for controls that must be minTapPx tall
- * @param {number} [o.minTapPx]
- * @param {string[]} [o.keyboardReach]  element ids Tab must reach
- * @param {number} [o.tabPresses]
- * @param {number} [o.minTextPx]  smallest allowed rendered font size; 0 skips the check
- * @param {(page: any, ctx: {viewport: any, colorScheme: string, problem: (msg: string) => void}) => Promise<void>} [o.extra]
- * @param {any} [o.browser]  an open Playwright browser to reuse
- * @returns {Promise<string[]>} problems, each tagged with where it happened, e.g. "[390px dark]"
- */
+export type CheckContext = { viewport: Viewport; colorScheme: ColorScheme; problem: (msg: string) => void };
+
+export interface ShowcaseOptions {
+  /** file:// or http(s):// address of the built page */
+  url: string;
+  viewports?: Viewport[];
+  colorSchemes?: ColorScheme[];
+  /** Requests that are fine; default local only. */
+  allowRequest?: (url: string) => boolean;
+  /** Selector for controls that must be minTapPx tall. */
+  tapTargets?: string;
+  minTapPx?: number;
+  /** Element ids Tab must reach. */
+  keyboardReach?: string[];
+  tabPresses?: number;
+  /** Smallest allowed rendered font size; 0 skips the check. */
+  minTextPx?: number;
+  /** Product-specific checks, run on each page after the built-in ones. */
+  extra?: (page: Page, ctx: CheckContext) => Promise<void>;
+  /** An open Playwright browser to reuse. */
+  browser?: Browser;
+}
+
+/** Returns problems, each tagged with where it happened, e.g. "[390px dark]". */
 export async function showcaseCheck({
   url,
   viewports = DEFAULT_VIEWPORTS,
@@ -55,18 +70,18 @@ export async function showcaseCheck({
   minTextPx = 0,
   extra,
   browser: given,
-}) {
+}: ShowcaseOptions): Promise<string[]> {
   const browser = given ?? (await launch());
-  const problems = new Set();
+  const problems = new Set<string>();
   try {
     for (const colorScheme of colorSchemes) {
       for (const viewport of viewports) {
         const where = `[${viewport.width}px ${colorScheme}]`;
-        const problem = (msg) => problems.add(`${msg} ${where}`);
+        const problem = (msg: string) => problems.add(`${msg} ${where}`);
         const page = await browser.newPage({ viewport, colorScheme });
         page.on("request", (r) => allowRequest(r.url()) || problem(`network request: ${r.url()}`));
         page.on("console", (m) => m.type() === "error" && problem(`console error: ${m.text()}`));
-        page.on("pageerror", (e) => problem(`page error: ${e.message ?? e}`));
+        page.on("pageerror", (e) => problem(`page error: ${e.message}`));
         await page.goto(url, { waitUntil: "load" });
 
         const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -75,13 +90,13 @@ export async function showcaseCheck({
         const short = await page.$$eval(
           tapTargets,
           (els, min) => els.filter((e) => e.getClientRects().length && e.getBoundingClientRect().height < min)
-            .map((e) => e.id || e.textContent.trim().slice(0, 30)),
+            .map((e) => e.id || (e.textContent ?? "").trim().slice(0, 30)),
           minTapPx,
         );
         if (short.length) problem(`tap targets under ${minTapPx}px: ${short.join(", ")}`);
 
         if (keyboardReach.length) {
-          const reached = new Set();
+          const reached = new Set<string | undefined>();
           for (let i = 0; i < tabPresses; i++) {
             await page.keyboard.press("Tab");
             reached.add(await page.evaluate(() => document.activeElement?.id));
@@ -94,17 +109,17 @@ export async function showcaseCheck({
         if (line) problem(`unfinished text "${line.trim().slice(0, 60)}"`);
 
         const broken = await page.$$eval("img", (imgs) =>
-          imgs.filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.getAttribute("src")));
+          (imgs as HTMLImageElement[]).filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.getAttribute("src")));
         for (const src of broken) problem(`broken image: ${src}`);
 
         if (minTextPx > 0) {
           const tiny = await page.evaluate((min) => {
-            const out = [];
+            const out: string[] = [];
             for (const el of document.body.querySelectorAll("*")) {
-              const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+              const own = [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
               if (!own || !el.getClientRects().length) continue;
               const size = parseFloat(getComputedStyle(el).fontSize);
-              if (size < min) out.push(`"${el.textContent.trim().slice(0, 30)}" ${size}px`);
+              if (size < min) out.push(`"${(el.textContent ?? "").trim().slice(0, 30)}" ${size}px`);
             }
             return out;
           }, minTextPx);
