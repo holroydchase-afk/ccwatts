@@ -85,10 +85,10 @@ export function energyByProject(usage: Usage, window: Window, params: Params) {
       ? `${e.byProject.length} project${e.byProject.length === 1 ? "" : "s"}, ${window.label}. Top: ${projectName(top.key)} at ${text(top.energy)}.`
       : `No Claude Code usage found, ${window.label}.`,
     wh: wh(e.total),
-    // Folder basename plus a hash of the full path: two folders with the same name stay apart.
+    // Folder basename only, no path hash (PS-R5). Same-name folders still stay separate entries,
+    // because the breakdown is keyed by name#id internally.
     projects: e.byProject.map((r) => ({
       name: projectName(r.key),
-      projectId: r.key.split("#")[1] ?? null,
       wh: wh(r.energy),
       share: share(r, e.total),
       tokens: tokenTotal(r.tokens),

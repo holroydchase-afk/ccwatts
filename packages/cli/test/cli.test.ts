@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { APP_VERSION, PLAYGROUND_URL } from "@ccwatts/core";
+import { APP_VERSION, PLAYGROUND_URL, projectRef } from "@ccwatts/core";
 
 // End-to-end: bundle the CLI the way tsup does, then run it as a user would, in a throwaway home.
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -699,5 +699,70 @@ syncBuiltinESMExports();
     expect(JSON.parse(r.out).responses).toBe(1);
     expect(r.out + r.err).not.toContain(h);
     expect(r.out + r.err).not.toContain(ENCODED);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// PS-R5: project ids are an unsalted hash of the full path, so a shared file could confirm a
+// guessed path. Nothing a user might share (--json, the dashboard file) may carry that hash.
+// Two folders share the basename "app" so the tests also prove they still stay apart.
+// ---------------------------------------------------------------------------------------------
+/** PS-R5: every string value in parsed JSON (numbers can look like hex digits, so only strings count). */
+function strings(v: unknown): string[] {
+  if (typeof v === "string") return [v];
+  if (Array.isArray(v)) return v.flatMap(strings);
+  if (v && typeof v === "object") return Object.entries(v).flatMap(([k, x]) => [k, ...strings(x)]);
+  return [];
+}
+
+describe("PS-R5 no path hash in shareable output", () => {
+  const A = "/synthetic/work/app";
+  const B = "/synthetic/play/app";
+  const realIds = [projectRef(A).id, projectRef(B).id];
+  const HEX16 = /[0-9a-f]{16}/;
+  const twoApps = () =>
+    logFiles({
+      "s.jsonl": [
+        hLine("a1", "2026-10-01T10:00:00.000Z", { cwd: A }),
+        hLine("a2", "2026-10-02T10:00:00.000Z", { cwd: A }),
+        hLine("b1", "2026-10-01T11:00:00.000Z", { cwd: B }),
+      ].join("\n"),
+    });
+
+  it.each([[[]], [["history"]]] as string[][][])("PS-R5 %j --json has project rows with key and no projectId or hash", (cmd) => {
+    const r = cli([...cmd, "--path", twoApps(), "--since", "all", "--json"], { HOME: home() });
+    expect(r.code).toBe(0);
+    const out = JSON.parse(r.out);
+    expect(out.byProject).toHaveLength(2); // same basename, still two rows
+    for (const p of out.byProject) {
+      expect(p.key).toBe("app");
+      expect(p).not.toHaveProperty("projectId");
+    }
+    for (const id of realIds) expect(r.out).not.toContain(id);
+    for (const str of strings(out)) expect(str).not.toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it("PS-R5 dashboard embeds opaque project ids: no real hash, distinct per project, stable per project", () => {
+    const h = home();
+    const env = { HOME: h, CCWATTS_HOME: join(h, ".ccwatts") };
+    const r = cli(["dashboard", "--no-open", "--path", twoApps()], env);
+    expect(r.code).toBe(0);
+    const html = readFileSync(join(h, ".ccwatts", "dashboard.html"), "utf8");
+    const raw = /<script id="ccwatts-data" type="application\/json">([\s\S]*?)<\/script>/.exec(html)?.[1];
+    expect(raw).toBeTruthy();
+    for (const id of realIds) expect(html).not.toContain(id);
+    const rows = JSON.parse(raw!).rows as { date: string; projectId: string | null; projectName: string | null }[];
+    expect(rows.length).toBe(3);
+    for (const row of rows) {
+      expect(row.projectName).toBe("app");
+      expect(row.projectId).toBeTruthy();
+      expect(row.projectId).not.toMatch(HEX16);
+    }
+    // A has rows on Oct 1 and Oct 2, B only on Oct 1.
+    const ids = rows.map((x) => x.projectId);
+    expect(new Set(ids).size).toBe(2); // two projects, two labels
+    const byDay = (d: string) => rows.filter((x) => x.date === d).map((x) => x.projectId);
+    const [aId] = byDay("2026-10-02");
+    expect(rows.filter((x) => x.projectId === aId)).toHaveLength(2); // the same project keeps one label
   });
 });

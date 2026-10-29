@@ -45,7 +45,7 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 
 ## Privacy
 
-- **The CLI** reads `~/.claude/projects/**/*.jsonl` and keeps only token counts, model, day and project. Projects are stored as a hash plus the folder name, never the full path. It makes no network calls.
+- **The CLI** reads `~/.claude/projects/**/*.jsonl` and keeps only token counts, model, day and project. Projects are stored as a hash plus the folder name, never the full path, and the hash stays in the local history file: `--json`, MCP answers and the dashboard file show only the folder name. It makes no network calls.
 - **The web page** has a Content-Security-Policy of `default-src 'none'` with a hash-pinned script, so the browser itself blocks any request. Tests check this, and `npm run check:browser` confirms zero requests in a real browser.
 - **History** lives in `~/.ccwatts/history.jsonl` (counts only). Delete it any time.
 
@@ -83,13 +83,13 @@ It runs on stdio: Claude Code starts it when it needs it and talks to it over a 
 
 Installing the plugin (above) also adds the MCP tools: the plugin registers the server itself, so there is nothing else to run. `/mcp` lists it as `plugin:ccwatts:ccwatts`, and you can switch it off there.
 
-Without the plugin, once the next version is on npm:
+Without the plugin:
 
 ```
 claude mcp add ccwatts -- npx -y ccwatts mcp
 ```
 
-From a clone of this repo, before that release (after `npm install && npm run build`):
+From a clone of this repo (after `npm install && npm run build`):
 
 ```
 claude mcp add ccwatts -- node /path/to/ccwatts/packages/cli/dist/index.js mcp
@@ -105,7 +105,7 @@ If you clone it to contribute, `npm install` turns on a pre-commit hook (`.githo
 
 ## Status
 
-v0.1.1 on npm, plus a Claude Code plugin from this repo. The MCP server (`ccwatts mcp`) is on `main` and ships in the next npm version. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
+v0.1.2 on npm (includes the `ccwatts mcp` server), plus a Claude Code plugin from this repo that registers it. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 
