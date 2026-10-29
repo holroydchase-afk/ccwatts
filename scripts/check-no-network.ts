@@ -3,15 +3,15 @@
 // logs an error, or scrolls sideways on a phone.
 //
 // Needs Playwright, which is not a project dependency:  npx playwright@1 install chromium
-// Run after `npm run build`:                            node scripts/check-no-network.mjs
+// Run after `npm run build`:                            tsx scripts/check-no-network.ts
 // Set PLAYWRIGHT_MODULE to a Playwright path and CHROMIUM_PATH to a browser binary if needed.
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { showcaseCheck } from "../tools/showcase-check/check.mjs";
+import { loadChromium, showcaseCheck } from "../tools/showcase-check/check.ts";
 
-const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
+const chromium = await loadChromium();
 const page_ = fileURLToPath(new URL("../packages/web/dist/ccwatts.html", import.meta.url));
 const log = fileURLToPath(new URL("../fixtures/claude-code/sample.jsonl", import.meta.url));
 
@@ -35,7 +35,7 @@ writeFileSync(noUsage, JSON.stringify({ type: "user", timestamp: "2026-10-01T10:
 const MONO = /monospace|Menlo|Consolas|SF Mono|Courier/i;
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-const problems = [];
+const problems: string[] = [];
 for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
   const page = await browser.newPage({ viewport });
   page.on("request", (r) => {
@@ -44,11 +44,13 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   page.on("console", (m) => m.type() === "error" && problems.push(`console error: ${m.text()}`));
   page.on("pageerror", (e) => problems.push(`page error: ${e}`));
   await page.goto(pathToFileURL(page_).href);
+  // An element missing from the page reads as "", so the check below reports it instead of crashing.
+  const text = async (sel: string) => (await page.textContent(sel)) ?? "";
 
-  if ((await page.textContent("#source-pill")) !== "Sample data") problems.push("did not open on sample data");
+  if ((await text("#source-pill")) !== "Sample data") problems.push("did not open on sample data");
 
   // Keyboard: Tab must reach both file pickers (recruiter-ready RR-5).
-  const reached = new Set();
+  const reached = new Set<string | undefined>();
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
@@ -56,14 +58,14 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
 
   // Tap targets: every button 44px tall or more (RR-9).
-  const short = await page.$$eval("button, label.btn", (els) => els.filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).map((e) => e.id || e.textContent.trim()));
+  const short = await page.$$eval("button, label.btn", (els) => (els as HTMLElement[]).filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).map((e) => e.id || (e.textContent ?? "").trim()));
   // Chart labels stay readable on a phone: drawn at the screen's pixel width, not scaled down (RR-8).
   const label = await page.$eval("#chart text", (t) => t.getBoundingClientRect().height);
   if (label < 11) problems.push(`chart labels ${label.toFixed(1)}px tall at ${viewport.width}px (want 11+)`);
   // Method table: no sideways scroll inside it on a phone, distinct source links 44px tall (RR-10, RR-11).
   const table = await page.$eval(".tablewrap", (t) => ({ over: t.scrollWidth - t.clientWidth }));
   if (table.over > 1) problems.push(`method table scrolls sideways by ${table.over}px at ${viewport.width}px`);
-  const links = await page.$$eval("#params a", (as) => as.map((a) => ({ t: a.textContent.trim(), h: a.getBoundingClientRect().height })));
+  const links = await page.$$eval("#params a", (as) => as.map((a) => ({ t: (a.textContent ?? "").trim(), h: a.getBoundingClientRect().height })));
   if (links.some((l) => l.t === "source")) problems.push("source links don't name their source");
   if (links.some((l) => l.h < 44)) problems.push(`source links under 44px at ${viewport.width}px`);
   // Phones get a hint that logs live on a computer (RR-13).
@@ -76,14 +78,18 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if (short.length) problems.push(`buttons under 44px at ${viewport.width}px: ${short.join(", ")}`);
 
   // UX-R4: reading text is in the sans stack; mono is for numbers and code only.
+  // Callbacks that run in the page declare no named functions: tsx keeps function names with an
+  // esbuild __name() helper that exists in Node but not in the browser.
   const fonts = await page.evaluate(() => {
-    const ff = (el) => (el ? getComputedStyle(el).fontFamily : "(missing)");
+    const [body, chartNote, post] = [document.body, document.querySelector("#chart-note"), document.querySelector("#post")]
+      .map((el) => (el ? getComputedStyle(el).fontFamily : "(missing)"));
     return {
-      body: ff(document.body),
-      paragraphs: [...document.querySelectorAll("main p")].filter((p) => p.textContent.trim()).map((p) => ({ id: p.id || p.className || p.textContent.slice(0, 30), f: ff(p) })),
-      chartNote: ff(document.querySelector("#chart-note")),
-      methodNotes: [...document.querySelectorAll("#params td[data-label='Parameter'] div")].map(ff),
-      post: ff(document.querySelector("#post")),
+      body: body!,
+      paragraphs: [...document.querySelectorAll("main p")].filter((p) => p.textContent?.trim())
+        .map((p) => ({ id: p.id || p.className || (p.textContent ?? "").slice(0, 30), f: getComputedStyle(p).fontFamily })),
+      chartNote: chartNote!,
+      methodNotes: [...document.querySelectorAll("#params td[data-label='Parameter'] div")].map((d) => getComputedStyle(d).fontFamily),
+      post: post!,
     };
   });
   if (MONO.test(fonts.body) || !/Helvetica|Arial|sans-serif/i.test(fonts.body)) problems.push(`UX-R4: body font is ${fonts.body}, want the sans stack`);
@@ -102,9 +108,10 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // UX-R3: the hero links to the "Try it" box, which comes after the chart and the rankings.
   const order = await page.evaluate(() => {
     const drop = document.querySelector("#drop");
-    const after = (sel) => !!(document.querySelector(sel).compareDocumentPosition(drop) & Node.DOCUMENT_POSITION_FOLLOWING);
-    const link = [...document.querySelectorAll(".hero a")].find((a) => a.textContent.trim() === "Use your own logs");
-    return { after: after("#chart") && after("#by-model") && after("#by-project"), link: link?.getAttribute("href") ?? null };
+    const after = ["#chart", "#by-model", "#by-project"].every((sel) =>
+      !!(drop && (document.querySelector(sel)?.compareDocumentPosition(drop) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING));
+    const link = [...document.querySelectorAll(".hero a")].find((a) => a.textContent?.trim() === "Use your own logs");
+    return { after, link: link?.getAttribute("href") ?? null };
   });
   if (!order.after) problems.push("UX-R3: 'Try it on your own logs' is not after the chart and the By model/By project lists");
   if (order.link !== "#drop") problems.push(`UX-R3: hero has no 'Use your own logs' link to #drop (got ${order.link})`);
@@ -119,7 +126,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if (live.hero) problems.push(`UX-R1: .hero still has aria-live=${live.hero}`);
 
   // UX-R11: footer version matches the CLI package.
-  if (!(await page.textContent("#footer-version")).includes(`v${cliVersion}`)) problems.push(`UX-R11: footer doesn't show v${cliVersion}`);
+  if (!(await text("#footer-version")).includes(`v${cliVersion}`)) problems.push(`UX-R11: footer doesn't show v${cliVersion}`);
 
   // CCW-M2.6.4 coverage: the 7 days / 30 days / All time toggle marks one button pressed and
   // changes the total; going back to All time gives the same total as before.
@@ -139,8 +146,8 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if (!(await page.$("#whatif-cache"))) problems.push(`WI-3: no #whatif-cache slider at ${viewport.width}px`);
   else {
     const share = () => page.evaluate(() => `${document.querySelector("#card")?.getAttribute("src")}|${document.querySelector("#post")?.textContent}`);
-    const noteShown = () => page.$eval("#whatif-note", (n) => !n.hidden && n.getBoundingClientRect().height > 0).catch(() => null);
-    const heroBefore = await page.textContent("#hero-big");
+    const noteShown = () => page.$eval("#whatif-note", (n: HTMLElement) => !n.hidden && n.getBoundingClientRect().height > 0).catch(() => null);
+    const heroBefore = await text("#hero-big");
     const shareBefore = await share();
     const box = await page.$eval("#whatif-cache", (s) => s.getBoundingClientRect().height);
     if (box < 44) problems.push(`WI-3: slider is ${box.toFixed(1)}px tall at ${viewport.width}px (want 44+)`);
@@ -149,63 +156,63 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     const scalePx = await page.$eval(".whatif-scale", (s) => parseFloat(getComputedStyle(s).fontSize)).catch(() => 0);
     if (scalePx < 13) problems.push(`WI-R6: .whatif-scale is ${scalePx}px at ${viewport.width}px (want 13+)`);
     if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note missing or shown before the slider moves");
-    await page.$eval("#whatif-cache", (s) => {
+    await page.$eval("#whatif-cache", (s: HTMLInputElement) => {
       s.value = s.max;
       s.dispatchEvent(new Event("input", { bubbles: true }));
       s.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    if ((await page.textContent("#hero-big")) === heroBefore) problems.push("WI-3: hero total did not change with the slider at its max");
+    if ((await text("#hero-big")) === heroBefore) problems.push("WI-3: hero total did not change with the slider at its max");
     if (!(await noteShown())) problems.push("WI-3: #whatif-note not shown while a what-if is active");
     // WI-R4 changes the wording to "What-if at 25%…", so WI-3 accepts either spelling.
-    else if (!/What[- ]if/.test(await page.textContent("#whatif-note"))) problems.push(`WI-3: #whatif-note says "${await page.textContent("#whatif-note")}", want it to contain "What if"`);
+    else if (!/What[- ]if/.test(await text("#whatif-note"))) problems.push(`WI-3: #whatif-note says "${await text("#whatif-note")}", want it to contain "What if"`);
     if ((await share()) !== shareBefore) problems.push("WI-3: share card or LinkedIn post changed with the what-if slider (must stay the published estimate)");
     const valuetext = await page.$eval("#whatif-cache", (s) => s.getAttribute("aria-valuetext"));
     if (!valuetext?.includes("%")) problems.push(`WI-3: slider aria-valuetext is ${JSON.stringify(valuetext)}, want a percent`);
     // WI-4: the method version stays on screen during a what-if.
-    if (!(await page.textContent("#hero-meta")).includes(`method v`)) problems.push("WI-4: hero meta line lost the method version during a what-if");
-    if (!(await page.textContent("#footer-version")).includes("method v")) problems.push("WI-4: footer lost the method version during a what-if");
+    if (!(await text("#hero-meta")).includes(`method v`)) problems.push("WI-4: hero meta line lost the method version during a what-if");
+    if (!(await text("#footer-version")).includes("method v")) problems.push("WI-4: footer lost the method version during a what-if");
     // WI-R1: the page pins the moved parameter (low = high = value) instead of scaling its bounds.
     // With scaled bounds the sample's all-time high at 25% is 63.4 kWh; pinned it must be lower.
     const rangeHigh = async () => {
-      const m = /[–-]\s*([\d.,]+)\s*(kWh|Wh)/.exec(await page.textContent("#hero-range"));
-      return m ? Number(m[1].replace(/,/g, "")) / (m[2] === "Wh" ? 1000 : 1) : NaN;
+      const m = /[–-]\s*([\d.,]+)\s*(kWh|Wh)/.exec(await text("#hero-range"));
+      return m?.[1] ? Number(m[1].replace(/,/g, "")) / (m[2] === "Wh" ? 1000 : 1) : NaN;
     };
     const highAtMax = await rangeHigh();
     if (!(highAtMax < 63)) problems.push(`WI-R1: hero range high at 25% is ${highAtMax} kWh (want < 63: the cache parameter should be pinned, not scaled)`);
-    if (!(await page.textContent("#hero-range")).includes("with cache reads fixed at 25%")) problems.push(`WI-R1: hero range "${await page.textContent("#hero-range")}" doesn't say "with cache reads fixed at 25%"`);
+    if (!(await text("#hero-range")).includes("with cache reads fixed at 25%")) problems.push(`WI-R1: hero range "${await text("#hero-range")}" doesn't say "with cache reads fixed at 25%"`);
     // WI-R4: the note is short, leads with the setting, and keeps the published figure and method version.
-    const noteText = (await page.textContent("#whatif-note")).trim();
+    const noteText = (await text("#whatif-note")).trim();
     const words = noteText.split(/\s+/).filter(Boolean).length;
     if (words > 30) problems.push(`WI-R4: #whatif-note is ${words} words (want 30 or fewer): "${noteText}"`);
     if (!noteText.startsWith("What-if at 25%")) problems.push(`WI-R4: #whatif-note should start "What-if at 25%", got "${noteText.slice(0, 40)}"`);
     if (!noteText.includes("Published:")) problems.push("WI-R4: #whatif-note lacks \"Published:\"");
     if (!noteText.includes("Method v")) problems.push("WI-R4: #whatif-note lacks \"Method v\"");
     // WI-R5: the hero flag names the setting.
-    const flag = await page.$eval(".whatif-flag", (f) => f.textContent).catch(() => "");
+    const flag = await page.$eval(".whatif-flag", (f) => f.textContent ?? "").catch(() => "");
     if (!flag.includes("what-if: cache reads 25%")) problems.push(`WI-R5: hero flag says "${flag}", want "what-if: cache reads 25%"`);
     await page.click("#whatif-reset");
-    if ((await page.textContent("#hero-big")) !== heroBefore) problems.push("WI-3: Reset did not restore the hero total");
+    if ((await text("#hero-big")) !== heroBefore) problems.push("WI-3: Reset did not restore the hero total");
     if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note still shown after Reset");
     // WI-R2: Reset hides itself, so focus goes back to the slider (click and Enter).
     const focused = () => page.evaluate(() => document.activeElement?.id ?? null);
     if ((await focused()) !== "whatif-cache") problems.push(`WI-R2: after clicking Reset focus is on #${await focused()}, want #whatif-cache`);
     // WI-R1 at the slider's min: the range still renders and names the pinned setting.
-    await page.$eval("#whatif-cache", (s) => {
+    await page.$eval("#whatif-cache", (s: HTMLInputElement) => {
       s.value = s.min;
       s.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    const minRange = await page.textContent("#hero-range");
+    const minRange = await text("#hero-range");
     if (!(await rangeHigh() > 0)) problems.push(`WI-R1: hero range doesn't render at 1%: "${minRange}"`);
     if (!minRange.includes("with cache reads fixed at 1%")) problems.push(`WI-R1: hero range "${minRange}" doesn't say "with cache reads fixed at 1%"`);
     await page.focus("#whatif-reset");
     await page.keyboard.press("Enter");
-    if ((await page.textContent("#hero-big")) !== heroBefore) problems.push("WI-R2: Enter on Reset did not restore the hero total");
+    if ((await text("#hero-big")) !== heroBefore) problems.push("WI-R2: Enter on Reset did not restore the hero total");
     if ((await focused()) !== "whatif-cache") problems.push(`WI-R2: after Enter on Reset focus is on #${await focused()}, want #whatif-cache`);
     // Keyboard: ArrowRight on the focused slider moves it.
-    const v0 = await page.$eval("#whatif-cache", (s) => s.value);
+    const v0 = await page.$eval("#whatif-cache", (s: HTMLInputElement) => s.value);
     await page.focus("#whatif-cache");
     await page.keyboard.press("ArrowRight");
-    if ((await page.$eval("#whatif-cache", (s) => s.value)) === v0) problems.push("WI-3: ArrowRight did not change the slider value");
+    if ((await page.$eval("#whatif-cache", (s: HTMLInputElement) => s.value)) === v0) problems.push("WI-3: ArrowRight did not change the slider value");
     await page.click("#whatif-reset");
   }
 
@@ -225,45 +232,46 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // UX-R1, UX-R2: a file with no usage keeps the sample pill and shows the next-step error, styled as an error.
   await page.setInputFiles("#pick-files", noUsage);
   await page.waitForFunction(() => !/Reading/.test(document.querySelector("#drop-status")?.textContent ?? "Reading"));
-  const failed = await page.evaluate(() => ({ pill: document.querySelector("#source-pill").textContent, status: document.querySelector("#drop-status").textContent, error: document.querySelector("#drop-status").classList.contains("error") }));
+  const failed = await page.evaluate(() => ({ pill: document.querySelector("#source-pill")?.textContent, status: document.querySelector("#drop-status")?.textContent, error: document.querySelector("#drop-status")?.classList.contains("error") }));
   if (failed.pill !== "Sample data") problems.push(`UX-R1: pill says "${failed.pill}" after a file with no usage`);
   if (failed.status !== "We couldn't find any Claude Code usage in that file. Pick the .jsonl files inside ~/.claude/projects, or use the prompt below.") problems.push(`UX-R2: no-usage file says "${failed.status}"`);
   if (!failed.error) problems.push("UX-R2: no-usage error has no .error class");
-  const sampleHeadline = await page.textContent("#hero-big");
+  const sampleHeadline = await text("#hero-big");
   await page.setInputFiles("#pick-files", log);
   await page.waitForFunction(() => document.querySelector("#source-pill")?.textContent === "Your files");
-  if ((await page.textContent("#hero-big")) === sampleHeadline) problems.push("headline did not change after loading a file");
+  if ((await text("#hero-big")) === sampleHeadline) problems.push("headline did not change after loading a file");
   // The lede follows the data source (recruiter-ready RR-16).
-  if ((await page.textContent("#lede")).includes("sample data")) problems.push("lede still says sample data after loading a file");
+  if ((await text("#lede")).includes("sample data")) problems.push("lede still says sample data after loading a file");
   await page.click("#w-7d");
   await page.click("#use-sample");
-  if (!(await page.textContent("#lede")).includes("sample data")) problems.push("lede lost its sample-data note after Use sample data");
+  if (!(await text("#lede")).includes("sample data")) problems.push("lede lost its sample-data note after Use sample data");
   // Claude Code on the web: the copied prompt's counts-only output, pasted inside a code fence, loads.
   await page.click("#export > summary");
-  const prompt = await page.textContent("#export-prompt");
+  const prompt = await text("#export-prompt");
   if (!prompt.includes("never the full path") || !prompt.includes("message content")) problems.push("export prompt lost its counts-only wording");
   await page.fill("#paste-log", ["```json", counts, "```"].join("\n"));
   await page.click("#read-paste");
   await page.waitForFunction(() => document.querySelector("#source-pill")?.textContent === "Your files");
-  if (!(await page.textContent("#drop-status")).includes("pasted text")) problems.push("pasted lines did not load");
+  if (!(await text("#drop-status")).includes("pasted text")) problems.push("pasted lines did not load");
   if (await page.$eval("#drop-status", (s) => s.classList.contains("error"))) problems.push("UX-R2: success status still has the .error class");
 
   // UX-R2: empty paste and paste with no usage get their own next-step copy, styled as errors.
-  for (const [text, want] of [
+  const pastes: [pasted: string, want: string][] = [
     ["   ", "Paste the lines first."],
     ["hello, not a log", "We couldn't find any usage lines in that text. Paste the lines Claude printed, one JSON object per line."],
-  ]) {
-    await page.fill("#paste-log", text);
+  ];
+  for (const [pasted, want] of pastes) {
+    await page.fill("#paste-log", pasted);
     await page.click("#read-paste");
-    const got = await page.evaluate(() => ({ t: document.querySelector("#drop-status").textContent, error: document.querySelector("#drop-status").classList.contains("error") }));
-    if (got.t !== want) problems.push(`UX-R2: paste ${JSON.stringify(text)} says "${got.t}", want "${want}"`);
-    if (!got.error) problems.push(`UX-R2: paste ${JSON.stringify(text)} error has no .error class`);
+    const got = await page.evaluate(() => ({ t: document.querySelector("#drop-status")?.textContent, error: document.querySelector("#drop-status")?.classList.contains("error") }));
+    if (got.t !== want) problems.push(`UX-R2: paste ${JSON.stringify(pasted)} says "${got.t}", want "${want}"`);
+    if (!got.error) problems.push(`UX-R2: paste ${JSON.stringify(pasted)} error has no .error class`);
   }
 
   // One day of usage: the meta line shows the date once, not "D to D".
   await page.fill("#paste-log", counts.split("\n").filter((l) => l.includes('"timestamp":"2026-10-01')).join("\n"));
   await page.click("#read-paste");
-  const meta = await page.textContent("#hero-meta");
+  const meta = await text("#hero-meta");
   if (/(\d{4}-\d{2}-\d{2}) to \1/.test(meta)) problems.push(`one-day span printed twice in the meta line: "${meta}"`);
   if (!meta.includes("2026-10-01")) problems.push(`one-day meta line lost its date: "${meta}"`);
 
@@ -275,7 +283,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 // row with markup for a date (a hand-edited or corrupt history file; the dashboard reads rows
 // without the parser's checks) must render as text, never as an element.
 {
-  const xssRow = (date) => ({ date, source: "claude-code", model: "claude-opus-4-6", projectId: "0000000000000000", projectName: "proj", responses: 1, tokens: { input: 10, cacheWrite: 100, cacheRead: 1000, output: 50 } });
+  const xssRow = (date: string) => ({ date, source: "claude-code", model: "claude-opus-4-6", projectId: "0000000000000000", projectName: "proj", responses: 1, tokens: { input: 10, cacheWrite: 100, cacheRead: 1000, output: 50 } });
   const rows = [xssRow("2026-10-01"), xssRow("<i id=xss>")];
   const json = JSON.stringify({ mode: "dashboard", generatedAt: new Date().toISOString(), rows }).replace(/</g, "\\u003c");
   const html = readFileSync(page_, "utf8").replace(/(<script id="ccwatts-data" type="application\/json">)([\s\S]*?)(<\/script>)/, (_m, open, _old, close) => `${open}${json}${close}`);

@@ -22,7 +22,7 @@ Often they're the same person: Hearth's grandparents grew up in the 60s to 80s, 
 Then the design rules: Layer 1 below, then the screen types and exceptions in `.claude/design-rules.md` (studio-agents `docs/design-rules.md`) and the product's own `docs/design-rules.md`, reading only the screen types on the screen in front of you. The product file wins where they differ.
 
 ## Layer 1: general rules
-Every screen, every product. *Code* means `node scripts/ux-rules.mjs <page> [--click SEL]` checks it.
+Every screen, every product. *Code* means `npx tsx scripts/ux-rules.ts <page> [--click SEL]` checks it.
 - **G1** One primary action per view; a dialog is its own view. *Code*
 - **G2** A destructive action is never the primary button; it confirms inline, names the thing, and offers a safe choice ("Keep"). *Code: not primary*
 - **G3** Every dialog has a title and a way out (Cancel, Close or Escape). *Code*
@@ -37,7 +37,7 @@ Every screen, every product. *Code* means `node scripts/ux-rules.mjs <page> [--c
 - **G12** Say it once: no repeated sentences, no title echoed in the status line.
 
 ## Layer V: visual craft
-What separates "designed" from "engineer did the frontend". Walk these on every screen after Layer 1. *Code* means ux-rules.mjs counts it (V findings report separately and only fail CI with `--strict-visual`).
+What separates "designed" from "engineer did the frontend". Walk these on every screen after Layer 1. *Code* means ux-rules counts it (V findings report separately and only fail CI with `--strict-visual`).
 - **V1** One focal point. Squint (blur the screenshot): exactly one thing reads first, and it's the screen's job. Hierarchy comes from size, weight or color, one lever at a time, never all three on one element. Secondary text is quieter (lighter color), not smaller and grayer and lighter at once.
 - **V2** A hand-picked type scale: 8 sizes or fewer per screen (5 or 6 is better), no near-duplicates (14 next to 14.5), 2 families (3 at most, one of them mono), and headings tighter in line height and letter spacing than body. *Code: sizes and families*
 - **V3** One spacing scale (4 and 8 based, or the product's tokens), applied by meaning: related things sit closer than unrelated ones, sections get the biggest gaps, and nothing touches its container's edge. Start too roomy and remove space.
@@ -53,7 +53,7 @@ What separates "designed" from "engineer did the frontend". Walk these on every 
 AI reviews tend to follow the happy path and miss where real people get stuck, so actively hunt for failure points.
 
 **Rules first, then opinion.** Models misread screenshots and over-praise them: a broken or bland screen can look fine to you. So:
-- Run `scripts/ux-rules.mjs` (synced from studio-agents `tools/`) before you look at anything, with `--click` for each dialog or tab. A failing rule is a finding, whatever the screenshot seems to show. When your eye and a check disagree, the check wins; say which region of which screenshot you were reading.
+- Run `scripts/ux-rules.ts` (synced from studio-agents `tools/`) before you look at anything, with `--click` for each dialog or tab. A failing rule is a finding, whatever the screenshot seems to show. When your eye and a check disagree, the check wins; say which region of which screenshot you were reading.
 - Then walk Layer 1 for the rules code can't check (G6, G10, G12), then the screen types. Name the rule ID (G3, F2, R1) or the heuristic in every finding.
 - Only then give your own judgment, marked as opinion. Never call a screen fine because someone says it looked fine; check it.
 - If the page can't be run, review the code against the rules and say the checks didn't run.
@@ -81,7 +81,7 @@ AI reviews tend to follow the happy path and miss where real people get stuck, s
    - Never empty, never silent: no blank first screen, and every error says what happened, what to do and who can help.
    - Who sees it: anything shared says in words who will see it.
 4. **Measure.** Text 17 pt or more that survives the largest system text size, tap targets 48 pt or more, contrast 4.5:1 for text and 3:1 for icons, and the smallest supported screen (for example 360×740 via Playwright). Say which numbers you measured and which you inferred.
-5. **Look at it, don't just read it.** Code review misses what a person sees. Run the product (local build or demo with sample data), screenshot every screen with Playwright at 360×740 or 390×844 and at 1280×800, in light and dark mode, viewport and full page, and open each screenshot. `node scripts/ux-shots.mjs <url or built page> [--click "[role=tab]"]` does all of this and writes `report.md` (sync it with studio-agents `scripts/sync-tools.sh`); its numbers are measurements, so judge each flag against the screenshot. For an app that promises to stay on the device (ccwatts, Energy Scanner), add `--no-network`: it blocks and lists every request that leaves the page. Record console errors, failed requests and horizontal scroll. Check visual hierarchy (one focal point per screen), spacing and alignment, type scale, empty and error states, and anything that looks unfinished (placeholder text, TODO, "coming soon", lorem, broken images).
+5. **Look at it, don't just read it.** Code review misses what a person sees. Run the product (local build or demo with sample data), screenshot every screen with Playwright at 360×740 or 390×844 and at 1280×800, in light and dark mode, viewport and full page, and open each screenshot. `npx tsx scripts/ux-shots.ts <url or built page> [--click "[role=tab]"]` does all of this and writes `report.md` (sync it with studio-agents `scripts/sync-tools.sh`); its numbers are measurements, so judge each flag against the screenshot. For an app that promises to stay on the device (ccwatts, Energy Scanner), add `--no-network`: it blocks and lists every request that leaves the page. Record console errors, failed requests and horizontal scroll. Check visual hierarchy (one focal point per screen), spacing and alignment, type scale, empty and error states, and anything that looks unfinished (placeholder text, TODO, "coming soon", lorem, broken images).
 6. **Heuristic sweep.** After the walkthrough and Layer V, check Nielsen's 10 heuristics and WCAG 2.2 AA (focus visible, labels, target size, contrast, reflow at 320px). Name the heuristic or criterion in each finding.
 7. **Know your limits.** Feelings and real-device behavior are guesses until a person tries it. Mark those findings "confirm with a real user" and add them to the next test session.
 

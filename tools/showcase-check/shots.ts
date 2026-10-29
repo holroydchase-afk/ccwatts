@@ -2,22 +2,31 @@
 // Returns the file paths so a reviewer (person or agent) can open each one.
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_VIEWPORTS, launch } from "./check.mjs";
+import type { Page } from "playwright-core";
+import { type ColorScheme, DEFAULT_VIEWPORTS, launch, type Viewport } from "./check.ts";
 
-/**
- * @param {object} o
- * @param {string} o.url
- * @param {string} o.outDir
- * @param {string} [o.name]  file name prefix
- * @param {{width:number,height:number}[]} [o.viewports]
- * @param {("light"|"dark")[]} [o.colorSchemes]
- * @param {(page: any) => Promise<void>} [o.prepare]  runs after load, before the shots
- * @returns {Promise<string[]>}
- */
-export async function screenshots({ url, outDir, name = "page", viewports = DEFAULT_VIEWPORTS, colorSchemes = ["light", "dark"], prepare }) {
+export interface ScreenshotOptions {
+  url: string;
+  outDir: string;
+  /** File name prefix. */
+  name?: string;
+  viewports?: Viewport[];
+  colorSchemes?: ColorScheme[];
+  /** Runs after load, before the shots. */
+  prepare?: (page: Page) => Promise<void>;
+}
+
+export async function screenshots({
+  url,
+  outDir,
+  name = "page",
+  viewports = DEFAULT_VIEWPORTS,
+  colorSchemes = ["light", "dark"],
+  prepare,
+}: ScreenshotOptions): Promise<string[]> {
   mkdirSync(outDir, { recursive: true });
   const browser = await launch();
-  const files = [];
+  const files: string[] = [];
   try {
     for (const colorScheme of colorSchemes) {
       for (const viewport of viewports) {

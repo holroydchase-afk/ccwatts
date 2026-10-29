@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
-const script = join(root, "scripts/check-private.mjs");
+const script = join(root, "scripts/check-private.ts");
 const read = (p: string) => readFileSync(join(root, p), "utf8");
 
 // Fixtures (concatenated so the literal never appears in this file).
@@ -37,13 +37,13 @@ function git(cwd: string, ...args: string[]) {
 
 /** A throwaway git repo with check-private and a config allowlisting "demo". */
 function tempRepo(files: Record<string, string>, { commit = true } = {}) {
-  expect(existsSync(script), "scripts/check-private.mjs exists").toBe(true);
+  expect(existsSync(script), "scripts/check-private.ts exists").toBe(true);
   const dir = mkdtempSync(join(tmpdir(), "ccw-private-"));
   tmps.push(dir);
   git(dir, "init", "-q");
   git(dir, "config", "core.hooksPath", "/dev/null");
   mkdirSync(join(dir, "scripts"));
-  copyFileSync(script, join(dir, "scripts/check-private.mjs"));
+  copyFileSync(script, join(dir, "scripts/check-private.ts"));
   writeFileSync(join(dir, "studio-checks.json"), JSON.stringify({ private: { allowUsers: ["demo"], allowEmails: [] } }));
   for (const [p, body] of Object.entries(files)) writeFileSync(join(dir, p), body);
   git(dir, "add", "-A");
@@ -52,7 +52,7 @@ function tempRepo(files: Record<string, string>, { commit = true } = {}) {
 }
 
 function check(cwd: string, ...args: string[]) {
-  const r = spawnSync(process.execPath, ["scripts/check-private.mjs", ...args], { cwd, encoding: "utf8" });
+  const r = spawnSync(join(root, "node_modules/.bin/tsx"), ["scripts/check-private.ts", ...args], { cwd, encoding: "utf8" });
   return { status: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
 }
 
@@ -115,7 +115,7 @@ describe("check-private (RB-1)", () => {
 
 describe("repo hygiene (RB-2, RB-3)", () => {
   it("RB-2 the repo itself passes check-private", () => {
-    expect(existsSync(script), "scripts/check-private.mjs exists").toBe(true);
+    expect(existsSync(script), "scripts/check-private.ts exists").toBe(true);
     const r = check(root);
     expect(r.status, r.out).toBe(0);
   });
@@ -124,13 +124,13 @@ describe("repo hygiene (RB-2, RB-3)", () => {
     expect(existsSync(join(root, ".githooks/pre-commit")), ".githooks/pre-commit exists").toBe(true);
     const ls = spawnSync("git", ["ls-files", "-s", ".githooks/pre-commit"], { cwd: root, encoding: "utf8" }).stdout;
     expect(ls, "tracked with mode 100755").toMatch(/^100755 /);
-    expect(read(".githooks/pre-commit")).toMatch(/node scripts\/check-private\.mjs --staged/);
+    expect(read(".githooks/pre-commit")).toMatch(/npx --no-install tsx scripts\/check-private\.ts --staged/);
   });
 
   it("RB-3b package.json wires the hook (prepare) and runs check-private in npm test", () => {
     const pkg = JSON.parse(read("package.json"));
     expect(pkg.scripts.prepare ?? "").toMatch(/core\.hooksPath \.githooks/);
-    expect(pkg.scripts.test).toMatch(/node scripts\/check-private\.mjs/);
+    expect(pkg.scripts.test).toMatch(/tsx scripts\/check-private\.ts/);
   });
 
   it("RB-3c the Agent-tool hook is wired and its run log is committable (not caught by *.log)", () => {
@@ -186,7 +186,7 @@ describe("workflows (RB-4)", () => {
     expect(ci).toMatch(/^ {2}browser:/m);
     const browser = ci.slice(ci.search(/^ {2}browser:/m));
     expect(browser).toMatch(/npm run check:browser/);
-    expect(ci).toMatch(/node scripts\/check-private\.mjs/);
+    expect(ci).toMatch(/tsx scripts\/check-private\.ts/);
   });
 
   it("RB-4c pages.yml deploys only after a successful CI run on a push", () => {

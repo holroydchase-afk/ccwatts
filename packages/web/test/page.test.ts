@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { APP_VERSION, defaultParams, rollup, claudeCodeAdapter, PLAYGROUND_URL, PORTFOLIO_URL } from "@ccwatts/core";
 import { DATA_MARKER, injectData, safeJson } from "../src/inject.js";
 
-// Built by `npm test` (node packages/web/build.mjs) before vitest runs.
+// Built by `npm test` (tsx packages/web/build.ts) before vitest runs.
 const html = readFileSync(new URL("../dist/ccwatts.html", import.meta.url), "utf8");
 const csp = /http-equiv="Content-Security-Policy" content="([^"]+)"/.exec(html)?.[1] ?? "";
 
@@ -138,7 +138,7 @@ describe("export prompt for Claude Code on the web", () => {
 // ---------------------------------------------------------------------------------------------
 // UI polish (CCW-M2.6.3, docs/reviews/2026-10-28-release-plan.md). Layout and computed-style
 // checks that need a real browser (UX-R4 fonts, UX-R5 phone height, UX-R2 error states, the
-// one-day span) are in scripts/check-no-network.mjs, run with `npm run check:browser`.
+// one-day span) are in scripts/check-no-network.ts, run with `npm run check:browser`.
 // ---------------------------------------------------------------------------------------------
 const tag = (re: RegExp) => re.exec(html)?.[0] ?? "";
 const at = (s: string) => html.indexOf(s);
@@ -222,7 +222,7 @@ describe("UX-R18 an empty status line takes no space (CCW-M2.6.4)", () => {
 });
 
 // CCW-M2.6.5 "What if?" cache-read slider. The bounds come from methodology/params.json so the
-// slider can never leave the published range. Browser behavior (WI-3, WI-4) is in check-no-network.mjs.
+// slider can never leave the published range. Browser behavior (WI-3, WI-4) is in check-no-network.ts.
 describe("WI-2 What if? cache-read slider is on the page (CCW-M2.6.5)", () => {
   const p = defaultParams.params.cache_read_vs_input!;
   const tag = /<input[^>]*id="whatif-cache"[^>]*>/.exec(html)?.[0] ?? "";

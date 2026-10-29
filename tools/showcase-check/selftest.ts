@@ -1,16 +1,16 @@
 // Self-test for the kit: the good fixture passes and the bad fixture trips every check.
-// Run: node tools/showcase-check/selftest.mjs   (needs Playwright, see README.md)
+// Run: tsx tools/showcase-check/selftest.ts   (needs Playwright, see README.md)
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { showcaseCheck } from "./check.mjs";
+import { showcaseCheck } from "./check.ts";
 
-const fixture = (name) => pathToFileURL(fileURLToPath(new URL(`fixtures/${name}`, import.meta.url))).href;
-const failures = [];
+const fixture = (name: string) => pathToFileURL(fileURLToPath(new URL(`fixtures/${name}`, import.meta.url))).href;
+const failures: string[] = [];
 
 const good = await showcaseCheck({ url: fixture("good.html"), keyboardReach: ["go"], minTextPx: 12 });
 if (good.length) failures.push(`good.html should pass but got:\n  ${good.join("\n  ")}`);
 
 const bad = await showcaseCheck({ url: fixture("bad.html"), keyboardReach: ["small", "unreachable"], minTextPx: 12 });
-const expected = {
+const expected: Record<string, RegExp> = {
   "network request": /network request: https:\/\/example\.com\/track/,
   "console error": /console error: boom/,
   "sideways scroll on a phone": /horizontal scroll: .*\[390px light\]/,

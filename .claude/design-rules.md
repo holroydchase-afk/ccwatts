@@ -2,7 +2,7 @@
 
 The studio's opinion on screens, written down so a reviewer checks against rules instead of judging pixels by eye. Three layers, read in order, and stop as soon as you have what you need:
 
-1. **General rules (G1-G12) and visual craft (V1-V10)** apply to every screen. They live in `plugins/studio/agents/ux-reviewer.md` so the reviewer always has them loaded. `tools/ux-rules.mjs` checks the ones marked *code*.
+1. **General rules (G1-G12) and visual craft (V1-V10)** apply to every screen. They live in `plugins/studio/agents/ux-reviewer.md` so the reviewer always has them loaded. `scripts/ux-rules.ts` checks the ones marked *code*.
 2. **Screen types** (below): what a list, form, dialog, result or landing page must have. Read only the types on the screen you're reviewing.
 3. **Exceptions** (below): where the studio deliberately breaks a rule, and why.
 
