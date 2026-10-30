@@ -160,5 +160,6 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - Shared studio agents are in `.claude/agents/` (source: holroydchase-afk/studio-agents; edit there, then sync).
 
 ## Blockers
+- Oct 30: intake #71 (Pace, opt-in burnout tracker) is on hold, labeled `needs-chase`. The issue says wait for the Polish Freeze to lift; project memory says Chase lifted all freezes Oct 28. Chase: reply "go" on #71 to start the spike, or "hold". Intake check skips it until then.
 - Resolved Oct 28: chaseholroyd.com now serves a valid certificate (verified from the cloud in Chromium and curl, M2.6.6). The Oct 22 *.github.io certificate problem is gone.
 - M2.1 local run needs Chase to use Claude Code on his Mac first (he has only used it in the browser). The parser itself is verified on real cloud-session logs (Oct 23). Not blocking later work.
