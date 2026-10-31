@@ -8,6 +8,15 @@ A running log. Add to the top of each section. Every entry starts with the probl
 
 ## Ideas
 
+### Pace: work-rhythm signals (`ccwatts pace`) · 🧪 proposed
+- **Problem:** Heavy Claude Code users can lose track of how long and how late they work. The same local logs that give energy also show when work happened, and nobody turns that into a plain weekly picture.
+- **Idea:** An opt-in `ccwatts pace` command. Group responses into work blocks (a gap over N minutes ends a block) and show active hours per day as a range, late-night share (10pm to 6am local), latest finish per day, longest stretch without a 15+ minute break, rest days in the last 7 and 28, weekend share, and this week against your own last 4 weeks. No population norms, scores or diagnosis.
+- **Honesty:** Active time is low/central/high from gap thresholds of 10, 20 and 30 minutes, kept in `methodology/params.json` and labeled heuristic. Every pace number names its thresholds and the method version.
+- **Privacy:** Local only, counts only, no network. History keeps daily pace aggregates only, never per-response times, and no timezone name. Off the receipt, share card and post unless `--share-pace` is passed. An MCP pace tool comes later, weekly summary only, after privacy-security.
+- **Fits:** PLAN M4 (M4.1 to M4.5). Pure `packages/core/src/pace.ts` behind the adapter interface (ANCHORS P2). Not doing: health scores, interrupting notifications, a server, comparisons with others.
+- **Decided so far:** Chase gave the go on Oct 31, 2026. Shipped name is "pace". The studio morning digest does not show finish times.
+- **Source:** Intake #71 from Product Studio, Oct 30, 2026.
+
 ### Measure the token-type ratios ourselves ("ccwatts bench") · 💡 idea
 - **Problem:** The cache-read and output factors come from other people's estimates, and they disagree. Skeptics will ask where the ratios come from.
 - **Idea:** Rent an H100 for a few hours, run open models on vLLM, meter the GPU with NVML/Zeus, and publish measured input, output and cache-read ratios as METHODOLOGY v0.2.
