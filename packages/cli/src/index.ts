@@ -15,6 +15,7 @@ import {
   linkedInPost,
   receiptSvg,
   shareLine,
+  paceFocus,
   paceVersusUsual,
   paceWeeks,
   samplePaceDays,
@@ -199,7 +200,11 @@ async function main(): Promise<void> {
 
   if (command === "dashboard") {
     noteToStderr();
-    const path = await writeDashboard(rows);
+    // Pace goes in only once the user has opted in (pace.jsonl exists) and it was read: stored days merged
+    // with today's from the logs. Skipped (--path, --no-history) or unreadable gets its own note (PS-R12/R13).
+    const paceOn = usage.pace.length > 0 || usage.paceStore === "read";
+    const paceOff = !paceOn && (usage.paceStore === "skipped" || usage.paceStore === "unreadable") ? usage.paceStore : undefined;
+    const path = await writeDashboard(rows, undefined, paceOn ? usage.pace : undefined, paceOff);
     console.log(`Dashboard written to ${path}. It works offline and makes no network requests.`);
     if (!values["no-open"]) openFile(path);
     return;
@@ -265,7 +270,9 @@ function paceFileLabel(): string {
 function printPace(days: PaceDay[], today: string, o: { json: boolean | undefined; csv: boolean; sample: boolean; savedTo: string | null }): void {
   if (o.csv) return void console.log(paceCsv(days));
   const weeks = paceWeeks(days, today, 4);
-  const view = { weeks, versus: paceVersusUsual(weeks[0]!, weeks.slice(1)), today, savedTo: o.savedTo };
+  // UX-R40: compare the week the lead describes with the weeks before it.
+  const f = paceFocus(weeks);
+  const view = { weeks, versus: paceVersusUsual(weeks[f]!, weeks.slice(f + 1)), today, savedTo: o.savedTo };
   if (o.json) return void console.log(paceJson(view, defaultParams, o.sample));
   const color = useColor();
   if (o.sample) process.stdout.write(`${styles(color).yellow("Sample data (synthetic), not your usage.")}\n\n`);

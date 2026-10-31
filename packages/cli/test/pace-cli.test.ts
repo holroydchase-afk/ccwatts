@@ -86,6 +86,8 @@ function withLogs() {
 const H = String.raw`\d+(?:\.\d)?`;
 /** "About 33 active hours (range 29 – 36)": central first, en dash for the range (UX-R34). */
 const LEAD = String.raw`[Aa]bout ${H} active hours \(range ${H} – ${H}\)`;
+/** UX-R41: the lead names its week first. */
+const LABELLED = String.raw`(?:Week of [A-Z][a-z]{2} \d{1,2}|This week so far): ${LEAD}`;
 const BANNED = /burnout|health|score|diagnos/i;
 
 describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
@@ -96,14 +98,15 @@ describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
     const lines = r.out.split("\n");
     expect(lines[0]).toMatch(/Sample data \(synthetic\), not your usage\./);
     // UX-R35/R36: the header reads like other commands, and the current week is "(partial)".
-    expect(lines[2]).toMatch(new RegExp(`^ccwatts v\\S+ · method v${VERSION.replace(/\./g, "\\.")} · pace, week of [A-Z][a-z]{2} \\d{1,2} \\(partial\\)$`));
-    expect(r.out).toMatch(new RegExp(`^  ${LEAD}, `, "m"));
+    expect(lines[2]).toMatch(new RegExp(`^ccwatts v\\S+ · method v${VERSION.replace(/\./g, "\\.")} · pace, week of [A-Z][a-z]{2} \\d{1,2}(?: \\(partial\\))?$`));
+    expect(r.out).toMatch(new RegExp(`^  ${LABELLED}, `, "m"));
   });
 
   it("UX-R31 says days off, never rest days, and counts active days so far", () => {
     const r = cli(["pace", "--demo"], { HOME: home(), NO_COLOR: "1" });
     expect(r.out).not.toMatch(/rest day/i);
-    expect(r.out).toMatch(/active \d of \d days so far\./);
+    expect(r.out).toMatch(/active \d of \d days\./); // UX-R40: the lead's label already says "so far"
+    expect(r.out).not.toMatch(/days so far/);
     expect(r.out).not.toMatch(/so far\)/);
   });
 
@@ -115,7 +118,7 @@ describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
 
   it("UX-R32 compares with numbers from your own earlier weeks, not a judgment", () => {
     const r = cli(["pace", "--demo"], { HOME: home(), NO_COLOR: "1" });
-    expect(r.out).toMatch(/^  Past 10pm: \d+h(?: \d+m)?, vs \S+(?: \S+)? to \S+(?: \S+)? in your last 3 weeks\.$/m);
+    expect(r.out).toMatch(/^  Past 10pm: \d+h(?: \d+m)?, vs \S+(?: \S+)? to \S+(?: \S+)? in (?:your last 3 weeks|the 2 weeks before)\.$/m);
     expect(r.out).not.toMatch(/usual|more time|more active/i);
   });
 
@@ -146,7 +149,7 @@ describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
     expect(r.out).toMatch(/10\/20\/30 min/);
     expect(r.out).toMatch(new RegExp(`Method v?${VERSION.replace(/\./g, "\\.")}`, "i"));
     expect(r.out).toMatch(/not a measurement/i);
-    expect(r.out).toMatch(/Past 10pm and Longest use the 20-min gap\./); // UX-R38
+    expect(r.out).toMatch(/Past 10pm and the longest stretch use the 20-min gap\./); // UX-R38, UX-R42
     expect(r.out).toMatch(/A day off has under 15 active minutes\./);
   });
 
@@ -344,6 +347,32 @@ describe("CCW-M4.4 pace comparison copy (UX-R32)", () => {
     const out = renderPace(view([w("2026-10-26", 21, 3.95, { daysCounted: 6 }), ...prior], { later: true, longer: false }), defaultParams);
     expect(out).toMatch(/^  Past 10pm: 3h 57m, vs 30m to 1h in your last 3 weeks\.$/m);
     expect(out).not.toMatch(/Active hours: /);
+  });
+
+  it("UX-R40 with 2 days this week: leads with last full week, then this week so far, compared with the weeks before it", () => {
+    const now = w("2026-10-26", 13, 0, { daysCounted: 2, restDays: 0 });
+    const focus = w("2026-10-19", 33, 0, { agentHours: { low: 3, central: 4, high: 5 } });
+    const older = [w("2026-10-12", 20, 0.5), w("2026-10-05", 22, 1)];
+    const out = renderPace(view([now, focus, ...older], { later: false, longer: true }), defaultParams);
+    const lines = out.split("\n");
+    expect(lines[0]).toMatch(/· pace, week of Oct 19$/);
+    const lead = lines.findIndex((l) => l.startsWith("  Week of Oct 19: about 33 active hours (range 31 – 35), "));
+    expect(lead, out).toBe(2);
+    const prose = lines.slice(2, lines.findIndex((l, i) => i > 2 && l === "")).join(" ");
+    expect(prose).toMatch(/active 6 of 7 days\./);
+    expect(lines).toContain("  This week so far: about 13 hours in 2 days.");
+    expect(lines.indexOf("  This week so far: about 13 hours in 2 days.")).toBeGreaterThan(lead);
+    expect(lines.indexOf("  Agents worked another 3.0 – 5.0 hours on their own.")).toBeGreaterThan(lines.indexOf("  This week so far: about 13 hours in 2 days."));
+    expect(out).toMatch(/^  Active hours: about 33, vs 20 to 22 in the 2 weeks before\.$/m);
+    for (const line of out.split("\n")) expect(line.length, line).toBeLessThanOrEqual(80);
+  });
+
+  it("UX-R40 with 4 days this week: the lead is this week so far, no second line", () => {
+    const out = renderPace(view([w("2026-10-26", 21, 0, { daysCounted: 4, restDays: 0 }), ...prior], null), defaultParams);
+    expect(out).toMatch(/^  This week so far: about 21 active hours \(range 19 – 23\), /m);
+    expect(out).toMatch(/active 4 of 4 days\./);
+    expect(out).not.toMatch(/hours in \d days/);
+    expect(out.split("\n")[0]).toMatch(/· pace, week of Oct 26 \(partial\)$/);
   });
 
   it("UX-R32 nothing to compare with fewer than two earlier weeks", () => {

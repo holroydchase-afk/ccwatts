@@ -53,6 +53,8 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 
 `ccwatts pace` shows your work rhythm from the same logs: active hours this week (a range), time past 10pm, longest stretch, days off, and how long agents worked on their own, with a four-week table. It compares you only with your own earlier weeks. It's a heuristic, not a measurement, and it never gives a verdict.
 
+![Pace section on the playground: four weeks of active hours with low–high ranges, time past 10pm and agent-only hours, on synthetic sample data](docs/images/pace-playground.png)
+
 ```
 npx ccwatts pace --demo   # try it on synthetic sample data
 npx ccwatts pace          # your own logs

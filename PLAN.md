@@ -208,7 +208,7 @@ From issue #71 (Chase's go, Oct 31, 2026). Opt-in `ccwatts pace`. Pace logic is 
 | M4.2 | **Core `pace.ts`** with fixtures: overnight blocks, a DST change, and an agent run with no human turns (counted as agent time, not pace hours: Chase, Oct 31). Gap thresholds 10/20/30 min in `params.json`, labeled heuristic. | PACE-1: two blocks split by a 45 min gap count as two blocks, with active time as a range. PACE-2: a block crossing midnight counts minutes on the right local days, including across DST. | done (Oct 31) | `claude/project-thread-qdyp4r` |
 | M4.3 | **History: daily pace counts.** New pace.jsonl, PACE_SCHEMA 1, with architect review. Store active min low/central/high, late-night min, longest block, and first/last active hour per day. | PACE-3: history stores only daily pace counts, and a test proves no per-response timestamps are written | done (Oct 31) | `claude/project-thread-qdyp4r-m4.3` |
 | M4.4 | **CLI `ccwatts pace`**: weekly line plus a 4-week table. `--share-pace` opt-in for share outputs. | PACE-4: receipt, card and post hold no pace data unless `--share-pace` is passed. PACE-5: every pace number names the gap thresholds and the method version. | done (Oct 31) | `claude/project-thread-qdyp4r-m4.4` |
-| M4.5 | **Dashboard and playground Pace tab** on sample data. | PACE-5 holds on the tab, and the no-network test still passes (PACE-6) | todo | `m4.5-pace-web` |
+| M4.5 | **Dashboard and playground Pace tab** on sample data. | PACE-5 holds on the tab, and the no-network test still passes (PACE-6) | done (Oct 31) | `claude/project-thread-qdyp4r-m4.5` |
 
 ## Conventions for Claude Code
 

@@ -23,7 +23,10 @@ import { basename } from "node:path";
 import { sampleRows } from "./dashboard.js";
 import { reason } from "./errors.js";
 import { defaultLogRoots, loadLogs, unreadableNote, type LoadedLogs } from "./logs.js";
-import { readHistory, readPaceHistory, writeHistory, writePaceHistory } from "./store.js";
+import { pacePath, readHistory, readPaceHistory, writeHistory, writePaceHistory } from "./store.js";
+
+/** What happened to pace.jsonl this run (see Usage.paceStore). */
+export type PaceStore = "none" | "read" | "unreadable" | "skipped";
 
 export interface UsageOptions {
   /** Estimate just this folder or .jsonl file; history is left alone. */
@@ -46,6 +49,11 @@ export interface Usage {
   pace: PaceDay[];
   /** True if this run wrote pace.jsonl. */
   paceSaved: boolean;
+  /**
+   * pace.jsonl this run: "none" (no file, or --demo), "read", "unreadable", or "skipped"
+   * (it exists but --path or --no-history leaves it alone).
+   */
+  paceStore: PaceStore;
   /** Raw records from the logs on disk now, for hour-level windows. */
   records: UsageRecord[];
   /** Folders searched for logs (full paths: print them to the user's own terminal only). */
@@ -96,8 +104,8 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
       });
     }
   }
-  const { days: pace, saved: paceSaved } = await loadPace(activity, options, demo);
-  return { rows, pace, paceSaved, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo, notes };
+  const { days: pace, saved: paceSaved, store: paceStore } = await loadPace(activity, options, demo);
+  return { rows, pace, paceSaved, paceStore, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo, notes };
 }
 
 /**
@@ -105,9 +113,15 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
  * minutes and whole hours are returned or stored. pace.jsonl is opt-in (created only when pace
  * is asked for) and, like history, left alone for --path, --demo and --no-history.
  */
-async function loadPace(activity: ActivityEvent[], options: UsageOptions, demo: boolean): Promise<{ days: PaceDay[]; saved: boolean }> {
-  if (demo) return { days: [], saved: false };
+async function loadPace(activity: ActivityEvent[], options: UsageOptions, demo: boolean): Promise<{ days: PaceDay[]; saved: boolean; store: PaceStore }> {
+  if (demo) return { days: [], saved: false, store: "none" };
   const keep = !options.noHistory && !options.path;
+  const result = await loadPaceDays(activity, options, keep);
+  if (keep) return result;
+  return { ...result, store: (await stat(pacePath()).catch(() => null)) ? "skipped" : "none" };
+}
+
+async function loadPaceDays(activity: ActivityEvent[], options: UsageOptions, keep: boolean): Promise<{ days: PaceDay[]; saved: boolean; store: PaceStore }> {
   let stored: Awaited<ReturnType<typeof readPaceHistory>> = null;
   let readFailed = false;
   if (keep) {
@@ -118,12 +132,13 @@ async function loadPace(activity: ActivityEvent[], options: UsageOptions, demo: 
       return null;
     });
   }
-  if (!options.pace && !stored) return { days: [], saved: false };
+  const store: PaceStore = readFailed ? "unreadable" : stored ? "read" : "none";
+  if (!options.pace && !stored) return { days: [], saved: false, store };
   // The zone is read here in the CLI and never stored: core takes it as an argument.
   const paceOptions = defaultPaceOptions(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const fresh = paceDays(activity, paceOptions);
   // An unreadable pace.jsonl may hold days the logs no longer have, so it is never overwritten.
-  if (!keep || readFailed || (options.pace === "count" && !stored)) return { days: fresh, saved: false };
+  if (!keep || readFailed || (options.pace === "count" && !stored)) return { days: fresh, saved: false, store };
   const method = paceMethod(paceOptions);
   const days = mergePaceHistory(stored?.days ?? [], fresh, JSON.stringify(stored?.method) === JSON.stringify(method));
   let saved = false;
@@ -137,7 +152,7 @@ async function loadPace(activity: ActivityEvent[], options: UsageOptions, demo: 
       },
     );
   }
-  return { days, saved };
+  return { days, saved, store };
 }
 
 /** Rows inside a window. Day rollups are cut by date. */
