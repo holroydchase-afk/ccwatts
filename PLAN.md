@@ -198,6 +198,18 @@ IDs follow the studio standard (`docs/planning-ids.md` in holroydchase-afk/studi
 |---|---|---|---|---|
 | M3.1 | **Methodology hardening** after an outside sanity check. | METHODOLOGY v0.2 tagged | todo | `m3.1-methodology` |
 
+### M4: Pace (work-rhythm signals)
+
+From issue #71 (Chase's go, Oct 31, 2026). Opt-in `ccwatts pace`. Pace logic is pure core behind the adapter interface (ANCHORS P2), with no ccwatts-specific terms. Later items (status-line nudge, opt-in share card, MCP pace tool) are not scheduled. Every M4 PR also meets PACE-6: no new network calls.
+
+| ID | Task | Done when | Status | Branch |
+|---|---|---|---|---|
+| M4.1 | **Spike (no ship).** Detect human turns from log structure alone, and pick the default gap threshold. | Findings and the chosen default gap are written up; nothing ships | done (Oct 31, `docs/spikes/2026-10-31-pace-spike.md`; default gap rechecked on a multi-day Mac log with M2.1) | `claude/project-thread-qdyp4r` |
+| M4.2 | **Core `pace.ts`** with fixtures: overnight blocks, a DST change, and an agent run with no human turns (counted as agent time, not pace hours: Chase, Oct 31). Gap thresholds 10/20/30 min in `params.json`, labeled heuristic. | PACE-1: two blocks split by a 45 min gap count as two blocks, with active time as a range. PACE-2: a block crossing midnight counts minutes on the right local days, including across DST. | todo | `m4.2-pace-core` |
+| M4.3 | **History: daily pace counts.** Schema bump with architect review. Store active min low/central/high, late-night min, longest block, and first/last active hour per day. | PACE-3: history stores only daily pace counts, and a test proves no per-response timestamps are written | todo | `m4.3-pace-history` |
+| M4.4 | **CLI `ccwatts pace`**: weekly line plus a 4-week table. `--share-pace` opt-in for share outputs. | PACE-4: receipt, card and post hold no pace data unless `--share-pace` is passed. PACE-5: every pace number names the gap thresholds and the method version. | todo | `m4.4-pace-cli` |
+| M4.5 | **Dashboard and playground Pace tab** on sample data. | PACE-5 holds on the tab, and the no-network test still passes (PACE-6) | todo | `m4.5-pace-web` |
+
 ## Conventions for Claude Code
 
 - Keep the core pure: parsing and math take data and return data. All I/O happens in the CLI or web packages.
