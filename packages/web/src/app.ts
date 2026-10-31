@@ -239,7 +239,7 @@ function renderPace() {
   $("pace-skipped").hidden = !off || pace.off !== "skipped";
   $("pace-unreadable").hidden = !off || pace.off !== "unreadable";
   // toggleAttribute, not .hidden: the chart is an <svg>, which has no hidden property.
-  for (const id of ["pace-body", "pace-legend", "pace-chart", "pace-foot"]) $(id).toggleAttribute("hidden", !any);
+  for (const id of ["pace-body", "pace-more"]) $(id).toggleAttribute("hidden", !any);
   const empty = $("pace-empty");
   empty.hidden = off || any;
   empty.textContent =
@@ -549,6 +549,10 @@ function wire() {
     });
   }
 
+  // A folded chart measures 0 wide and draws at full width; redraw at the real width once opened.
+  $("pace-more").addEventListener("toggle", () => {
+    if ($<HTMLDetailsElement>("pace-more").open && paceShown.length) renderPaceChart(paceShown);
+  });
   let resizeTimer = 0;
   let chartWidth = $("chart").getBoundingClientRect().width;
   window.addEventListener("resize", () => {
@@ -586,6 +590,8 @@ function wire() {
   document.title = payload.mode === "dashboard" ? `${APP_NAME} dashboard` : `${APP_NAME} playground`;
 }
 
+// The 4-week chart starts open where there's room; phones keep it folded (UX-R5 page budget).
+if (matchMedia("(min-width: 720px)").matches) $<HTMLDetailsElement>("pace-more").open = true;
 wire();
 renderMethod();
 render();

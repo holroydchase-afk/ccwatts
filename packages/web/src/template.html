@@ -147,6 +147,7 @@ kbd{font-family:var(--mono);font-size:.9em;border:1px solid var(--line);border-r
 #hero-eyebrow .whatif-flag{color:var(--sample)}
 /* Pace (M4.5): work rhythm by week, same visual language as the energy chart. Numbers, never a verdict. */
 .pace-title{display:flex;flex-direction:column;gap:4px}
+@media (max-width:719px){.pace-title .eyebrow{display:none}}
 .pace-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
 .pace .agent{fill:var(--accent);fill-opacity:var(--agent-op)}
 .legend i.agent{background:var(--accent);opacity:var(--agent-op)}
@@ -282,19 +283,23 @@ Leave out everything else, especially message content. Save the lines as ccwatts
         <span class="pill sample" id="pace-pill">Sample data</span>
       </div>
     </div>
-    <div id="pace-body">
-      <p class="pace-lead" id="pace-lead"></p>
+    <!-- UX-R5: on phones the section folds to one line so the page stays short; wide screens open it (app.ts). -->
+    <details id="pace-more">
+      <summary class="disclose">Show your work rhythm and 4-week chart</summary>
+      <div id="pace-body">
+        <p class="pace-lead" id="pace-lead"></p>
+      </div>
       <p class="pace-sofar" id="pace-sofar" hidden></p>
       <p class="pace-agents" id="pace-agents"></p>
-    </div>
-    <div class="legend" id="pace-legend" aria-hidden="true"><span><i style="background:var(--accent)"></i>Active hours</span><span><i style="background:var(--t-cacheWrite)"></i>Past __PACE_LATE__ (part of active)</span><span><i class="agent"></i>Agent-only</span><span><i class="whisker"></i>Low – high range</span></div>
-    <svg class="chart" id="pace-chart" viewBox="0 0 720 230" role="img" aria-label="Active and agent-only hours per week, last 4 weeks"></svg>
-    <table class="vh" id="pace-table"></table>
+      <div class="legend" id="pace-legend" aria-hidden="true"><span><i style="background:var(--accent)"></i>Active hours</span><span><i style="background:var(--t-cacheWrite)"></i>Past __PACE_LATE__ (part of active)</span><span><i class="agent"></i>Agent-only</span><span><i class="whisker"></i>Low – high range</span></div>
+      <svg class="chart" id="pace-chart" viewBox="0 0 720 230" role="img" aria-label="Active and agent-only hours per week, last 4 weeks"></svg>
+      <table class="vh" id="pace-table"></table>
+      <p class="note pace-foot" id="pace-foot">__PACE_NOTES__</p>
+    </details>
     <p class="note" id="pace-empty" hidden></p>
     <p class="note" id="pace-skipped" hidden>Pace is skipped with --path or --no-history, which leave pace.jsonl alone. Run <code>ccwatts dashboard</code> without them to see it.</p>
     <p class="note" id="pace-unreadable" hidden>Couldn't read pace.jsonl, so Pace is left out this time. The file is left as it is.</p>
     <p class="note" id="pace-optin" hidden>Pace is off. Run <code>ccwatts pace</code> once to turn it on: it keeps daily minutes and whole hours in <code>~/.ccwatts/pace.jsonl</code> on this computer, and this page shows it next time.</p>
-    <p class="note pace-foot" id="pace-foot">__PACE_NOTES__</p>
   </section>
 
   <section>

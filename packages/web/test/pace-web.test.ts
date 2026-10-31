@@ -93,6 +93,13 @@ describe("CCW-M4.5 playground build (PACE-WEB2)", () => {
     expect(section).toMatch(/id="pace-chart"[^>]*role="img"|role="img"[^>]*id="pace-chart"/);
     expect(section).toMatch(/<table[^>]*class="vh"[^>]*id="pace-table"|<table[^>]*id="pace-table"[^>]*class="vh"/);
   });
+  it("PACE-WEB7 (UX-R5 budget) the Pace body folds into a <details> on phones and opens on wide screens", () => {
+    const section = paceSection(html);
+    const more = /<details[^>]*id="pace-more"[^>]*>([\s\S]*?)<\/details>/.exec(section)?.[1] ?? "";
+    expect(more).toMatch(/<summary[^>]*>[^<]*chart/i);
+    for (const id of ["pace-lead", "pace-legend", "pace-chart", "pace-table", "pace-foot"]) expect(more).toContain(`id="${id}"`);
+    expect(app).toMatch(/matchMedia\("\(min-width: 720px\)"\)\.matches\)[^;]*pace-more"\)\.open = true/);
+  });
 });
 
 describe("CCW-M4.5 opt-in note (PACE-WEB3, page side)", () => {
