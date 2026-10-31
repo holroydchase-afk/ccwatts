@@ -234,8 +234,8 @@ function renderMethod() {
 }
 
 const LEDE: Record<typeof state.source, string> = {
-  sample: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. You're looking at sample data; try your own logs below.",
-  files: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. You're looking at the files you loaded; nothing was uploaded.",
+  sample: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. Try it on your own logs below.",
+  files: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. You're looking at the files you loaded.",
   history: "ccwatts estimates the electricity behind your Claude Code use from the token counts in its local logs, as a range with every assumption sourced.",
 };
 
@@ -252,6 +252,13 @@ function render(share = true) {
   const pill = $("source-pill");
   pill.textContent = state.source === "sample" ? "Sample data" : state.source === "history" ? "Your history" : "Your files";
   pill.classList.toggle("sample", state.source === "sample");
+  // DEMO-BAR: in the playground the demo bar says which data is on screen, so the pill steps aside.
+  pill.hidden = payload.mode === "playground";
+  const own = state.source !== "sample";
+  $("demo-sum-sample").hidden = own;
+  $("demo-copy-sample").hidden = own;
+  $("demo-sum-files").hidden = !own;
+  $("demo-copy-files").hidden = !own;
   $("lede").textContent = LEDE[state.source];
   renderHero(e, label);
   renderChart(e);
@@ -417,14 +424,33 @@ function wire() {
   $("cli-cmd").textContent = `npx ${APP_NAME}`;
   ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
   if (payload.mode === "playground") {
-    const back = $<HTMLAnchorElement>("back-link");
-    back.href = PORTFOLIO_URL;
-    back.hidden = false;
+    wireDemoBar();
     $("jump").hidden = false;
   }
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;
   document.title = payload.mode === "dashboard" ? `${APP_NAME} dashboard` : `${APP_NAME} playground`;
+}
+
+/** The studio demo bar (DEMO-BAR): a disclosure button over a push-down drawer; Esc closes it. */
+function wireDemoBar() {
+  const bar = $("demo-bar");
+  const toggle = $<HTMLButtonElement>("demo-toggle");
+  const panel = $("demo-panel");
+  for (const id of ["demo-home", "demo-back"]) $<HTMLAnchorElement>(id).href = PORTFOLIO_URL;
+  $<HTMLAnchorElement>("demo-code").href = REPO_URL;
+  const setOpen = (open: boolean) => {
+    toggle.setAttribute("aria-expanded", String(open));
+    panel.hidden = !open;
+  };
+  toggle.addEventListener("click", () => setOpen(panel.hidden));
+  bar.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !panel.hidden) {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+  bar.hidden = false;
 }
 
 wire();

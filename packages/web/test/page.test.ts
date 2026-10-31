@@ -50,9 +50,10 @@ describe("first screen (recruiter-ready RR-1, RR-3)", () => {
     expect(html).toMatch(/id="lede"[^>]*>[^<]*AI coding agent/);
   });
 
-  it("links back to the portfolio, from the header and the footer", () => {
+  it("links back to the portfolio, from the demo bar and the footer", () => {
     expect(PORTFOLIO_URL).toBe("https://chaseholroyd.com/ccwatts.html");
-    expect(html).toContain('id="back-link"');
+    // DEMO-BAR: the old standalone #back-link is replaced by the demo bar's "← Portfolio" link.
+    expect(html).toContain("← Portfolio");
     expect(html).toContain('id="built-by"');
     // The href is set by the script (like the repo link), so the page source holds no absolute URLs outside meta tags.
     expect(html).toContain(PORTFOLIO_URL);
@@ -283,5 +284,60 @@ describe("WI-R6 what-if scale is readable", () => {
     const sizes = [...html.matchAll(/\.whatif-scale\{[^}]*font-size:(\d+)px/g)].map((m) => Number(m[1]));
     expect(sizes.length).toBeGreaterThan(0);
     for (const s of sizes) expect(s).toBeGreaterThanOrEqual(13);
+  });
+});
+
+// DEMO-BAR (studio demo bar standard, docs/DEMO-BANNER.md in pm-tools; intake #73). Static checks
+// on the built page. Layout, focus, colors and state changes are checked in a real browser in
+// scripts/check-no-network.ts (npm run check:browser).
+describe("DEMO-BAR studio demo bar (static)", () => {
+  const css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n");
+  const app = readFileSync(new URL("../src/app.ts", import.meta.url), "utf8");
+
+  it("DEMO-BAR-1: a named Demo region with one toggle button (aria-expanded=false, aria-controls, 'Demo details')", () => {
+    expect(html).toMatch(/<section[^>]*aria-label="Demo"/);
+    const toggle = /<button[^>]*aria-label="Demo details"[^>]*>/.exec(html)?.[0] ?? "";
+    expect(toggle, "toggle button").not.toBe("");
+    expect(toggle).toContain('aria-expanded="false"');
+    expect(toggle).toMatch(/aria-controls="[^"]+"/);
+  });
+
+  it("DEMO-BAR-2: carries the standard drawer copy for sample data and for the visitor's own files", () => {
+    expect(html).toContain("This is the real ccwatts, running on made-up sample data. Nothing you do is saved or sent anywhere; reload to start over.");
+    expect(html).toContain("This is the real ccwatts, now showing the files you picked. They were read in this browser and never uploaded; nothing is saved, so reload to start over.");
+    expect(html).toContain("Chase Holroyd's portfolio");
+    expect(html).toContain("Code on GitHub");
+    // ccwatts keeps no state, so there is no Reset demo button.
+    expect(html).not.toContain("Reset demo");
+  });
+
+  it("DEMO-BAR-3: the middle text has the sample and own-files wording", () => {
+    for (const s of ["Sample data", " · nothing leaves this browser", "Your files", " · read in this browser only"]) expect(html, s).toContain(s);
+  });
+
+  it("DEMO-BAR-4: the old notices are gone (no #back-link, no 'You're looking at sample data' lede)", () => {
+    expect(html).not.toContain('id="back-link"');
+    expect(html).not.toContain("You're looking at sample data");
+    expect(app).not.toContain("You're looking at sample data");
+    expect(html).toMatch(/id="lede"[^>]*>[^<]*Try it on your own logs below\./);
+  });
+
+  it("DEMO-UX-R2: the own-files lede doesn't repeat the not-uploaded note (the bar and drawer say it)", () => {
+    const files = /files:\s*"([^"]*)"/.exec(app)?.[1] ?? "";
+    expect(files, "files lede").not.toBe("");
+    expect(files).toMatch(/You're looking at the files you loaded\.$/);
+    expect(files).not.toMatch(/upload/i);
+  });
+
+  it("DEMO-BAR-5: bar tokens map to the page's own --surface, --ink, --muted, --line and --sans", () => {
+    for (const [bar, page] of [["--demo-bg", "--surface"], ["--demo-fg", "--ink"], ["--demo-muted", "--muted"], ["--demo-line", "--line"], ["--demo-font", "--sans"]]) {
+      expect(css, `${bar} reads ${page}`).toMatch(new RegExp(`${bar}[^;}]*var\\(${page}\\b`));
+    }
+  });
+
+  it("DEMO-BAR-6: hrefs on the bar are set by script (no absolute URL in the bar markup)", () => {
+    const bar = /<section[^>]*aria-label="Demo"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+    expect(bar, "bar markup").not.toBe("");
+    expect(bar).not.toMatch(/href="https?:/);
   });
 });
