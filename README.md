@@ -49,6 +49,44 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 - **The web page** has a Content-Security-Policy of `default-src 'none'` with a hash-pinned script, so the browser itself blocks any request. Tests check this, and `npm run check:browser` confirms zero requests in a real browser.
 - **History** lives in `~/.ccwatts/history.jsonl` (counts only). Delete it any time.
 
+## Pace (opt-in)
+
+`ccwatts pace` shows your work rhythm from the same logs: active hours this week (a range), time past 10pm, longest stretch, days off, and how long agents worked on their own, with a four-week table. It compares you only with your own earlier weeks. It's a heuristic, not a measurement, and it never gives a verdict.
+
+![Pace section on the playground: four weeks of active hours with low–high ranges, time past 10pm and agent-only hours, on synthetic sample data](docs/images/pace-playground.png)
+
+```
+npx ccwatts pace --demo   # try it on synthetic sample data
+npx ccwatts pace          # your own logs
+```
+
+- `~/.ccwatts/pace.jsonl` holds daily minutes and whole hours only: no timestamps, no time zone, no content.
+- It's created only when you run `ccwatts pace`. Delete it any time.
+- It's never shared. `ccwatts receipt` adds one line with this week's active hours only if you pass `--share-pace`.
+
+## Bedtime nudge (opt-in)
+
+Working late? Turn on the bedtime nudge and, from 11pm to 5am, the status line gets a second line suggesting bed, in a persona you pick: serious (`coach`, `researcher`, `stoic`) or funny (`grandma`, `narrator`, `pirate`, `haiku`, `sergeant`), or `random` for a new one each hour.
+
+```
+⚡ ~9.1 Wh this session (range 2.3 – 27.5) · method v0.1.0
+🌙 Sweetheart, it's 1:14am. The computer will still be there in the morning.
+```
+
+```
+🌙 Few creatures stir at 1:14am. Most of them are owls. You are not an owl.
+🌙 The bug will wait here/patient as a sleeping cat/so should you, my friend
+🌙 Drop and give me eight... hours. Of sleep. That's an order!
+```
+
+```
+npx ccwatts nudge --preview                      # one line from each persona, changes nothing
+npx ccwatts nudge on --persona grandma --after 23
+npx ccwatts nudge off
+```
+
+It's off by default. It only shows in the status line (set it up with `/ccwatts:statusline` in the plugin, or see [Status line](#status-line) below; `/ccwatts:nudge` turns the nudge on from the plugin), with no notifications or sounds, and it never blocks work. The setting lives in `~/.ccwatts/nudge.json`.
+
 ## Try it
 
 ccwatts is on npm. With Node 20+:
@@ -74,6 +112,14 @@ ccwatts is also a Claude Code plugin, so you can check your number without leavi
 ```
 
 Then type `/ccwatts` (it completes to `/ccwatts:ccwatts`). It takes the same options as the CLI, for example `/ccwatts history` or `/ccwatts --by project`. Run `/ccwatts:statusline` once to add a status line that shows the current session's estimate after every response. Installing the plugin also adds the MCP tools below, so you can just ask Claude. The plugin runs the same local CLI, so nothing leaves your machine.
+
+### Status line
+
+The status line shows the current session's estimate after every response, and the [bedtime nudge](#bedtime-nudge-opt-in) when it's on. With the plugin, run `/ccwatts:statusline` once. Without it, install the CLI (`npm install -g ccwatts`) and add this to `~/.claude/settings.json`:
+
+```json
+"statusLine": { "type": "command", "command": "ccwatts statusline" }
+```
 
 ### Ask Claude about it (MCP server)
 

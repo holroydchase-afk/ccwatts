@@ -24,6 +24,17 @@ import {
   type TokenCounts,
   type TokenType,
   type Window,
+  paceHours,
+  hm,
+  monthDay,
+  clockHour,
+  paceHoursRange,
+  paceActiveLead,
+  paceLead,
+  paceAgentsLine,
+  paceNotes,
+  type PaceDay,
+  type PaceWeek,
 } from "@ccwatts/core";
 
 /** Kept as the CLI's name for the shared formatter. */
@@ -102,9 +113,15 @@ type Align = "left" | "right";
  * A plain-text table, indented 2 spaces like the summary (the --method listing passes no indent). Column i is left-aligned when i < alignLeft
  * or align[i] says so. dimCols are dimmed after padding, so ANSI codes never upset the widths.
  */
-function table(head: string[], rows: string[][], alignLeft = 1, o: { align?: Align[]; dimCols?: number[]; color?: boolean | undefined; indent?: string } = {}): string {
+function table(
+  head: string[],
+  rows: string[][],
+  alignLeft = 1,
+  o: { align?: Align[]; dimCols?: number[]; color?: boolean | undefined; indent?: string; gutter?: string } = {},
+): string {
   const { dim } = styles(o.color);
   const indent = o.indent ?? "  ";
+  const gutter = o.gutter ?? "   ";
   const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
   const left = (i: number) => (o.align?.[i] ?? (i < alignLeft ? "left" : "right")) === "left";
   const line = (cells: string[], styled: boolean) =>
@@ -114,9 +131,9 @@ function table(head: string[], rows: string[][], alignLeft = 1, o: { align?: Ali
         const padded = left(i) ? c.padEnd(widths[i]!) : c.padStart(widths[i]!);
         return styled && o.dimCols?.includes(i) ? dim(padded) : padded;
       })
-      .join("   ")
+      .join(gutter)
       .trimEnd();
-  return [line(head, false), dim(indent + widths.map((w) => "-".repeat(w)).join("   ")), ...rows.map((r) => line(r, true))].join("\n");
+  return [line(head, false), dim(indent + widths.map((w) => "-".repeat(w)).join(gutter)), ...rows.map((r) => line(r, true))].join("\n");
 }
 
 const DIM_ROWS: Record<Dimension, keyof Estimate> = { model: "byModel", type: "byType", day: "byDay", project: "byProject" };
@@ -273,4 +290,155 @@ export function statusLine(e: Estimate, params: Params): string {
   if (e.responses === 0) return `⚡ ${APP_NAME}: no usage yet this session`;
   const t = formatEnergy(e.total);
   return `⚡ ~${t.central} this session (range ${t.range}) · method v${params.version}`;
+}
+
+// Pace words live in core (pace-copy.ts), shared with the web page.
+export { paceHours, hm };
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const weekday = (date: string) => WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()]!;
+
+
+/** What pace() and paceJson() need beyond the weeks. */
+export interface PaceView {
+  /** Newest first; the first is the current week. */
+  weeks: PaceWeek[];
+  /** The week the lead describes (paceFocus) against the weeks before it. */
+  versus: { later: boolean; longer: boolean } | null;
+  /** Local YYYY-MM-DD. */
+  today: string;
+  /** Where pace.jsonl was written, as shown to the user (never a full home path), or null if not saved. */
+  savedTo: string | null;
+}
+
+
+/** One coarse line for receipt --share-pace: this week's active hours as a range, nothing finer. */
+export function paceShareLine(week: PaceWeek): string {
+  return week.activeHours.high > 0 ? `Pace this week: ${paceActiveLead(week.activeHours)}.` : "Pace this week: no active hours yet.";
+}
+
+
+/** Words wrapped to `width` columns (plain text, before any styling), each line indented. Never splits "2h 18m" or "29 – 36". */
+function wrap(text: string, indent = "  ", width = 80): string[] {
+  const glue = "\u0000";
+  const kept = text.replace(/(\d+h) (\d+m)/g, `$1${glue}$2`).replace(/ – /g, `${glue}–${glue}`);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of kept.split(" ")) {
+    if (line && indent.length + line.length + 1 + word.length > width) {
+      lines.push(indent + line);
+      line = word;
+    } else line = line ? `${line} ${word}` : word;
+  }
+  if (line) lines.push(indent + line);
+  return lines.map((l) => l.replaceAll(glue, " "));
+}
+
+/** "20 to 24" or "30m to 1h": the lowest and highest of the earlier weeks. */
+const spanOf = (values: number[], show: (n: number) => string) => {
+  const lo = show(Math.min(...values));
+  const hi = show(Math.max(...values));
+  return lo === hi ? lo : `${lo} to ${hi}`;
+};
+
+/** The terminal view of `ccwatts pace`: this week in words, four weeks in a table, the method in the footer. No scores, no verdicts. */
+export function pace(view: PaceView, params: Params, opts: RenderOptions = {}): string {
+  const { bold, dim } = styles(opts.color);
+  if (!view.weeks.length) return "";
+  const late = clockHour(params.pace.late_night.start_hour);
+  // UX-R40: early in a week the lead describes the last full week; this week gets a quieter line.
+  const { focus, lead: Lead, rest, soFar, agents } = paceLead(view.weeks, params);
+  const week = view.weeks[focus]!;
+  const earlier = view.weeks.slice(focus + 1);
+  const prose = wrap(`${Lead}, ${rest}`);
+  prose[0] = prose[0]!.replace(Lead, bold(Lead));
+  const partial = week.daysCounted < 7 ? " (partial)" : "";
+  const lines = [`${APP_NAME} v${APP_VERSION} · method v${params.version} · pace, week of ${monthDay(week.start)}${partial}`, "", ...prose];
+  if (soFar) lines.push(...wrap(soFar));
+  if (agents) lines.push(...wrap(agents));
+  // Numbers, not a verdict: the lead's week next to the spread of the user's own earlier weeks (never a norm).
+  const usual = earlier.filter((w) => w.activeHours.central > 0);
+  if (view.versus && usual.length >= 2) {
+    const n = usual.length === earlier.length ? `${usual.length}` : `${usual.length} of ${earlier.length}`;
+    const among = focus === 0 ? `your last ${n} weeks` : `the ${n} weeks before`;
+    if (view.versus.longer) {
+      const span = spanOf(usual.map((w) => w.activeHours.central), paceHours);
+      lines.push(...wrap(`Active hours: about ${paceHours(week.activeHours.central)}, vs ${span} in ${among}.`));
+    }
+    if (view.versus.later) {
+      const span = spanOf(usual.map((w) => w.lateNightHours * 60), hm);
+      lines.push(...wrap(`Past ${late}: ${hm(week.lateNightHours * 60)}, vs ${span} in ${among}.`));
+    }
+  }
+  const rows = view.weeks.map((w, i) => [
+    i === 0 && w.daysCounted < 7 ? `${monthDay(w.start)} (partial)` : monthDay(w.start),
+    paceHoursRange(w.activeHours),
+    hm(w.lateNightHours * 60),
+    hm(w.longestStretchMinutes),
+    String(w.restDays),
+    paceHoursRange(w.agentHours),
+  ]);
+  lines.push(
+    "",
+    table(["Week of", "Active (h)", `Past ${late}`, "Longest", "Days off", "Agent-only (h)"], rows, 1, { dimCols: [5], color: opts.color, gutter: "  " }),
+    "",
+    ...paceNotes(params).map((note) => dim(`  ${note}`)),
+  );
+  if (view.savedTo) lines.push(...[...wrap(`Saved to ${view.savedTo} (daily minutes and whole hours only).`), "  Delete it any time."].map((l) => dim(l)));
+  return lines.join("\n");
+}
+
+/** `ccwatts pace --json`: the weeks, the method and its gaps. No zone, no times of day beyond whole hours. */
+export function paceJson(view: PaceView, params: Params, sample: boolean): string {
+  const g = params.pace.gap_minutes;
+  const gapMinutes = { low: g.low, central: g.value, high: g.high };
+  return JSON.stringify(
+    {
+      app: APP_NAME,
+      version: APP_VERSION,
+      method: {
+        version: params.version,
+        gapMinutes,
+        breakMinutes: params.pace.break_minutes.value,
+        lateNight: { startHour: params.pace.late_night.start_hour, endHour: params.pace.late_night.end_hour },
+      },
+      unit: "hours",
+      sample,
+      versusUsual: view.versus,
+      weeks: view.weeks,
+    },
+    null,
+    2,
+  );
+}
+
+/** Daily pace rows as CSV: counts in minutes and whole local hours only. */
+export function paceCsv(days: readonly PaceDay[]): string {
+  const head = [
+    "date",
+    "active_low_min",
+    "active_central_min",
+    "active_high_min",
+    "agent_low_min",
+    "agent_central_min",
+    "agent_high_min",
+    "late_night_min",
+    "longest_stretch_min",
+    "first_hour",
+    "last_hour",
+  ];
+  const body = days.map((d) => [
+    d.date,
+    d.activeMinutes.low,
+    d.activeMinutes.central,
+    d.activeMinutes.high,
+    d.agentMinutes.low,
+    d.agentMinutes.central,
+    d.agentMinutes.high,
+    d.lateNightMinutes,
+    d.longestStretchMinutes,
+    d.firstHour ?? "",
+    d.lastHour ?? "",
+  ]);
+  return [head, ...body].map((cells) => cells.map(csvCell).join(",")).join("\n");
 }

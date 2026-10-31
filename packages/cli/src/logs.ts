@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { claudeCodeAdapter, dedupe, type UsageRecord } from "@ccwatts/core";
+import { claudeCodeAdapter, dedupe, type ActivityEvent, type UsageRecord } from "@ccwatts/core";
 import { reason } from "./errors.js";
 
 /** Where Claude Code keeps session logs. CLAUDE_CONFIG_DIR may hold a comma-separated list. */
@@ -27,12 +27,14 @@ export interface LoadedLogs {
   roots: string[];
   files: number;
   records: UsageRecord[];
+  /** Activity times for Pace. They stay inside loadUsage: only daily counts are kept or shown. */
+  activity: ActivityEvent[];
   /** One reason code (EACCES, EISDIR, …) per file that couldn't be read. Never a path. */
   unreadable: string[];
 }
 
 /**
- * Reads every Claude Code log under the roots. Only token counts leave this function.
+ * Reads every Claude Code log under the roots. Only token counts and activity times leave this function.
  * A file that can't be read is skipped and counted, so one bad file never stops the estimate.
  */
 export async function loadLogs(roots: string[]): Promise<LoadedLogs> {
@@ -41,14 +43,21 @@ export async function loadLogs(roots: string[]): Promise<LoadedLogs> {
   const parsed = await Promise.all(
     files.map(async (f) => {
       try {
-        return claudeCodeAdapter.parse(await readFile(f, "utf8"));
+        const text = await readFile(f, "utf8");
+        return { records: claudeCodeAdapter.parse(text), activity: claudeCodeAdapter.activity?.(text) ?? [] };
       } catch (error) {
         unreadable.push(reason(error));
-        return [];
+        return { records: [], activity: [] };
       }
     }),
   );
-  return { roots, files: files.length, records: dedupe(parsed.flat()), unreadable };
+  return {
+    roots,
+    files: files.length,
+    records: dedupe(parsed.flatMap((p) => p.records)),
+    activity: parsed.flatMap((p) => p.activity),
+    unreadable,
+  };
 }
 
 /** "1 log file couldn't be read (EISDIR)": reason codes only, so no path or folder name. */
