@@ -3,12 +3,22 @@
  * own (CCW-F8). It never throws: a failed read comes back as a status line, so the page never
  * stays on "Reading…". Messages name no file or folder: a browser file has no full path anyway.
  */
+import { claudeCodeAdapter, defaultPaceOptions, paceDays, type PaceDay } from "@ccwatts/core";
+
 export type LogFile = { name: string; text(): Promise<string> };
-export type ReadResult = { ok: true; texts: string[]; what: string } | { ok: false; status: string };
+/** pace is there only when the caller passed a time zone (the page passes the browser's). */
+export type ReadResult = { ok: true; texts: string[]; what: string; pace?: PaceDay[] } | { ok: false; status: string };
+
+/** Adds daily pace counts in `timeZone` to a read, when one is given. Only per-day minutes and whole hours come back. */
+function withPace(read: { ok: true; texts: string[]; what: string }, timeZone?: string): ReadResult {
+  if (!timeZone) return read;
+  const events = read.texts.flatMap((t) => claudeCodeAdapter.activity?.(t) ?? []);
+  return { ...read, pace: paceDays(events, defaultPaceOptions(timeZone)) };
+}
 
 export const NO_JSONL = "No .jsonl files found there. Claude Code keeps them in ~/.claude/projects.";
 
-export async function readLogFiles(files: Iterable<LogFile>): Promise<ReadResult> {
+export async function readLogFiles(files: Iterable<LogFile>, timeZone?: string): Promise<ReadResult> {
   const logs = [...files].filter((f) => f.name.endsWith(".jsonl"));
   if (!logs.length) return { ok: false, status: NO_JSONL };
   const texts: string[] = [];
@@ -20,7 +30,7 @@ export async function readLogFiles(files: Iterable<LogFile>): Promise<ReadResult
       return { ok: false, status: "Couldn't read one of those files. Try again, or pick the files instead of the folder." };
     }
   }
-  return { ok: true, texts, what: `${logs.length} file${logs.length === 1 ? "" : "s"}` };
+  return withPace({ ok: true, texts, what: `${logs.length} file${logs.length === 1 ? "" : "s"}` }, timeZone);
 }
 
 export const EMPTY_PASTE = "Paste the lines first.";
@@ -33,7 +43,7 @@ export function noUsageStatus(what: string): string {
 }
 
 /** The paste box, as a ReadResult: an empty or blank paste asks for the lines first. */
-export function readPaste(text: string): ReadResult {
+export function readPaste(text: string, timeZone?: string): ReadResult {
   if (!text.trim()) return { ok: false, status: EMPTY_PASTE };
-  return { ok: true, texts: [text], what: "pasted text" };
+  return withPace({ ok: true, texts: [text], what: "pasted text" }, timeZone);
 }
