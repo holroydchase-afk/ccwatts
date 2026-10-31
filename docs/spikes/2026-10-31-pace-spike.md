@@ -53,7 +53,7 @@ Gaps over 4 min: A has one (153 min); B has 5.8, 9.5, 173 and 250. With human-an
 
 - **Missing data:** a multi-day local terminal log from Chase's Mac (M2.1). It is needed to see real idle-gap spread between 10 and 45 min, slash-command and compact lines, and older lines with no `origin`. Rerun `scripts/pace-spike.ts` on it and paste only the printed counts.
 - Which Claude Code version first wrote `origin` / `promptSource` / `turnOrigin`, and whether terminal sessions set them (here `entrypoint` was a remote one).
-- Product decision for Chase: should blocks that hold only machine wakes (scheduled runs, notifications) count as "pace" at all?
+- Decided (Chase, Oct 31): blocks that hold only machine wakes (scheduled runs, notifications) do not count as pace hours. M4.2 reports them separately as agent time.
 
 ## Privacy-security ruling (Oct 31)
 
