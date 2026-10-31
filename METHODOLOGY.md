@@ -81,6 +81,18 @@ These run as unit tests (`packages/core/test/energy.test.ts`), so a parameter ch
 
 **Why our range is wider than Hausfather's.** His 70–330 kWh comes from comparing several estimation methods. Ours combines the bounds of every parameter, including the 1%–25% spread on cache reads. That's deliberate: we'd rather show a range a skeptic can't easily push outside of. As better data comes out, the bounds tighten and the method version goes up.
 
+## Pace (work rhythm)
+
+Pace is not an energy number. It counts how long and when you worked, from the timestamps Claude Code already logs. It is covered by method version 0.1.0, and its thresholds live in the `pace` section of `params.json`, apart from the energy parameters.
+
+- **Blocks.** Log lines are sorted by time and split wherever the idle gap is longer than a threshold. The threshold is a **GUESS** (heuristic, not measured): 20 minutes, with 10 and 30 as the bounds. The 10-minute gap splits more often and gives the low active time; 30 gives the high. So active time is always a range.
+- **Human turns, from structure only.** A block counts as your active time only if it holds at least one turn you typed. That is decided from the line's structure, never its text: a `user` line that is not `isMeta`, `isSidechain` or `isCompactSummary`, has no `toolUseResult` and no `tool_result` block, and, when the line has an `origin`, has `origin.kind` = `"human"`. Details: `packages/core/README.md`.
+- **Agent time is shown separately.** A block with no human turn (an agent or subagent running on its own) is counted as agent time, not as your hours (Chase, Oct 31, 2026).
+- **Local days.** Minutes are put on local days in the time zone you run it in. A block that crosses midnight is split at local midnight, and real elapsed time is used, so a 23- or 25-hour DST day comes out right.
+- **Other counts** (central gap): late-night minutes (22:00 to 06:00 local), the longest stretch with no pause of 15 minutes or more (also a **GUESS**), and the first and last local hour you were active.
+
+**Caveat: older logs over-count.** Logs written before Claude Code added `origin` don't say who wrote a line. There, any plain text or image `user` line counts as human, so some automated lines (a hook or command output written as plain text) can make an agent block look like your time. Active time from those logs may run high.
+
 ## Versioning
 
 - Any change to `params.json` bumps `version`, and every output prints the method version it used.
