@@ -8,6 +8,7 @@ export { projectRef } from "./project.js";
 export { claudeCodeAdapter, MAX_TOKENS_PER_RESPONSE } from "./adapters/claude-code.js";
 // paceBlocks stays internal: it returns exact block times, which must never reach history or output (PS-R5).
 export { paceDays, defaultPaceOptions, type PaceOptions, type PaceDay, type PaceRange } from "./pace.js";
+export { PACE_SCHEMA, paceMethod, serializePaceHistory, parsePaceHistory, mergePaceHistory, type PaceMethod } from "./pace-history.js";
 export { addCounts, dedupe, totalTokens, totalsByModel, type ModelTotals } from "./rollup.js";
 export { defaultParams, withOverrides, type Param, type Params, type PaceParams, type Comparison, type ConfidenceLabel } from "./params.js";
 export {
