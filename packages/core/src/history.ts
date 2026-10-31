@@ -119,10 +119,10 @@ export function parseHistory(text: string): RollupRow[] {
 }
 
 /** A finite count that isn't negative. */
-const okCount = (n: unknown) => typeof n === "number" && Number.isFinite(n) && n >= 0;
+export const okCount = (n: unknown) => typeof n === "number" && Number.isFinite(n) && n >= 0;
 
 /** A real calendar date written YYYY-MM-DD. */
-const okDate = (d: unknown) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`));
+export const okDate = (d: unknown) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`));
 
 /** A row we can trust: a real date, names that are strings, and counts that are finite and not negative. */
 function isRow(v: unknown): v is RollupRow {

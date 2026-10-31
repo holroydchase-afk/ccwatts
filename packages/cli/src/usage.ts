@@ -1,12 +1,18 @@
 import {
+  defaultPaceOptions,
   dropFuture,
   estimate,
   futureNote,
   mergeHistory,
+  mergePaceHistory,
+  paceDays,
+  paceMethod,
   rollup,
   rollupRecords,
   since,
+  type ActivityEvent,
   type Estimate,
+  type PaceDay,
   type Params,
   type RollupRow,
   type UsageRecord,
@@ -17,7 +23,7 @@ import { basename } from "node:path";
 import { sampleRows } from "./dashboard.js";
 import { reason } from "./errors.js";
 import { defaultLogRoots, loadLogs, unreadableNote, type LoadedLogs } from "./logs.js";
-import { readHistory, writeHistory } from "./store.js";
+import { readHistory, readPaceHistory, writeHistory, writePaceHistory } from "./store.js";
 
 export interface UsageOptions {
   /** Estimate just this folder or .jsonl file; history is left alone. */
@@ -26,11 +32,15 @@ export interface UsageOptions {
   demo?: boolean | undefined;
   /** Don't read or update ~/.ccwatts/history.jsonl. */
   noHistory?: boolean | undefined;
+  /** Count daily pace, and start keeping ~/.ccwatts/pace.jsonl (`ccwatts pace`). Once that file exists, every run updates it. */
+  pace?: boolean | undefined;
 }
 
 export interface Usage {
   /** Daily rollups: logs on disk merged with stored history. */
   rows: RollupRow[];
+  /** Daily pace counts: logs on disk merged with pace.jsonl. Empty unless pace was asked for or pace.jsonl exists. */
+  pace: PaceDay[];
   /** Raw records from the logs on disk now, for hour-level windows. */
   records: UsageRecord[];
   /** Folders searched for logs (full paths: print them to the user's own terminal only). */
@@ -51,7 +61,7 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
     // Basename only: errors can end up in a model's context (mcp) as well as the terminal.
     throw new Error(`"${basename(options.path)}" doesn't exist. Check the folder or file given to --path.`);
   }
-  const logs: LoadedLogs = demo ? { roots: [], files: 0, records: [], unreadable: [] } : await loadLogs(options.path ? [options.path] : defaultLogRoots());
+  const logs: LoadedLogs = demo ? { roots: [], files: 0, records: [], activity: [], unreadable: [] } : await loadLogs(options.path ? [options.path] : defaultLogRoots());
   const sample = demo ? sampleRows() : [];
   // The sample is a fixed month in the past: count --since back from its last day.
   const now = demo ? new Date(`${sample.map((r) => r.date).sort().at(-1)}T23:59:59Z`) : new Date();
@@ -59,6 +69,7 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
   // estimate and of history, so it can't stretch the weekly table into the future.
   const { kept, future } = dropFuture(logs.records, now);
   logs.records = kept;
+  const activity = dropFuture(logs.activity, now).kept;
   const notes = [unreadableNote(logs.unreadable), future ? futureNote(future) : null].filter((n): n is string => n !== null);
 
   // History keeps daily token counts so usage survives Claude Code's log cleanup.
@@ -80,7 +91,43 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
       });
     }
   }
-  return { rows, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo, notes };
+  const pace = await loadPace(activity, options, demo);
+  return { rows, pace, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo, notes };
+}
+
+/**
+ * Daily pace counts in this machine's zone. Activity times never leave here: only per-day
+ * minutes and whole hours are returned or stored. pace.jsonl is opt-in (created only when pace
+ * is asked for) and, like history, left alone for --path, --demo and --no-history.
+ */
+async function loadPace(activity: ActivityEvent[], options: UsageOptions, demo: boolean): Promise<PaceDay[]> {
+  if (demo) return [];
+  const keep = !options.noHistory && !options.path;
+  let stored: Awaited<ReturnType<typeof readPaceHistory>> = null;
+  let readFailed = false;
+  if (keep) {
+    stored = await readPaceHistory().catch((error: unknown) => {
+      const why = reason(error);
+      console.error(`Couldn't read pace history (${why}). Using current logs only.`);
+      readFailed = true;
+      return null;
+    });
+  }
+  if (!options.pace && !stored) return [];
+  // The zone is read here in the CLI and never stored: core takes it as an argument.
+  const paceOptions = defaultPaceOptions(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const fresh = paceDays(activity, paceOptions);
+  // An unreadable pace.jsonl may hold days the logs no longer have, so it is never overwritten.
+  if (!keep || readFailed) return fresh;
+  const method = paceMethod(paceOptions);
+  const days = mergePaceHistory(stored?.days ?? [], fresh, JSON.stringify(stored?.method) === JSON.stringify(method));
+  if (activity.length > 0) {
+    await writePaceHistory(days, method).catch((error: unknown) => {
+      const why = reason(error);
+      console.error(`Couldn't save pace history (${why}). Continuing without it.`);
+    });
+  }
+  return days;
 }
 
 /** Rows inside a window. Day rollups are cut by date. */
