@@ -11,7 +11,14 @@ import {
   estimate,
   everyday,
   formatEnergy,
+  hm,
   int,
+  monthDay,
+  paceHours,
+  paceHoursRange,
+  paceLead,
+  paceWeeks,
+  clockHour,
   linkedInPost,
   num,
   projectName,
@@ -22,6 +29,8 @@ import {
   shortModel,
   type Breakdown,
   type Estimate,
+  type PaceDay,
+  type PaceWeek,
   type RollupRow,
   type TokenType,
   type Params,
@@ -47,12 +56,20 @@ function readJson<T>(id: string, fallback: T): T {
 
 const payload = readJson<PagePayload>("ccwatts-data", { mode: "playground", generatedAt: null, rows: [] });
 const sample = readJson<RollupRow[]>("ccwatts-sample", []);
+const samplePace = readJson<PaceDay[]>("ccwatts-sample-pace", []);
 
 const state: { rows: RollupRow[]; source: "history" | "sample" | "files"; window: WindowId } = {
   rows: payload.mode === "dashboard" && payload.rows.length ? payload.rows : sample,
   source: payload.mode === "dashboard" && payload.rows.length ? "history" : "sample",
   window: "30d",
 };
+
+/**
+ * Pace shown in its own section. null means pace is off (a dashboard without pace.jsonl): the
+ * section shows how to turn it on. Days are per-day minutes and whole hours only.
+ */
+const pace: { days: PaceDay[] | null; source: "history" | "sample" | "files"; off?: "skipped" | "unreadable" | undefined } =
+  payload.mode === "dashboard" ? { days: payload.pace ?? null, source: "history", off: payload.paceOff } : { days: samplePace, source: "sample" };
 
 const WINDOW_LABEL: Record<WindowId, string> = { "7d": "last 7 days", "30d": "last 30 days", all: "all time" };
 
@@ -194,6 +211,131 @@ function renderExplain(e: Estimate) {
     : "Load some usage to see what drives it.";
 }
 
+/** Today's local date, YYYY-MM-DD, in the browser's own zone. */
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const LATE = clockHour(params.pace.late_night.start_hour);
+const PACE_PILL: Record<typeof pace.source, string> = { sample: "Sample data", history: "Your history", files: "Your files" };
+let paceShown: PaceWeek[] = [];
+
+/** The Pace section: this week in words, four weeks as bars, a hidden table for screen readers. */
+function renderPace() {
+  const days = pace.days;
+  const off = days === null;
+  // Like the energy windows: real history counts back from today, sample and files from their last day.
+  const today = pace.source === "history" ? localToday() : (days ?? []).reduce((m, d) => (d.date > m ? d.date : m), "0000-00-00");
+  const weeks = days && days.length ? paceWeeks(days, today, 4) : [];
+  const any = weeks.some((w) => w.activeHours.high > 0 || w.agentHours.high > 0);
+  paceShown = any ? weeks : [];
+  const pill = $("pace-pill");
+  pill.hidden = off;
+  pill.textContent = PACE_PILL[pace.source];
+  pill.classList.toggle("sample", pace.source === "sample");
+  // PS-R12/R13: pace.jsonl skipped (--path, --no-history) or unreadable gets its own note, not "Pace is off".
+  $("pace-optin").hidden = !off || Boolean(pace.off);
+  $("pace-skipped").hidden = !off || pace.off !== "skipped";
+  $("pace-unreadable").hidden = !off || pace.off !== "unreadable";
+  // toggleAttribute, not .hidden: the chart is an <svg>, which has no hidden property.
+  for (const id of ["pace-body", "pace-legend", "pace-chart", "pace-foot"]) $(id).toggleAttribute("hidden", !any);
+  const empty = $("pace-empty");
+  empty.hidden = off || any;
+  empty.textContent =
+    pace.source === "files"
+      ? "No pace for these files: they hold no timed turns to count."
+      : "No active time in the last 4 weeks yet. Pace fills in as you use Claude Code.";
+  if (!any) {
+    $("pace-chart").innerHTML = "";
+    $("pace-table").innerHTML = "";
+    return;
+  }
+  // UX-R40/R41: same lead as the CLI. Early in a week it describes the last full week, and this week
+  // moves to the quieter "so far" line; the agents line follows the week the lead describes.
+  const line = paceLead(weeks, params);
+  $("pace-lead").innerHTML = `<b>${esc(keep(line.lead))}</b>, ${esc(keep(line.rest))}`;
+  $("pace-sofar").textContent = line.soFar ? keep(line.soFar) : "";
+  $("pace-sofar").hidden = !line.soFar;
+  $("pace-agents").textContent = line.agents ? keep(line.agents) : "";
+  $("pace-agents").hidden = !line.agents;
+  renderPaceChart(weeks);
+  const rows = weeks
+    .map(
+      (w, i) =>
+        `<tr><td>${esc(weekLabel(w, i))}</td><td>${esc(paceHoursRange(w.activeHours))}</td><td>${esc(hm(w.lateNightHours * 60))}</td><td>${esc(hm(w.longestStretchMinutes))}</td><td>${w.restDays}</td><td>${esc(paceHoursRange(w.agentHours))}</td></tr>`,
+    )
+    .join("");
+  $("pace-table").innerHTML = `<caption>Pace by week, newest first</caption><thead><tr><th>Week of</th><th>Active (h)</th><th>Past ${esc(LATE)}</th><th>Longest</th><th>Days off</th><th>Agent-only (h)</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+/** Never break inside "2h 51m" or "12 – 14" when the line wraps. */
+const keep = (text: string) => text.replace(/(\d+h) (\d+m)/g, "$1\u00a0$2").replace(/(\d) – (\d)/g, "$1\u00a0–\u00a0$2");
+
+const weekLabel = (w: PaceWeek, i: number) => (i === 0 && w.daysCounted < 7 ? `${monthDay(w.start)} (so far)` : monthDay(w.start));
+
+/** Four weeks, oldest on the left: active hours (central, low–high whisker, the part past 10pm on top) beside agent-only hours. */
+function renderPaceChart(newestFirst: PaceWeek[]) {
+  const svg = $("pace-chart");
+  const W = Math.round(Math.min(720, Math.max(320, svg.getBoundingClientRect().width || 720)));
+  const H = 230;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const pad = { l: 36, r: 8, t: 26, b: 40 };
+  const weeks = [...newestFirst].reverse();
+  const max = Math.max(...weeks.map((w) => Math.max(w.activeHours.high, w.agentHours.high)), 1);
+  const step = niceStep(max / 3);
+  const top = Math.max(step * Math.ceil(max / step), step);
+  const y = (v: number) => pad.t + (H - pad.t - pad.b) * (1 - v / top);
+  const gw = (W - pad.l - pad.r) / weeks.length;
+  const parts: string[] = [];
+  for (let v = 0; v <= top + 1e-9; v += step) {
+    parts.push(`<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`);
+    parts.push(`<text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end">${num(v)}</text>`);
+  }
+  parts.push(`<text x="0" y="10">hours per week, starting Monday</text>`);
+  const f = (n: number) => n.toFixed(1);
+  const whisker = (cx: number, lo: number, hi: number, stroke: string) => {
+    if (hi <= lo) return "";
+    const cap = 5;
+    return `<path d="M${f(cx)} ${f(y(lo))}V${f(y(hi))}M${f(cx - cap)} ${f(y(hi))}H${f(cx + cap)}M${f(cx - cap)} ${f(y(lo))}H${f(cx + cap)}" stroke="${stroke}" stroke-width="1.5" fill="none"/>`;
+  };
+  weeks.forEach((w, i) => {
+    const label = weekLabel(w, weeks.length - 1 - i);
+    const ba = Math.min(56, gw * 0.36);
+    const bg = Math.min(48, gw * 0.26);
+    const gap = Math.max(4, gw * 0.04);
+    const x0 = pad.l + i * gw + (gw - ba - gap - bg) / 2;
+    const x1 = x0 + ba + gap;
+    const base = y(0);
+    const a = w.activeHours;
+    const late = Math.min(w.lateNightHours, a.central);
+    // UX-R40: a week still in progress is drawn at half fill, so it doesn't read as a short week.
+    const partial = w.daysCounted < 7;
+    const op = partial ? ` fill-opacity="0.5"` : "";
+    const title = `Week of ${label}: about ${paceHours(a.central)} active hours (range ${paceHoursRange(a)}), ${hm(w.lateNightHours * 60)} past ${LATE}`;
+    if (a.central > 0) {
+      parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(0.5, base - y(a.central)))}" rx="2" fill="var(--accent)"${op}><title>${esc(title)}</title></rect>`);
+      if (late > 0) parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(1.5, y(a.central - late) - y(a.central)))}" rx="2" fill="var(--t-cacheWrite)"${op}><title>${esc(`${hm(w.lateNightHours * 60)} past ${LATE}`)}</title></rect>`);
+    }
+    parts.push(whisker(x0 + ba / 2, a.low, a.high, "var(--ink)"));
+    if (a.high > 0) parts.push(`<text class="val" x="${f(x0 + ba / 2)}" y="${f(y(a.high) - 7)}" text-anchor="middle">${esc(paceHours(a.central))}h</text>`);
+    const g = w.agentHours;
+    if (g.central > 0) {
+      parts.push(`<rect x="${f(x1)}" y="${f(y(g.central))}" width="${f(bg)}" height="${f(Math.max(0.5, base - y(g.central)))}" rx="2" class="agent${partial ? " partial" : ""}"><title>${esc(`Agents on their own: about ${paceHours(g.central)} hours (range ${paceHoursRange(g)})`)}</title></rect>`);
+      parts.push(whisker(x1 + bg / 2, g.low, g.high, "var(--muted)"));
+    }
+    const cx = pad.l + (i + 0.5) * gw;
+    const [day, extra] = label.split(" (");
+    parts.push(`<text x="${f(cx)}" y="${H - 22}" text-anchor="middle">${esc(day!)}</text>`);
+    if (extra) parts.push(`<text x="${f(cx)}" y="${H - 8}" text-anchor="middle">${esc(extra.replace(")", ""))}</text>`);
+  });
+  svg.innerHTML = parts.join("");
+  const summary = newestFirst
+    .map((w, i) => `week of ${weekLabel(w, i)}: about ${paceHours(w.activeHours.central)} active hours (range ${paceHoursRange(w.activeHours)}), ${hm(w.lateNightHours * 60)} past ${LATE}, agent-only ${paceHoursRange(w.agentHours)} hours`)
+    .join("; ");
+  svg.setAttribute("aria-label", `Pace for the last ${newestFirst.length} weeks, newest first: ${summary}.`);
+}
+
 let currentSvg = "";
 let fullSizeUrl = "";
 let currentLine = "";
@@ -260,6 +402,7 @@ function render(share = true) {
   renderExplain(e);
   renderWhatIf(e, published);
   if (share) renderShare(published, label);
+  renderPace();
 }
 
 function renderWhatIf(e: Estimate, published: Estimate) {
@@ -290,9 +433,18 @@ function setStatus(text: string, error = false) {
   if (error) status.scrollIntoView({ block: "nearest" });
 }
 
+/** The browser's own time zone, so pace days fall on the user's calendar. Used here and never stored or sent. */
+function browserZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function loadFiles(files: FileList | File[]) {
   setStatus("Reading files on this device…");
-  load(await readLogFiles(files));
+  load(await readLogFiles(files, browserZone()));
 }
 
 /** Parses log text (from files or the paste box) on this device and shows it. A failure leaves the current data on screen. */
@@ -305,6 +457,8 @@ function load(read: ReadResult) {
   state.rows = rows;
   state.source = "files";
   state.window = "all";
+  pace.days = read.pace ?? [];
+  pace.source = "files";
   setStatus(`Read ${int(records.length)} responses from ${read.what}. Nothing was uploaded.`);
   render();
 }
@@ -366,7 +520,7 @@ function wire() {
     $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
     $("read-paste").addEventListener("click", () => {
       // Pasted from a chat, the lines may sit inside a ``` code fence; the adapter skips those lines.
-      load(readPaste($<HTMLTextAreaElement>("paste-log").value));
+      load(readPaste($<HTMLTextAreaElement>("paste-log").value, browserZone()));
     });
     for (const id of ["pick-folder", "pick-files"]) {
       $<HTMLInputElement>(id).addEventListener("change", (ev) => {
@@ -378,6 +532,8 @@ function wire() {
       state.rows = sample;
       state.source = "sample";
       state.window = "30d";
+      pace.days = samplePace;
+      pace.source = "sample";
       setStatus("");
       render();
     });
@@ -399,7 +555,10 @@ function wire() {
     clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
       const w = $("chart").getBoundingClientRect().width;
-      if (lastEstimate && Math.round(w) !== Math.round(chartWidth)) renderChart(lastEstimate);
+      if (lastEstimate && Math.round(w) !== Math.round(chartWidth)) {
+        renderChart(lastEstimate);
+        if (paceShown.length) renderPaceChart(paceShown);
+      }
       chartWidth = w;
     }, 150);
   });

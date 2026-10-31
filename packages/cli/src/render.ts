@@ -24,9 +24,16 @@ import {
   type TokenCounts,
   type TokenType,
   type Window,
-  REST_DAY_MINUTES,
+  paceHours,
+  hm,
+  monthDay,
+  clockHour,
+  paceHoursRange,
+  paceActiveLead,
+  paceLead,
+  paceAgentsLine,
+  paceNotes,
   type PaceDay,
-  type PaceRange,
   type PaceWeek,
 } from "@ccwatts/core";
 
@@ -285,34 +292,18 @@ export function statusLine(e: Estimate, params: Params): string {
   return `⚡ ~${t.central} this session (range ${t.range}) · method v${params.version}`;
 }
 
-/** Hours for pace: whole hours from 10 up, one decimal below ("0.5", "6.4", "28"). */
-export function paceHours(h: number): string {
-  if (h === 0) return "0";
-  return h >= 10 ? int(h) : (Math.round(h * 10) / 10).toFixed(1);
-}
+// Pace words live in core (pace-copy.ts), shared with the web page.
+export { paceHours, hm };
 
-/** Minutes as "4h 10m", "45m" or "6h". */
-export function hm(minutes: number): string {
-  const total = Math.round(minutes);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  if (h === 0) return `${m}m`;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-/** "Oct 26" from a YYYY-MM-DD date, with no time zone involved. */
-const monthDay = (date: string) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ${Number(date.slice(8, 10))}`;
 const weekday = (date: string) => WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()]!;
 
-/** "10pm" from a 0-23 hour. */
-const clockHour = (h: number) => (h === 0 ? "midnight" : h === 12 ? "noon" : h < 12 ? `${h}am` : `${h - 12}pm`);
 
 /** What pace() and paceJson() need beyond the weeks. */
 export interface PaceView {
   /** Newest first; the first is the current week. */
   weeks: PaceWeek[];
+  /** The week the lead describes (paceFocus) against the weeks before it. */
   versus: { later: boolean; longer: boolean } | null;
   /** Local YYYY-MM-DD. */
   today: string;
@@ -320,15 +311,12 @@ export interface PaceView {
   savedTo: string | null;
 }
 
-/** "About 33 active hours (range 29 – 36)": central first, then the range, like the main summary. */
-const activeLead = (r: PaceRange) => `about ${paceHours(r.central)} active hours (range ${hoursRange(r)})`;
 
 /** One coarse line for receipt --share-pace: this week's active hours as a range, nothing finer. */
 export function paceShareLine(week: PaceWeek): string {
-  return week.activeHours.high > 0 ? `Pace this week: ${activeLead(week.activeHours)}.` : "Pace this week: no active hours yet.";
+  return week.activeHours.high > 0 ? `Pace this week: ${paceActiveLead(week.activeHours)}.` : "Pace this week: no active hours yet.";
 }
 
-const hoursRange = (r: PaceRange) => `${paceHours(r.low)} – ${paceHours(r.high)}`;
 
 /** Words wrapped to `width` columns (plain text, before any styling), each line indented. Never splits "2h 18m" or "29 – 36". */
 function wrap(text: string, indent = "  ", width = 80): string[] {
@@ -356,48 +344,45 @@ const spanOf = (values: number[], show: (n: number) => string) => {
 /** The terminal view of `ccwatts pace`: this week in words, four weeks in a table, the method in the footer. No scores, no verdicts. */
 export function pace(view: PaceView, params: Params, opts: RenderOptions = {}): string {
   const { bold, dim } = styles(opts.color);
-  const [now, ...earlier] = view.weeks;
-  if (!now) return "";
+  if (!view.weeks.length) return "";
   const late = clockHour(params.pace.late_night.start_hour);
-  const g = params.pace.gap_minutes;
-  const activeDays = now.daysCounted - now.restDays;
-  const lead = activeLead(now.activeHours);
-  const Lead = `${lead[0]!.toUpperCase()}${lead.slice(1)}`;
-  const prose = wrap(
-    `${Lead}, ${hm(now.lateNightHours * 60)} past ${late}, longest stretch ${hm(now.longestStretchMinutes)}, active ${activeDays} of ${now.daysCounted} days so far.`,
-  );
+  // UX-R40: early in a week the lead describes the last full week; this week gets a quieter line.
+  const { focus, lead: Lead, rest, soFar, agents } = paceLead(view.weeks, params);
+  const week = view.weeks[focus]!;
+  const earlier = view.weeks.slice(focus + 1);
+  const prose = wrap(`${Lead}, ${rest}`);
   prose[0] = prose[0]!.replace(Lead, bold(Lead));
-  const lines = [`${APP_NAME} v${APP_VERSION} · method v${params.version} · pace, week of ${monthDay(now.start)} (partial)`, "", ...prose];
-  if (now.agentHours.high > 0) lines.push(...wrap(`Agents worked another ${hoursRange(now.agentHours)} hours on their own.`));
-  // Numbers, not a verdict: this week next to the spread of the user's own earlier weeks (never a norm).
+  const partial = week.daysCounted < 7 ? " (partial)" : "";
+  const lines = [`${APP_NAME} v${APP_VERSION} · method v${params.version} · pace, week of ${monthDay(week.start)}${partial}`, "", ...prose];
+  if (soFar) lines.push(...wrap(soFar));
+  if (agents) lines.push(...wrap(agents));
+  // Numbers, not a verdict: the lead's week next to the spread of the user's own earlier weeks (never a norm).
   const usual = earlier.filter((w) => w.activeHours.central > 0);
   if (view.versus && usual.length >= 2) {
-    const among = usual.length === earlier.length ? `your last ${usual.length} weeks` : `${usual.length} of your last ${earlier.length} weeks`;
+    const n = usual.length === earlier.length ? `${usual.length}` : `${usual.length} of ${earlier.length}`;
+    const among = focus === 0 ? `your last ${n} weeks` : `the ${n} weeks before`;
     if (view.versus.longer) {
       const span = spanOf(usual.map((w) => w.activeHours.central), paceHours);
-      lines.push(...wrap(`Active hours: about ${paceHours(now.activeHours.central)}, vs ${span} in ${among}.`));
+      lines.push(...wrap(`Active hours: about ${paceHours(week.activeHours.central)}, vs ${span} in ${among}.`));
     }
     if (view.versus.later) {
       const span = spanOf(usual.map((w) => w.lateNightHours * 60), hm);
-      lines.push(...wrap(`Past ${late}: ${hm(now.lateNightHours * 60)}, vs ${span} in ${among}.`));
+      lines.push(...wrap(`Past ${late}: ${hm(week.lateNightHours * 60)}, vs ${span} in ${among}.`));
     }
   }
   const rows = view.weeks.map((w, i) => [
-    i === 0 ? `${monthDay(w.start)} (partial)` : monthDay(w.start),
-    hoursRange(w.activeHours),
+    i === 0 && w.daysCounted < 7 ? `${monthDay(w.start)} (partial)` : monthDay(w.start),
+    paceHoursRange(w.activeHours),
     hm(w.lateNightHours * 60),
     hm(w.longestStretchMinutes),
     String(w.restDays),
-    hoursRange(w.agentHours),
+    paceHoursRange(w.agentHours),
   ]);
   lines.push(
     "",
     table(["Week of", "Active (h)", `Past ${late}`, "Longest", "Days off", "Agent-only (h)"], rows, 1, { dimCols: [5], color: opts.color, gutter: "  " }),
     "",
-    dim(`  Active time counts idle gaps under ${g.low}/${g.value}/${g.high} min (low/central/high) as work.`),
-    dim(`  Past ${late} and Longest use the ${g.value}-min gap.`),
-    dim(`  A day off has under ${REST_DAY_MINUTES} active minutes. Agent-only: no turn from you.`),
-    dim(`  Heuristic, not a measurement · method v${params.version}`),
+    ...paceNotes(params).map((note) => dim(`  ${note}`)),
   );
   if (view.savedTo) lines.push(...[...wrap(`Saved to ${view.savedTo} (daily minutes and whole hours only).`), "  Delete it any time."].map((l) => dim(l)));
   return lines.join("\n");
