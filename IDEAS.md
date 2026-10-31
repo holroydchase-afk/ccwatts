@@ -8,6 +8,12 @@ A running log. Add to the top of each section. Every entry starts with the probl
 
 ## Ideas
 
+### Leverage: your hours vs. your agents' hours · 💡 idea
+- **Problem:** Other tools count tokens or dollars. Nobody shows how much machine work an hour of your attention buys, or what it costs the grid, so AI energy reads as guilt with no lever to pull.
+- **Idea:** Under the weekly Pace line, add one more line, for example "You worked 11 to 14 hours. Your agents ran 31 to 40 hours and used 2.1 to 4.8 kWh. Method 0.1.0, gaps 10/20/30." It's a delegation ratio people want to improve and post.
+- **Fits:** after M4.4, as M4.6 (about two PRs). Local counts only, ranges with method version, shared only with `--share-pace`.
+- **Source:** staff-pm pitch for Chase, Oct 31, 2026.
+
 ### Pace: work-rhythm signals (`ccwatts pace`) · 🧪 proposed
 - **Problem:** Heavy Claude Code users can lose track of how long and how late they work. The same local logs that give energy also show when work happened, and nobody turns that into a plain weekly picture.
 - **Idea:** An opt-in `ccwatts pace` command. Group responses into work blocks (a gap over N minutes ends a block) and show active hours per day as a range, late-night share (10pm to 6am local), latest finish per day, longest stretch without a 15+ minute break, rest days in the last 7 and 28, weekend share, and this week against your own last 4 weeks. No population norms, scores or diagnosis.
