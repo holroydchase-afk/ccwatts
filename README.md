@@ -49,6 +49,19 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 - **The web page** has a Content-Security-Policy of `default-src 'none'` with a hash-pinned script, so the browser itself blocks any request. Tests check this, and `npm run check:browser` confirms zero requests in a real browser.
 - **History** lives in `~/.ccwatts/history.jsonl` (counts only). Delete it any time.
 
+## Pace (opt-in)
+
+`ccwatts pace` shows your work rhythm from the same logs: active hours this week (a range), time past 10pm, longest stretch, days off, and how long agents worked on their own, with a four-week table. It compares you only with your own earlier weeks. It's a heuristic, not a measurement, and it never gives a verdict.
+
+```
+npx ccwatts pace --demo   # try it on synthetic sample data
+npx ccwatts pace          # your own logs
+```
+
+- `~/.ccwatts/pace.jsonl` holds daily minutes and whole hours only: no timestamps, no time zone, no content.
+- It's created only when you run `ccwatts pace`. Delete it any time.
+- It's never shared. `ccwatts receipt` adds one line with this week's active hours only if you pass `--share-pace`.
+
 ## Try it
 
 ccwatts is on npm. With Node 20+:

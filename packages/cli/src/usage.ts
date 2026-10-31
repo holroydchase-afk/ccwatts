@@ -32,8 +32,11 @@ export interface UsageOptions {
   demo?: boolean | undefined;
   /** Don't read or update ~/.ccwatts/history.jsonl. */
   noHistory?: boolean | undefined;
-  /** Count daily pace, and start keeping ~/.ccwatts/pace.jsonl (`ccwatts pace`). Once that file exists, every run updates it. */
-  pace?: boolean | undefined;
+  /**
+   * Count daily pace. true (`ccwatts pace`) also starts keeping ~/.ccwatts/pace.jsonl; "count"
+   * (`receipt --share-pace`) counts without creating it. Once the file exists, every run updates it.
+   */
+  pace?: boolean | "count" | undefined;
 }
 
 export interface Usage {
@@ -41,6 +44,8 @@ export interface Usage {
   rows: RollupRow[];
   /** Daily pace counts: logs on disk merged with pace.jsonl. Empty unless pace was asked for or pace.jsonl exists. */
   pace: PaceDay[];
+  /** True if this run wrote pace.jsonl. */
+  paceSaved: boolean;
   /** Raw records from the logs on disk now, for hour-level windows. */
   records: UsageRecord[];
   /** Folders searched for logs (full paths: print them to the user's own terminal only). */
@@ -91,8 +96,8 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
       });
     }
   }
-  const pace = await loadPace(activity, options, demo);
-  return { rows, pace, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo, notes };
+  const { days: pace, saved: paceSaved } = await loadPace(activity, options, demo);
+  return { rows, pace, paceSaved, records: logs.records, roots: logs.roots, files: logs.files, now, sample: demo, notes };
 }
 
 /**
@@ -100,8 +105,8 @@ export async function loadUsage(options: UsageOptions): Promise<Usage> {
  * minutes and whole hours are returned or stored. pace.jsonl is opt-in (created only when pace
  * is asked for) and, like history, left alone for --path, --demo and --no-history.
  */
-async function loadPace(activity: ActivityEvent[], options: UsageOptions, demo: boolean): Promise<PaceDay[]> {
-  if (demo) return [];
+async function loadPace(activity: ActivityEvent[], options: UsageOptions, demo: boolean): Promise<{ days: PaceDay[]; saved: boolean }> {
+  if (demo) return { days: [], saved: false };
   const keep = !options.noHistory && !options.path;
   let stored: Awaited<ReturnType<typeof readPaceHistory>> = null;
   let readFailed = false;
@@ -113,21 +118,26 @@ async function loadPace(activity: ActivityEvent[], options: UsageOptions, demo: 
       return null;
     });
   }
-  if (!options.pace && !stored) return [];
+  if (!options.pace && !stored) return { days: [], saved: false };
   // The zone is read here in the CLI and never stored: core takes it as an argument.
   const paceOptions = defaultPaceOptions(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const fresh = paceDays(activity, paceOptions);
   // An unreadable pace.jsonl may hold days the logs no longer have, so it is never overwritten.
-  if (!keep || readFailed) return fresh;
+  if (!keep || readFailed || (options.pace === "count" && !stored)) return { days: fresh, saved: false };
   const method = paceMethod(paceOptions);
   const days = mergePaceHistory(stored?.days ?? [], fresh, JSON.stringify(stored?.method) === JSON.stringify(method));
+  let saved = false;
   if (activity.length > 0) {
-    await writePaceHistory(days, method).catch((error: unknown) => {
-      const why = reason(error);
-      console.error(`Couldn't save pace history (${why}). Continuing without it.`);
-    });
+    saved = await writePaceHistory(days, method).then(
+      () => true,
+      (error: unknown) => {
+        const why = reason(error);
+        console.error(`Couldn't save pace history (${why}). Continuing without it.`);
+        return false;
+      },
+    );
   }
-  return days;
+  return { days, saved };
 }
 
 /** Rows inside a window. Day rollups are cut by date. */
