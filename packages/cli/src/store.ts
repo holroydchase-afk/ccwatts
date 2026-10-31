@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -35,7 +35,9 @@ async function writeAtomic(path: string, text: string): Promise<void> {
   // a crash (possibly wider) is removed first (PS-R8, PS-R9).
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const tmp = `${path}.tmp`;
-  await rm(tmp, { force: true });
+  await unlink(tmp).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== "ENOENT") throw error;
+  });
   await writeFile(tmp, text, { mode: 0o600, flag: "wx" });
   await rename(tmp, path);
 }
