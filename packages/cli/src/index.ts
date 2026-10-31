@@ -15,11 +15,15 @@ import {
   linkedInPost,
   receiptSvg,
   shareLine,
+  paceVersusUsual,
+  paceWeeks,
+  samplePaceDays,
   type Dimension,
+  type PaceDay,
 } from "@ccwatts/core";
 import { openFile, writeDashboard } from "./dashboard.js";
 import { errorLine, reason } from "./errors.js";
-import { breakdown, history, historyCsv, json, jsonError, method, statusLine, styles, summary } from "./render.js";
+import { breakdown, history, historyCsv, json, jsonError, method, pace, paceCsv, paceJson, paceShareLine, statusLine, styles, summary } from "./render.js";
 import { estimateWindow, loadUsage, rowsIn, type UsageOptions } from "./usage.js";
 
 /** Bold and dim only in a terminal: on for a TTY or FORCE_COLOR, off for NO_COLOR (https://no-color.org) and when piped. */
@@ -40,26 +44,32 @@ Commands:
   (none)            Summary for the time window
   history           Weekly trend, all-time total, best and worst weeks
   dashboard         Write an offline HTML dashboard of your history and open it
+  pace              Work rhythm: active hours, time past 10pm, days off (opt-in)
   receipt           Share line, LinkedIn post text and a 1200×627 card (SVG)
-  statusline        One line for the Claude Code status line (reads its JSON on stdin)
-  mcp               MCP server on stdio, so Claude Code can ask about its own energy use
+  statusline        One line for the Claude Code status line (JSON on stdin)
+  mcp               MCP server on stdio, so Claude Code can ask about its energy
   help              Show this help
 
 Options:
-  --since <when>    7d, 12h, 4w, 2026-10-01 or all (default 30d; history defaults to all)
+  --since <when>    7d, 12h, 4w, 2026-10-01 or all (default 30d; history: all)
   --by <dim>        Breakdown table: model, day, project or type
   --json            Machine-readable output, same numbers, in Wh
   --method          Parameters, sources and method version
-  --export csv      With history: daily rows as CSV on stdout
-  --out <file>      With receipt: where to write the card (default ./${APP_NAME}-receipt.svg)
+  --export csv      With history or pace: daily rows as CSV on stdout
+  --out <file>      With receipt: card file (default ./${APP_NAME}-receipt.svg)
+  --share-pace      With receipt: add one line with this week's active hours
   --demo            Try it on synthetic sample data (no logs needed)
-  --path <dir>      Estimate just this folder or .jsonl file (history is left alone)
+  --path <dir>      Estimate just this folder or .jsonl file (history untouched)
   --no-open         With dashboard: write the file but don't open it
   --no-history      Don't read or update ~/.${APP_NAME}/history.jsonl
   -v, --version     Show the version
   -h, --help        Show this help
 
-Logs somewhere else? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep your history.`;
+Logs elsewhere? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep history.
+
+Pace is opt-in and local: running ${APP_NAME} pace starts ~/.${APP_NAME}/pace.jsonl
+(daily minutes and whole hours only). Delete it any time. receipt never shares
+pace unless you add --share-pace.`;
 
 const MCP_HELP = `Usage: ${APP_NAME} mcp [--path <dir>] [--demo] [--no-history]
 
@@ -75,7 +85,7 @@ Reads local logs only. No port, no network.`;
 const PLAYGROUND = PLAYGROUND_URL;
 
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
-const COMMANDS = ["summary", "history", "receipt", "dashboard", "statusline", "mcp", "help"];
+const COMMANDS = ["summary", "history", "pace", "receipt", "dashboard", "statusline", "mcp", "help"];
 
 /** parseArgs errors are written for developers; say the same thing in plain words. */
 function plainArgError(error: unknown): Error | undefined {
@@ -102,6 +112,7 @@ async function main(): Promise<void> {
       demo: { type: "boolean" },
       "no-history": { type: "boolean" },
       "no-open": { type: "boolean" },
+      "share-pace": { type: "boolean" },
       version: { type: "boolean", short: "v" },
       help: { type: "boolean", short: "h" },
     },
@@ -123,7 +134,8 @@ async function main(): Promise<void> {
   const by = values.by as Dimension | undefined;
   if (by && !DIMS.includes(by)) throw new Error(`--by must be one of: ${DIMS.join(", ")}`);
   if (values.export && values.export !== "csv") throw new Error(`--export supports csv only`);
-  if (values.export && command !== "history") throw new Error(`--export works with ${APP_NAME} history. Try: ${APP_NAME} history --export csv`);
+  if (values.export && command !== "history" && command !== "pace") throw new Error(`--export works with ${APP_NAME} history. Try: ${APP_NAME} history --export csv`);
+  if (values["share-pace"] && command !== "receipt") throw new Error(`--share-pace works with ${APP_NAME} receipt.`);
 
   const demo = Boolean(values.demo);
   if (demo && (command === "receipt" || command === "dashboard")) {
@@ -135,7 +147,13 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const usage = await loadUsage({ path: values.path, demo, noHistory: values["no-history"] });
+  if (command === "pace" && demo) {
+    // Synthetic days ending today, so "this week" reads as this week. Never written anywhere.
+    const today = localToday();
+    return void printPace(samplePaceDays(today), today, { json: values.json, csv: Boolean(values.export), sample: true, savedTo: null });
+  }
+  const paceMode = command === "pace" ? true : values["share-pace"] ? "count" : false;
+  const usage = await loadUsage({ path: values.path, demo, noHistory: values["no-history"], pace: paceMode });
   const { rows } = usage;
   const window = parseSince(values.since ?? (command === "history" || demo ? "all" : "30d"), usage.now);
   if (rows.length === 0) {
@@ -159,7 +177,7 @@ async function main(): Promise<void> {
     }
     // Next step first, then where we looked (full paths, but only to the user's own terminal).
     const { dim } = styles(useColor());
-    console.log(`No Claude Code logs yet. Try ${APP_NAME} --demo, or point at a folder with --path <dir>.`);
+    console.log(`No Claude Code logs yet. Try ${APP_NAME}${command === "pace" ? " pace" : ""} --demo, or point at a folder with --path <dir>.`);
     console.log("");
     console.log("Looked in:");
     for (const r of usage.roots) console.log(dim(`  ${r}`));
@@ -172,6 +190,12 @@ async function main(): Promise<void> {
   const noteToStderr = () => {
     for (const note of usage.notes) console.error(`Note: ${note}`);
   };
+
+  if (command === "pace") {
+    noteToStderr();
+    const savedTo = usage.paceSaved ? paceFileLabel() : null;
+    return void printPace(usage.pace, localToday(), { json: values.json, csv: Boolean(values.export), sample: false, savedTo });
+  }
 
   if (command === "dashboard") {
     noteToStderr();
@@ -205,9 +229,17 @@ async function main(): Promise<void> {
       throw new Error(`Couldn't write the card to --out ${basename(out)} (${why}).${hint}`);
     }
     noteToStderr();
+    // --share-pace adds one coarse line (this week's active hours, a range) to the share line and post. Never the card.
+    const paceLine = values["share-pace"] ? paceShareLine(paceWeeks(usage.pace, localToday(), 1)[0]!) : null;
+    let post = linkedInPost(input);
+    if (paceLine) {
+      const cut = post.indexOf("\n\n");
+      post = cut < 0 ? `${post}\n\n${paceLine}` : `${post.slice(0, cut)}\n\n${paceLine}${post.slice(cut)}`;
+    }
     console.log(shareLine(input));
+    if (paceLine) console.log(paceLine);
     console.log(`\nCard written to ${out} (1200×627, LinkedIn size). Open ${APP_NAME} dashboard to save it as PNG.`);
-    console.log(`\nReady-to-paste post:\n\n${linkedInPost(input)}`);
+    console.log(`\nReady-to-paste post:\n\n${post}`);
     return;
   }
   if (values.json) return void console.log(json(est, params, window, demo));
@@ -215,6 +247,29 @@ async function main(): Promise<void> {
   if (by) noteToStderr();
   if (by) console.log(breakdown(est, params, window, by, opts));
   else console.log(summary(est, params, window, demo, opts));
+}
+
+/** Today's date in this machine's zone, YYYY-MM-DD. The zone is read here and never stored or printed. */
+function localToday(now = new Date()): string {
+  const p: Record<string, string> = {};
+  for (const part of new Intl.DateTimeFormat("en-US", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now)) p[part.type] = part.value;
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/** Where pace.jsonl lives, for the user's eyes: never the full home path. */
+function paceFileLabel(): string {
+  return process.env[`${APP_NAME.toUpperCase()}_HOME`] ? `$${APP_NAME.toUpperCase()}_HOME/pace.jsonl` : `~/.${APP_NAME}/pace.jsonl`;
+}
+
+/** Prints `ccwatts pace` as text, --json or --export csv. Four weeks, compared only with the user's own earlier weeks. */
+function printPace(days: PaceDay[], today: string, o: { json: boolean | undefined; csv: boolean; sample: boolean; savedTo: string | null }): void {
+  if (o.csv) return void console.log(paceCsv(days));
+  const weeks = paceWeeks(days, today, 4);
+  const view = { weeks, versus: paceVersusUsual(weeks[0]!, weeks.slice(1)), today, savedTo: o.savedTo };
+  if (o.json) return void console.log(paceJson(view, defaultParams, o.sample));
+  const color = useColor();
+  if (o.sample) process.stdout.write(`${styles(color).yellow("Sample data (synthetic), not your usage.")}\n\n`);
+  console.log(pace(view, defaultParams, { color }));
 }
 
 function parseArgsPlain<T extends ParseArgsConfig>(config: T): ReturnType<typeof parseArgs<T>> {
