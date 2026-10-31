@@ -1,4 +1,18 @@
 # Handoff
+<!-- status
+stage: beta
+goal: portfolio
+milestone: CCW-M4
+now: Pace (M4.2 to M4.6) merged and live on the playground; README demo refresh in PR #83
+next: Chase merges #83, then gives the go for the 0.1.2 npm release (Trusted Publishing first, issue #38)
+waiting_on_chase:
+  - Merge PR #83 (README playground shots and bedtime nudge GIF)
+  - Go for npm release 0.1.2 (set up Trusted Publishing first, issue #38)
+  - Go on M4.7 Leverage (proposed in IDEAS.md)
+  - Real usage data: save a counts-only log per session, or estimate from message timestamps
+  - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
+blockers: []
+-->
 
 Live notes for whoever picks up the build next (human or Claude). Updated every push.
 
@@ -46,6 +60,7 @@ _Updated 2026-10-21._
 - **Keep in sync:** when a change here alters what the portfolio page or demo shows (features, numbers, screenshots, privacy claims), tell the portfolio thread ("Portfolio research and upgrade plan") or update the page in `holroydchase-afk.github.io` (`tools/build.py`). Any portfolio change that touches this product adds a dated line here.
 
 ## Done
+- 2026-10-31: Intake #78 (Studio Console, PMT-M3.4). HANDOFF.md opens with the `<!-- status` header the console reads (stage, goal `portfolio`, milestone, now, next, waiting_on_chase, blockers). `scripts/check-handoff-status.sh` copied from studio-agents `templates/scripts/` (only that file: running `install-rules.sh` as-is would also add `scripts/check-logs.mjs`, which the all-TypeScript rule rejects), and `handoff-check.yml` gains the warn-only "HANDOFF.md status header" step from the template by hand (our pinned checkout and Bot exemption kept). Keep the header current with every HANDOFF update.
 - 2026-10-31: Intake #77 (refresh qa-tdd from studio-agents). `.claude/agents/qa-tdd.md` synced with `sync.sh` from studio-agents main (after #33 merged, 807073f): reports end with a ```qa block (green, red, flaky or blocked, 3 runs per suite, QA-R findings), qa-tdd never fixes product code, flaky is never green, and the caller relays the block verbatim. `scripts/check-qa-report.ts` is a strict-TypeScript port of studio-agents `tools/check-qa-report.mjs` (same messages and exits; the repo stays all-TypeScript, so `sync-tools.sh` was not run as-is). CLAUDE.md gains the "Relay qa-tdd's verdict as-is" paragraph. Tests: `packages/cli/test/qa-report.test.ts` (QAR-1 to QAR-9) over studio's 47 fixtures, red first. Only qa-tdd was synced; ux-reviewer, design-rules and the new story-keeper agent have upstream changes left for a later refresh (story-keeper needs a CLAUDE.md row).
 - 2026-10-31: Intake #73, studio demo bar (pm-tools docs/DEMO-BANNER.md) on the playground. A slim `<section aria-label="Demo">` bar opens the page: `← Portfolio`, then one "Demo details" button (Demo badge in ink, "Sample data · nothing leaves this browser", Details chevron) that opens a push-down drawer with the standard copy adapted for ccwatts (no state, so no Reset; reload to start over) and links to the portfolio and GitHub. It switches to "Your files" after a visitor loads logs. Playground only; the local dashboard keeps its "Your history" pill. Old notices removed: the sample pill (hidden in the playground), the floating back link, and the lede's "You're looking at sample data". qa-tdd DEMO-BAR-1..13 red first; ux-reviewer 5 → 7 → 8/10 after DEMO-UX-R1 (bar row didn't span the column, P1) and R2 (own-files lede said "not uploaded" a third time) were fixed test-first. Before/after shots in `docs/reviews/2026-10-31-demo-bar/`. 266 tests and check:browser green 3x. Note: `check:browser` locally needs `PLAYWRIGHT_MODULE=/opt/node22/lib/node_modules/playwright/index.mjs` in cloud sessions.
 - 2026-10-31: CCW-M4.6 bedtime nudge (Chase's ask: "bug you and tell you to go to sleep in different serious or funny personas"). Opt-in second status-line line between a start hour (default 11pm) and 5am, in one of 8 personas: serious `coach`, `researcher`, `stoic`; funny `grandma`, `narrator`, `pirate`, `haiku`, `sergeant`; or `random`. `ccwatts nudge on --persona <id> [--after h --until h]`, `nudge off`, `nudge --preview`, `nudge` (status); `/ccwatts:nudge` plugin skill. Settings in `~/.ccwatts/nudge.json` (0600, whitelisted keys, 4 KB cap); the status line reads it and writes nothing. Core `nudge.ts` is pure (hour and seed passed in). README "Bedtime nudge" and new "Status line" sections. ux-reviewer 7/10 before, UX-R46 to R53 fixed test-first; privacy-security pass, no P0/P1, PS-R15 (narrowed skill allowed-tools, unknown flags rejected), PS-R16 (CCWATTS_NOW only under NODE_ENV=test), PS-R17 (size cap) fixed test-first. 432 passed, 1 skipped, 3x.
@@ -119,7 +134,7 @@ All of M1.1 to M1.8 (old S1 to S7 plus the README; PRs #1, #3 to #10) and the Pa
 - M2.2 done (Oct 26): Chase merged #41 and published ccwatts@0.1.1 from the Actions workflow (`npx ccwatts@0.1.1 --demo` verified with an empty HOME), then deleted the npm token and the `NPM_TOKEN` secret. README Try it now lists `npx ccwatts --demo`.
 
 ## Exact next step
-- **Intake #77:** done once the PR that says `Closes #77` merges (studio-agents #33 merged Oct 31). Next intake: #78 (HANDOFF status header).
+- **Intake #77:** done once the PR that says `Closes #77` merges (studio-agents #33 merged Oct 31). Intake #78 (status header) done in the PR that says `Closes #78`.
 - **Intake #73 demo bar (Oct 31):** merged after the Pace stack (#81). Next: re-shoot README playground images with `scripts/make-readme-images.ts`.
 - **Pace overnight run (Oct 31):** M4.2 to M4.6 done as stacked PRs: #74 (M4.2, base main) ← #75 (M4.3) ← #76 (M4.4) ← #79 (M4.5) ← M4.6 (bedtime nudge). Merge in that order. Next: M4.7 Leverage line (proposed in IDEAS.md), only on Chase's go.
 - **TS-1 (Oct 29):** Chase reviews and merges the TypeScript PR. Product Studio: update studio-agents so `check-logs`, `check-private` and the showcase kit ship as `.ts` run with `npx tsx`, and ux-reviewer step 5 runs `npx tsx tools/showcase-check/cli.ts` (INTAKE in the PR body; Chase is pasting it). Until then, a studio re-sync would add `scripts/check-logs.mjs` back, and TS-1a would fail on it.
