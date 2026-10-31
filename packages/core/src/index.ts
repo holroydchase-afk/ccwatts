@@ -6,8 +6,13 @@ export { safeName, NAME_MAX } from "./sanitize.js";
 export * from "./types.js";
 export { projectRef } from "./project.js";
 export { claudeCodeAdapter, MAX_TOKENS_PER_RESPONSE } from "./adapters/claude-code.js";
+// paceBlocks stays internal: it returns exact block times, which must never reach history or output (PS-R5).
+export { paceDays, defaultPaceOptions, type PaceOptions, type PaceDay, type PaceRange } from "./pace.js";
+export { paceWeeks, paceVersusUsual, samplePaceDays, REST_DAY_MINUTES, type PaceWeek } from "./pace-week.js";
+export { paceHours, hm, monthDay, clockHour, paceHoursRange, paceActiveLead, paceLead, paceFocus, PACE_EARLY_WEEK_DAYS, paceAgentsLine, paceNotes, type PaceLead } from "./pace-copy.js";
+export { PACE_SCHEMA, paceMethod, serializePaceHistory, parsePaceHistory, mergePaceHistory, type PaceMethod } from "./pace-history.js";
 export { addCounts, dedupe, totalTokens, totalsByModel, type ModelTotals } from "./rollup.js";
-export { defaultParams, withOverrides, type Param, type Params, type Comparison, type ConfidenceLabel } from "./params.js";
+export { defaultParams, withOverrides, type Param, type Params, type PaceParams, type Comparison, type ConfidenceLabel } from "./params.js";
 export {
   estimate,
   energyForCounts,
@@ -38,3 +43,18 @@ export {
   type RollupRow,
   type Week,
 } from "./history.js";
+export {
+  PERSONAS,
+  DEFAULT_NUDGE_SETTINGS,
+  bedtimeNudge,
+  personaLine,
+  nudgePersona,
+  inBedtimeWindow,
+  clockTime,
+  parseNudgeSettings,
+  serializeNudgeSettings,
+  type Persona,
+  type PersonaTone,
+  type NudgeInput,
+  type NudgeSettings,
+} from "./nudge.js";

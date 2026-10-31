@@ -1,6 +1,6 @@
 import { projectRef } from "../project.js";
 import { safeName } from "../sanitize.js";
-import type { UsageAdapter, UsageRecord } from "../types.js";
+import type { ActivityEvent, UsageAdapter, UsageRecord } from "../types.js";
 
 /** Fields we read from a Claude Code JSONL line. Everything else, including content, is ignored. */
 interface AssistantLine {
@@ -72,6 +72,40 @@ function toRecord(line: AssistantLine): UsageRecord | null {
   };
 }
 
+/** Fields we read from a line for Pace. Content blocks are read for their `type` only, never their text. */
+interface ActivityLine {
+  type?: unknown;
+  timestamp?: unknown;
+  isMeta?: unknown;
+  isSidechain?: unknown;
+  isCompactSummary?: unknown;
+  toolUseResult?: unknown;
+  origin?: unknown;
+  message?: { content?: unknown };
+}
+
+const blockType = (block: unknown): unknown =>
+  typeof block === "object" && block !== null ? (block as { type?: unknown }).type : undefined;
+
+/**
+ * Whether a user line is a turn a person typed, decided by structure alone (see packages/core/README.md).
+ * Never looks at the text: a prompt that reads like a command or a tag is still a prompt.
+ */
+function isHumanTurn(line: ActivityLine): boolean {
+  if (line.type !== "user") return false;
+  if (line.isMeta === true || line.isSidechain === true || line.isCompactSummary === true) return false;
+  if ("toolUseResult" in line) return false;
+  const content = line.message?.content;
+  if (Array.isArray(content) && content.some((b) => blockType(b) === "tool_result")) return false;
+  // Newer logs say who wrote the line. Older ones don't, so fall back to the content's shape.
+  if ("origin" in line) {
+    const origin = line.origin;
+    return typeof origin === "object" && origin !== null && (origin as { kind?: unknown }).kind === "human";
+  }
+  if (typeof content === "string") return true;
+  return Array.isArray(content) && content.length > 0 && content.every((b) => blockType(b) === "text" || blockType(b) === "image");
+}
+
 /**
  * Parses the JSONL that Claude Code writes under `<config dir>/projects/`.
  * One API response can span several lines (one per content block), each repeating
@@ -95,5 +129,24 @@ export const claudeCodeAdapter: UsageAdapter = {
       if (record) byKey.set(record.key, record);
     }
     return [...byKey.values()];
+  },
+  /** One event per timestamped user or assistant line, sorted by time. Keeps only the time and the human flag. */
+  activity(text) {
+    const events: { event: ActivityEvent; ms: number }[] = [];
+    for (const raw of text.replace(/^\uFEFF/, "").split("\n")) {
+      if (!raw.includes('"user"') && !raw.includes('"assistant"')) continue;
+      let line: ActivityLine;
+      try {
+        line = JSON.parse(raw) as ActivityLine;
+      } catch {
+        continue;
+      }
+      if (typeof line !== "object" || line === null) continue;
+      if (line.type !== "user" && line.type !== "assistant") continue;
+      const timestamp = str(line.timestamp);
+      if (!timestamp || !validTimestamp(timestamp)) continue;
+      events.push({ event: { timestamp, human: isHumanTurn(line) }, ms: Date.parse(timestamp) });
+    }
+    return events.sort((a, b) => a.ms - b.ms).map((e) => e.event);
   },
 };

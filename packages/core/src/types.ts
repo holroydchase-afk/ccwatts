@@ -27,10 +27,20 @@ export interface UsageRecord {
   tokens: TokenCounts;
 }
 
+/** One timestamped moment of activity in a log. Counts only: no content, ids or paths. */
+export interface ActivityEvent {
+  /** ISO 8601 timestamp. */
+  timestamp: string;
+  /** True for a turn a person typed; false for model replies, tool results and subagent work. */
+  human: boolean;
+}
+
 /** A provider adapter turns raw log text into usage records. Pure: no I/O. */
 export interface UsageAdapter {
   id: string;
   parse(text: string): UsageRecord[];
+  /** Optional: activity events for Pace, sorted by time. */
+  activity?(text: string): ActivityEvent[];
 }
 
 export function emptyCounts(): TokenCounts {

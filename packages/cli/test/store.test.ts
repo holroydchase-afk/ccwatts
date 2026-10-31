@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -48,5 +48,22 @@ describe("historyCsv", () => {
     expect(csv[0]).toBe("date,model,project,responses,input,cache_write,cache_read,output,wh_low,wh_central,wh_high,method_version");
     expect(csv).toHaveLength(rows.length + 1);
     expect(csv[1]).toMatch(/,0\.1\.0$/);
+  });
+});
+
+describe("data file permissions (PS-R8, PS-R9)", () => {
+  it("PS-R8: a stale, world-readable .tmp left by a crash still ends up 0600", async () => {
+    const home = join(tmp(), "data");
+    mkdirSync(home);
+    writeFileSync(join(home, "history.jsonl.tmp"), "stale", { mode: 0o644 });
+    chmodSync(join(home, "history.jsonl.tmp"), 0o644);
+    await writeHistory([], home);
+    expect(statSync(join(home, "history.jsonl")).mode & 0o777).toBe(0o600);
+  });
+
+  it("PS-R9: a new data folder is created 0700", async () => {
+    const home = join(tmp(), "fresh");
+    await writeHistory([], home);
+    expect(statSync(home).mode & 0o777).toBe(0o700);
   });
 });

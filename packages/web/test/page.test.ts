@@ -323,7 +323,7 @@ describe("DEMO-BAR studio demo bar (static)", () => {
   });
 
   it("DEMO-UX-R2: the own-files lede doesn't repeat the not-uploaded note (the bar and drawer say it)", () => {
-    const files = /files:\s*"([^"]*)"/.exec(app)?.[1] ?? "";
+    const files = /const LEDE[\s\S]*?files:\s*"([^"]*)"/.exec(app)?.[1] ?? "";
     expect(files, "files lede").not.toBe("");
     expect(files).toMatch(/You're looking at the files you loaded\.$/);
     expect(files).not.toMatch(/upload/i);

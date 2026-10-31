@@ -37,6 +37,10 @@ The adapter never throws on a bad line; it skips it. What it skips or changes:
 - **Future dates.** `dropFuture(records, now)` leaves out responses dated more than one day after `now` (a little clock skew is fine). The CLI and MCP server note it as "Ignored N response(s) dated in the future."
 - **History file.** `parseHistory` skips rows whose date isn't a real `YYYY-MM-DD`, or whose counts are negative or not finite, and cleans names the same way.
 
+## Activity for Pace (CCW-M4.2)
+
+`claudeCodeAdapter.activity(text)` reads every timestamped `user` and `assistant` line and keeps only `{ timestamp, human }`. A line is a human turn by structure alone, never by its text: `type` is `"user"`; `isMeta`, `isSidechain` and `isCompactSummary` are not `true`; there is no `toolUseResult` key; `message.content` has no `tool_result` block; and when `origin` is present, `origin.kind` is `"human"` (other kinds, such as `"task-notification"`, are not). Without `origin` (older logs), string content or an array of only `text` and `image` blocks counts as human, which can over-count. Assistant and sidechain lines are activity with `human: false`. Content block `type` is the only thing read from `message.content`.
+
 ## Retention
 
 Claude Code deletes session logs older than `cleanupPeriodDays` (a `settings.json` key, documented default 30 days). This is why ccwatts keeps its own history from M1.4 onward. **Still to confirm on Chase's machine:** the actual value in `~/.claude/settings.json` and the oldest log date present.

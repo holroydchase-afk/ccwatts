@@ -25,9 +25,17 @@ const script = app.outputFiles![0]!.text.trim();
 mkdirSync(here("dist"), { recursive: true });
 const tmp = here("dist/.sample.mjs");
 await build({ entryPoints: [here("src/sample.ts")], bundle: true, format: "esm", platform: "node", outfile: tmp, alias });
-const { sampleRows } = await import(`${tmp}?t=${Date.now()}`);
+const { sampleRows, samplePace, paceNoteLines, paceLateLabel } = await import(`${tmp}?t=${Date.now()}`);
 rmSync(tmp);
-const sample = JSON.stringify(sampleRows(here("../../fixtures/claude-code/demo.jsonl"))).replace(/</g, "\\u003c");
+const rows: { date: string }[] = sampleRows(here("../../fixtures/claude-code/demo.jsonl"));
+const sample = JSON.stringify(rows).replace(/</g, "\\u003c");
+// Sample pace (synthetic, no times of day) ends on the energy sample's last day.
+const lastSampleDate = rows.map((r) => r.date).sort().at(-1);
+if (!lastSampleDate) throw new Error("The sample has no days.");
+const samplePaceJson = JSON.stringify(samplePace(lastSampleDate)).replace(/</g, "\\u003c");
+const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const paceNotes = (paceNoteLines() as string[]).map(escHtml).join(" ");
+const paceLate = escHtml(paceLateLabel() as string);
 
 // Read from core/src/meta.ts so the URL lives in one place.
 const PLAYGROUND_URL = /PLAYGROUND_URL = "([^"]+)"/.exec(readFileSync(here("../core/src/meta.ts"), "utf8"))?.[1];
@@ -61,6 +69,9 @@ const html = readFileSync(here("src/template.html"), "utf8")
   .replaceAll("__WHATIF_LOW_PCT__", () => pct(cacheRead.low))
   .replaceAll("__WHATIF_HIGH_PCT__", () => pct(cacheRead.high))
   .replace("__SAMPLE__", () => sample)
+  .replace("__SAMPLE_PACE__", () => samplePaceJson)
+  .replace("__PACE_NOTES__", () => paceNotes)
+  .replace("__PACE_LATE__", () => paceLate)
   .replace("__SCRIPT__", () => script);
 writeFileSync(here("dist/ccwatts.html"), html);
 console.log(`Wrote dist/ccwatts.html (${Math.round(html.length / 1024)} KB)`);
