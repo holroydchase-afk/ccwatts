@@ -25,6 +25,7 @@ import {
 import { openFile, writeDashboard } from "./dashboard.js";
 import { errorLine, reason } from "./errors.js";
 import { breakdown, history, historyCsv, json, jsonError, method, pace, paceCsv, paceJson, paceShareLine, statusLine, styles, summary } from "./render.js";
+import { runNudge, statusNudge } from "./nudge.js";
 import { estimateWindow, loadUsage, rowsIn, type UsageOptions } from "./usage.js";
 
 /** Bold and dim only in a terminal: on for a TTY or FORCE_COLOR, off for NO_COLOR (https://no-color.org) and when piped. */
@@ -48,6 +49,7 @@ Commands:
   pace              Work rhythm: active hours, time past 10pm, days off (opt-in)
   receipt           Share line, LinkedIn post text and a 1200×627 card (SVG)
   statusline        One line for the Claude Code status line (JSON on stdin)
+  nudge             Bedtime nudge under the status line, in a persona (opt-in)
   mcp               MCP server on stdio, so Claude Code can ask about its energy
   help              Show this help
 
@@ -63,6 +65,11 @@ Options:
   --path <dir>      Estimate just this folder or .jsonl file (history untouched)
   --no-open         With dashboard: write the file but don't open it
   --no-history      Don't read or update ~/.${APP_NAME}/history.jsonl
+  --persona <id>    With nudge on: coach, researcher, stoic, grandma, narrator,
+                    pirate, haiku, sergeant or random (default random)
+  --after <hour>    With nudge on: start hour, 24-hour clock (default 23 = 11pm)
+  --until <hour>    With nudge on: end hour, 24-hour clock (default 5 = 5am)
+  --preview         With nudge: show a line from each persona, change nothing
   -v, --version     Show the version
   -h, --help        Show this help
 
@@ -70,7 +77,10 @@ Logs elsewhere? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep history.
 
 Pace is opt-in and local: running ${APP_NAME} pace starts ~/.${APP_NAME}/pace.jsonl
 (daily minutes and whole hours only). Delete it any time. receipt never shares
-pace unless you add --share-pace.`;
+pace unless you add --share-pace.
+
+The bedtime nudge is off until you run ${APP_NAME} nudge on. Late at night it adds
+a short line under the status line suggesting bed. ${APP_NAME} nudge off stops it.`;
 
 const MCP_HELP = `Usage: ${APP_NAME} mcp [--path <dir>] [--demo] [--no-history]
 
@@ -85,8 +95,9 @@ Reads local logs only. No port, no network.`;
 // Public page, not a secret: a plain name so the studio log check (which bans URL-named values in logs) reads it as fixed text.
 const PLAYGROUND = PLAYGROUND_URL;
 
+const NUDGE_FLAGS = ["persona", "after", "until", "preview", "help"];
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
-const COMMANDS = ["summary", "history", "pace", "receipt", "dashboard", "statusline", "mcp", "help"];
+const COMMANDS = ["summary", "history", "pace", "receipt", "dashboard", "statusline", "nudge", "mcp", "help"];
 
 /** parseArgs errors are written for developers; say the same thing in plain words. */
 function plainArgError(error: unknown): Error | undefined {
@@ -114,6 +125,10 @@ async function main(): Promise<void> {
       "no-history": { type: "boolean" },
       "no-open": { type: "boolean" },
       "share-pace": { type: "boolean" },
+      persona: { type: "string" },
+      after: { type: "string" },
+      until: { type: "string" },
+      preview: { type: "boolean" },
       version: { type: "boolean", short: "v" },
       help: { type: "boolean", short: "h" },
     },
@@ -130,7 +145,20 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  if (command === "statusline") return void console.log(await sessionLine(values.path));
+  if (command === "statusline") {
+    const [energy, moon] = await Promise.all([sessionLine(values.path), statusNudge()]);
+    // Energy line first and unchanged; Claude Code shows each printed line as a status line row.
+    return void console.log(moon ? `${energy}\n${moon}` : energy);
+  }
+  const nudgeOnly = [values.persona, values.after, values.until, values.preview].some((v) => v !== undefined);
+  if (nudgeOnly && command !== "nudge") throw new Error(`--persona, --after, --until and --preview work with ${APP_NAME} nudge. Try: ${APP_NAME} nudge --preview`);
+  if (command === "nudge") {
+    // PS-R15: nudge takes only its own flags, so the /ccwatts:nudge skill can't be steered elsewhere.
+    const other = Object.keys(values).filter((k) => values[k as keyof typeof values] !== undefined && !NUDGE_FLAGS.includes(k));
+    if (other.length > 0) throw new Error(`${APP_NAME} nudge takes only --persona, --after, --until and --preview, not --${other[0]}. Try: ${APP_NAME} nudge --preview`);
+    if (positionals.length > 2) throw new Error(`${APP_NAME} nudge takes one action: on or off.`);
+    return void console.log(await runNudge({ action: positionals[1], persona: values.persona, after: values.after, until: values.until, preview: values.preview }));
+  }
   if (command === "mcp") return runMcp({ path: values.path, demo: values.demo, noHistory: values["no-history"] });
   const by = values.by as Dimension | undefined;
   if (by && !DIMS.includes(by)) throw new Error(`--by must be one of: ${DIMS.join(", ")}`);

@@ -43,3 +43,18 @@ export {
   type RollupRow,
   type Week,
 } from "./history.js";
+export {
+  PERSONAS,
+  DEFAULT_NUDGE_SETTINGS,
+  bedtimeNudge,
+  personaLine,
+  nudgePersona,
+  inBedtimeWindow,
+  clockTime,
+  parseNudgeSettings,
+  serializeNudgeSettings,
+  type Persona,
+  type PersonaTone,
+  type NudgeInput,
+  type NudgeSettings,
+} from "./nudge.js";

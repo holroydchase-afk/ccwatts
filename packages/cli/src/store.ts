@@ -1,12 +1,16 @@
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   APP_NAME,
+  DEFAULT_NUDGE_SETTINGS,
   parseHistory,
+  parseNudgeSettings,
   parsePaceHistory,
   serializeHistory,
+  serializeNudgeSettings,
   serializePaceHistory,
+  type NudgeSettings,
   type PaceDay,
   type PaceMethod,
   type RollupRow,
@@ -19,6 +23,8 @@ export function dataDir(): string {
 
 export const historyPath = (dir = dataDir()) => join(dir, "history.jsonl");
 export const pacePath = (dir = dataDir()) => join(dir, "pace.jsonl");
+export const nudgePath = (dir = dataDir()) => join(dir, "nudge.json");
+const NUDGE_MAX_BYTES = 4096;
 
 export async function readHistory(dir = dataDir()): Promise<RollupRow[]> {
   try {
@@ -58,4 +64,20 @@ export async function readPaceHistory(dir = dataDir()): Promise<{ method: PaceMe
 
 export async function writePaceHistory(days: readonly PaceDay[], method: PaceMethod, dir = dataDir()): Promise<void> {
   await writeAtomic(pacePath(dir), serializePaceHistory(days, method));
+}
+
+/** Bedtime nudge settings (CCW-M4.6); the defaults (off) when there's no nudge.json yet. */
+export async function readNudgeSettings(dir = dataDir()): Promise<NudgeSettings> {
+  try {
+    // PS-R17: the real file is under 100 bytes; anything over 4 KB isn't ours, so don't read it.
+    if ((await stat(nudgePath(dir))).size > NUDGE_MAX_BYTES) return { ...DEFAULT_NUDGE_SETTINGS };
+    return parseNudgeSettings(await readFile(nudgePath(dir), "utf8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { ...DEFAULT_NUDGE_SETTINGS };
+    throw error;
+  }
+}
+
+export async function writeNudgeSettings(settings: NudgeSettings, dir = dataDir()): Promise<void> {
+  await writeAtomic(nudgePath(dir), serializeNudgeSettings(settings));
 }
