@@ -111,5 +111,31 @@
       "as_of": "2026-10-21",
       "note": "EPA's figure for fully charging one smartphone."
     }
+  },
+  "pace": {
+    "gap_minutes": {
+      "value": 20,
+      "low": 10,
+      "high": 30,
+      "unit": "minutes",
+      "label": "GUESS",
+      "source": "https://github.com/holroydchase-afk/ccwatts/blob/main/docs/spikes/2026-10-31-pace-spike.md",
+      "as_of": "2026-10-31",
+      "note": "Heuristic, not measured: an idle gap longer than this ends a work block. The low gap gives the low active time (more splits), the high gap the high."
+    },
+    "break_minutes": {
+      "value": 15,
+      "low": 15,
+      "high": 15,
+      "unit": "minutes",
+      "label": "GUESS",
+      "source": "https://github.com/holroydchase-afk/ccwatts/blob/main/docs/spikes/2026-10-31-pace-spike.md",
+      "as_of": "2026-10-31",
+      "note": "Heuristic, not measured: a pause of at least this long inside a block ends a stretch, for the longest-stretch count."
+    },
+    "late_night": {
+      "start_hour": 22,
+      "end_hour": 6
+    }
   }
 }

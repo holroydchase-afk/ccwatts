@@ -23,6 +23,16 @@ export interface Comparison {
   note: string;
 }
 
+/** Pace (work rhythm) thresholds. Kept apart from `params` so the energy model never reads them. */
+export interface PaceParams {
+  /** An idle gap longer than this ends a work block. */
+  gap_minutes: Param;
+  /** A pause of at least this ends a stretch inside a block. */
+  break_minutes: Param;
+  /** Local hours counted as late night: from start_hour up to end_hour, across midnight. */
+  late_night: { start_hour: number; end_hour: number };
+}
+
 export interface Params {
   version: string;
   as_of: string;
@@ -33,6 +43,7 @@ export interface Params {
   /** Tier name to substrings matched against the model id, plus the fallback tier. */
   tiers: Record<string, string[] | string>;
   comparisons: Record<string, Comparison>;
+  pace: PaceParams;
 }
 
 /** The parameter set shipped with this build (methodology/params.json). */
