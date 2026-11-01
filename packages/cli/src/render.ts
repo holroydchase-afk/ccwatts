@@ -352,7 +352,8 @@ export function pace(view: PaceView, params: Params, opts: RenderOptions = {}): 
   const earlier = view.weeks.slice(focus + 1);
   const prose = wrap(`${Lead}, ${rest}`);
   prose[0] = prose[0]!.replace(Lead, bold(Lead));
-  const partial = week.daysCounted < 7 ? " (partial)" : "";
+  // The newest week always holds today, which is still in progress, even on a Sunday (QA-R4).
+  const partial = focus === 0 ? " (partial)" : "";
   const lines = [`${APP_NAME} v${APP_VERSION} · method v${params.version} · pace, week of ${monthDay(week.start)}${partial}`, "", ...prose];
   if (soFar) lines.push(...wrap(soFar));
   if (agents) lines.push(...wrap(agents));
@@ -371,7 +372,7 @@ export function pace(view: PaceView, params: Params, opts: RenderOptions = {}): 
     }
   }
   const rows = view.weeks.map((w, i) => [
-    i === 0 && w.daysCounted < 7 ? `${monthDay(w.start)} (partial)` : monthDay(w.start),
+    i === 0 ? `${monthDay(w.start)} (partial)` : monthDay(w.start),
     paceHoursRange(w.activeHours),
     hm(w.lateNightHours * 60),
     hm(w.longestStretchMinutes),
