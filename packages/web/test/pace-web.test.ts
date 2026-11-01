@@ -240,7 +240,9 @@ describe("CCW-M4.5 lead and second line (UX-R40, UX-R41)", () => {
   });
 
   it("UX-R40 the partial week's bars are drawn at 0.5 fill opacity", () => {
-    expect(app).toMatch(/daysCounted < 7/);
+    // QA-R4: the newest week is the in-progress one, even on a Sunday when it already has 7 days.
+    expect(app).toMatch(/const partial = w === newestFirst\[0\]/);
+    expect(app).not.toMatch(/daysCounted < 7/);
     expect(app).toMatch(/fill-opacity="0\.5"/);
     expect(template).toMatch(/\.pace \.agent\.partial\{[^}]*fill-opacity:calc\(var\(--agent-op\) \* 0\.5\)/);
   });

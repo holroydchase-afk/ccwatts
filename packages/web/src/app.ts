@@ -272,7 +272,8 @@ function renderPace() {
 /** Never break inside "2h 51m" or "12 – 14" when the line wraps. */
 const keep = (text: string) => text.replace(/(\d+h) (\d+m)/g, "$1\u00a0$2").replace(/(\d) – (\d)/g, "$1\u00a0–\u00a0$2");
 
-const weekLabel = (w: PaceWeek, i: number) => (i === 0 && w.daysCounted < 7 ? `${monthDay(w.start)} (so far)` : monthDay(w.start));
+// The newest week always holds today, still in progress even on a Sunday (QA-R4).
+const weekLabel = (w: PaceWeek, i: number) => (i === 0 ? `${monthDay(w.start)} (so far)` : monthDay(w.start));
 
 /** Four weeks, oldest on the left: active hours (central, low–high whisker, the part past 10pm on top) beside agent-only hours. */
 function renderPaceChart(newestFirst: PaceWeek[]) {
@@ -310,7 +311,7 @@ function renderPaceChart(newestFirst: PaceWeek[]) {
     const a = w.activeHours;
     const late = Math.min(w.lateNightHours, a.central);
     // UX-R40: a week still in progress is drawn at half fill, so it doesn't read as a short week.
-    const partial = w.daysCounted < 7;
+    const partial = w === newestFirst[0]; // QA-R4: in progress until the week ends, not when it has 7 days
     const op = partial ? ` fill-opacity="0.5"` : "";
     const title = `Week of ${label}: about ${paceHours(a.central)} active hours (range ${paceHoursRange(a)}), ${hm(w.lateNightHours * 60)} past ${LATE}`;
     if (a.central > 0) {

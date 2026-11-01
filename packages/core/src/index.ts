@@ -5,6 +5,7 @@ export { parseSince, dropFuture, futureNote, FUTURE_SLACK_MS, type Window } from
 export { safeName, NAME_MAX } from "./sanitize.js";
 export * from "./types.js";
 export { projectRef } from "./project.js";
+export { countsOnlyLog } from "./counts-only.js";
 export { claudeCodeAdapter, MAX_TOKENS_PER_RESPONSE } from "./adapters/claude-code.js";
 // paceBlocks stays internal: it returns exact block times, which must never reach history or output (PS-R5).
 export { paceDays, defaultPaceOptions, type PaceOptions, type PaceDay, type PaceRange } from "./pace.js";
