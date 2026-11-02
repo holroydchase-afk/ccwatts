@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`breakdown > --by day 1`] = `
-"ccwatts v0.1.2 · method v0.1.0 · all time
+"ccwatts v0.2.0 · method v0.1.0 · all time
 
   day          tokens    Wh        range   share
   ----------   ------   ---   ----------   -----
@@ -11,7 +11,7 @@ exports[`breakdown > --by day 1`] = `
 `;
 
 exports[`breakdown > --by model 1`] = `
-"ccwatts v0.1.2 · method v0.1.0 · all time
+"ccwatts v0.2.0 · method v0.1.0 · all time
 
   model        tokens    Wh        range   share
   ----------   ------   ---   ----------   -----
@@ -21,7 +21,7 @@ exports[`breakdown > --by model 1`] = `
 `;
 
 exports[`breakdown > --by project 1`] = `
-"ccwatts v0.1.2 · method v0.1.0 · all time
+"ccwatts v0.2.0 · method v0.1.0 · all time
 
   project   tokens    Wh        range   share
   -------   ------   ---   ----------   -----
@@ -31,7 +31,7 @@ exports[`breakdown > --by project 1`] = `
 `;
 
 exports[`breakdown > --by type 1`] = `
-"ccwatts v0.1.2 · method v0.1.0 · all time
+"ccwatts v0.2.0 · method v0.1.0 · all time
 
   type          tokens      Wh          range   share
   -----------   ------   -----   ------------   -----
@@ -43,7 +43,7 @@ exports[`breakdown > --by type 1`] = `
 `;
 
 exports[`history > renders weeks, a trend and ranges 1`] = `
-"ccwatts v0.1.2 · method v0.1.0 · all time
+"ccwatts v0.2.0 · method v0.1.0 · all time
 
   week                  Wh        range   trend
   ------------------   ---   ----------   --------------------
@@ -57,7 +57,7 @@ exports[`history > renders weeks, a trend and ranges 1`] = `
 `;
 
 exports[`summary > matches the PLAN.md layout 1`] = `
-"ccwatts v0.1.2 · method v0.1.0 · all time
+"ccwatts v0.2.0 · method v0.1.0 · all time
 
   Electricity   9.1 Wh   (range 2.3 – 27.5)
   ≈ about half a phone charge
