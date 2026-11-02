@@ -153,6 +153,8 @@ TypeScript monorepo: `packages/core` holds the pure parsing, energy model and re
 
 If you clone it to contribute, `npm install` turns on a pre-commit hook (`.githooks/pre-commit`) that refuses a commit containing a home path, an email address, a token or key, or a `.env` file. `npm test` and CI run the same check (`scripts/check-private.ts`) over the whole repo.
 
+The repo's `.claude/settings.json` also has a Stop hook (`scripts/save-session-counts.ts`) for the maintainer's cloud sessions: after each turn it saves a counts-only copy of the session log to `/mnt/project-files/ccwatts-usage/`. On your machine that folder doesn't exist, so it writes nothing and makes no network calls; set `CCWATTS_SAVE_DIR` if you want the copies yourself.
+
 ## Status
 
 v0.1.2 on npm (includes the `ccwatts mcp` server), plus a Claude Code plugin from this repo that registers it. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.

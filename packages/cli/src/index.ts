@@ -25,7 +25,7 @@ import {
 import { openFile, writeDashboard } from "./dashboard.js";
 import { errorLine, reason } from "./errors.js";
 import { breakdown, history, historyCsv, json, jsonError, method, pace, paceCsv, paceJson, paceShareLine, statusLine, styles, summary } from "./render.js";
-import { runNudge, statusNudge } from "./nudge.js";
+import { nudgeNow, runNudge, statusNudge } from "./nudge.js";
 import { estimateWindow, loadUsage, rowsIn, type UsageOptions } from "./usage.js";
 
 /** Bold and dim only in a terminal: on for a TTY or FORCE_COLOR, off for NO_COLOR (https://no-color.org) and when piped. */
@@ -178,7 +178,8 @@ async function main(): Promise<void> {
   }
   if (command === "pace" && demo) {
     // Synthetic days ending today, so "this week" reads as this week. Never written anywhere.
-    const today = localToday();
+    // nudgeNow() is the real clock unless NODE_ENV=test pins it (PS-R16), so tests don't depend on the run date (QA-R6).
+    const today = localToday(nudgeNow());
     return void printPace(samplePaceDays(today), today, { json: values.json, csv: Boolean(values.export), sample: true, savedTo: null });
   }
   const paceMode = command === "pace" ? true : values["share-pace"] ? "count" : false;
