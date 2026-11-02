@@ -2040,7 +2040,7 @@ ${moon}` : energy2);
     return;
   }
   if (command === "pace" && demo) {
-    const today = localToday();
+    const today = localToday(nudgeNow());
     return void printPace(samplePaceDays(today), today, { json: values.json, csv: Boolean(values.export), sample: true, savedTo: null });
   }
   const paceMode = command === "pace" ? true : values["share-pace"] ? "count" : false;
