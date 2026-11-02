@@ -31,7 +31,7 @@ Developers run AI agents all day, and almost nobody can see what that costs in e
 
 | Playground on a laptop | Share card | Playground on a phone |
 |---|---|---|
-| ![Playground on a laptop, showing sample data](docs/images/playground-laptop.png) | ![Receipt card](docs/images/receipt-sample.png) | ![Playground on a phone, showing sample data](docs/images/playground-phone.png) |
+| ![Playground on a laptop with the demo bar, showing sample data](docs/images/playground-laptop.png) | ![Share card made from the sample data](docs/images/receipt-sample.png) | ![Playground on a phone in dark mode, showing sample data](docs/images/playground-phone.png) |
 
 In the playground, a **"What if?" slider** moves the least certain assumption, what a cache read costs (the method uses 10% of fresh input and tests 1% to 25%), and recomputes your number and its range live. It's a what-if only: the share card and LinkedIn post always use the published estimate.
 
@@ -84,6 +84,10 @@ npx ccwatts nudge --preview                      # one line from each persona, c
 npx ccwatts nudge on --persona grandma --after 23
 npx ccwatts nudge off
 ```
+
+![ccwatts nudge --preview in a terminal: one bedtime line from each of the eight personas, at a sample time of 1:14am](docs/images/cli-nudge.gif)
+
+The lines rotate, so each persona has more than one way of saying it.
 
 It's off by default. It only shows in the status line (set it up with `/ccwatts:statusline` in the plugin, or see [Status line](#status-line) below; `/ccwatts:nudge` turns the nudge on from the plugin), with no notifications or sounds, and it never blocks work. The setting lives in `~/.ccwatts/nudge.json`.
 
