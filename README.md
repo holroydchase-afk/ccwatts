@@ -157,7 +157,7 @@ The repo's `.claude/settings.json` also has a Stop hook (`scripts/save-session-c
 
 ## Status
 
-v0.1.2 on npm (includes the `ccwatts mcp` server), plus a Claude Code plugin from this repo that registers it. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
+v0.2.0 (Pace, the bedtime nudge and the `ccwatts mcp` server; on npm once the release workflow runs), plus a Claude Code plugin from this repo that registers it. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 

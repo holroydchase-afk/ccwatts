@@ -1,6 +1,6 @@
 {
   "name": "ccwatts",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Estimate the electricity your Claude Code usage consumes, as a sourced range, with /ccwatts and four MCP tools. Reads local logs only; nothing leaves your machine.",
   "author": { "name": "Chase Holroyd", "url": "https://chaseholroyd.com" },
   "homepage": "https://chaseholroyd.com/ccwatts/",
