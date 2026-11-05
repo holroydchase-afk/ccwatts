@@ -11,7 +11,7 @@ ccwatts (working name) is an open-source CLI that reads local Claude Code logs a
 ## Read before doing anything
 
 1. `ANCHORS.md`: why it exists, decisions, candidate anchors, open proposals. **It wins any conflict with PLAN.md.**
-2. `PLAN.md`: stack, repo layout, energy model, the three MVP surfaces, and the plan (milestones M1–M3, tasks like M1.2; the old S1–S10 labels map to them in HANDOFF.md).
+2. `PLAN.md`: stack, repo layout, energy model, the three MVP surfaces, and the plan (milestones M1–M3, tasks like M1.2; the old S1–S10 labels map to them in `docs/history/HANDOFF-archive.md`).
 3. `HANDOFF.md`: status header, what's done, in progress, the exact next step, blockers.
 4. `docs/product/DECISIONS.md` (index of Chase's calls), `docs/eng/LESSONS.md` (read before picking a version or calling a build ready), `docs/product/ACCOUNTS.md` (before anything that locks the name), `docs/product/MARKETING.md` (the only claims public copy may use).
 

@@ -165,7 +165,7 @@ The problem: Claude Code prunes old session logs. The default retention is belie
 
 ## Plan (no time limit per task; one PR each)
 
-IDs follow the studio standard (`docs/planning-ids.md` in holroydchase-afk/studio-agents): milestone `M1`, task `M1.1`, step `M1.1.1`. Across products this repo's code is `CCW` (for example `CCW-M2.1`). Status is todo, doing, blocked, done or dropped. The old S1–S10 labels map to these IDs in `HANDOFF.md`.
+IDs follow the studio standard (`docs/planning-ids.md` in holroydchase-afk/studio-agents): milestone `M1`, task `M1.1`, step `M1.1.1`. Across products this repo's code is `CCW` (for example `CCW-M2.1`). Status is todo, doing, blocked, done or dropped. The old S1–S10 labels map to these IDs in `docs/history/HANDOFF-archive.md`.
 
 ### M1: v1, recruiter-demoable (M1.1–M1.8 done Oct 21, 2026)
 
