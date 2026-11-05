@@ -90,10 +90,14 @@ const LEAD = String.raw`[Aa]bout ${H} active hours \(range ${H} – ${H}\)`;
 const LABELLED = String.raw`(?:Week of [A-Z][a-z]{2} \d{1,2}|This week so far): ${LEAD}`;
 const BANNED = /burnout|health|score|diagnos/i;
 
+// QA-R6: the demo's days are generated from today, so pin the clock with the test-only override
+// (honoured only under NODE_ENV=test, PS-R16). Thu Oct 29 2026: week of Oct 26 runs later than the 3 before.
+const PIN = { NODE_ENV: "test", CCWATTS_NOW: "2026-10-29T15:00:00Z" };
+
 describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
   it("PACE-C1 is labeled as sample data and leads with this week's active hours as a range", () => {
     const h = home();
-    const r = cli(["pace", "--demo"], { HOME: h, CCWATTS_HOME: join(h, ".ccwatts") });
+    const r = cli(["pace", "--demo"], { ...PIN, HOME: h, CCWATTS_HOME: join(h, ".ccwatts") });
     expect(r.code, r.err).toBe(0);
     const lines = r.out.split("\n");
     expect(lines[0]).toMatch(/Sample data \(synthetic\), not your usage\./);
@@ -103,7 +107,7 @@ describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
   });
 
   it("UX-R31 says days off, never rest days, and counts active days so far", () => {
-    const r = cli(["pace", "--demo"], { HOME: home(), NO_COLOR: "1" });
+    const r = cli(["pace", "--demo"], { ...PIN, HOME: home(), NO_COLOR: "1" });
     expect(r.out).not.toMatch(/rest day/i);
     expect(r.out).toMatch(/active \d of \d days\./); // UX-R40: the lead's label already says "so far"
     expect(r.out).not.toMatch(/days so far/);
@@ -111,29 +115,29 @@ describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
   });
 
   it("UX-R33 agent time reads as agent-only work", () => {
-    const r = cli(["pace", "--demo"], { HOME: home(), NO_COLOR: "1" });
+    const r = cli(["pace", "--demo"], { ...PIN, HOME: home(), NO_COLOR: "1" });
     expect(r.out).toMatch(new RegExp(`^  Agents worked another ${H} – ${H} hours on their own\\.$`, "m"));
     expect(r.out).not.toMatch(/agents alone|also ran/i);
   });
 
   it("UX-R32 compares with numbers from your own earlier weeks, not a judgment", () => {
-    const r = cli(["pace", "--demo"], { HOME: home(), NO_COLOR: "1" });
+    const r = cli(["pace", "--demo"], { ...PIN, HOME: home(), NO_COLOR: "1" });
     expect(r.out).toMatch(/^  Past 10pm: \d+h(?: \d+m)?, vs \S+(?: \S+)? to \S+(?: \S+)? in (?:your last 3 weeks|the 2 weeks before)\.$/m);
     expect(r.out).not.toMatch(/usual|more time|more active/i);
   });
 
   it("UX-R30 every line of pace output fits 80 columns", () => {
     const s = withLogs();
-    for (const r of [cli(["pace", "--demo"], { HOME: home(), NO_COLOR: "1" }), cli(["pace"], { ...s.env, NO_COLOR: "1" }), cli(["--help"], { HOME: home() })]) {
+    for (const r of [cli(["pace", "--demo"], { ...PIN, HOME: home(), NO_COLOR: "1" }), cli(["pace"], { ...s.env, NO_COLOR: "1" }), cli(["--help"], { HOME: home() })]) {
       expect(r.code, r.err).toBe(0);
       for (const line of r.out.split("\n")) expect(line.length, line).toBeLessThanOrEqual(80);
     }
   });
 
   it("PACE-C1 shows a four-week table", () => {
-    const r = cli(["pace", "--demo"], { HOME: home() });
+    const r = cli(["pace", "--demo"], { ...PIN, HOME: home() });
     const lines = r.out.split("\n");
-    const head = lines.findIndex((l) => /Week of/.test(l));
+    const head = lines.findIndex((l) => /^\s*Week of\s{2,}Active/.test(l)); // QA-R6: not the "Week of Oct 26:" lead
     expect(head, r.out).toBeGreaterThan(-1);
     expect(lines[head]).toMatch(/Active/);
     expect(lines[head]).toMatch(/Days off/);
@@ -145,7 +149,7 @@ describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
   });
 
   it("PACE-C1 / PACE-5 the footer names the gaps (10/20/30 min) and the method version", () => {
-    const r = cli(["pace", "--demo"], { HOME: home() });
+    const r = cli(["pace", "--demo"], { ...PIN, HOME: home() });
     expect(r.out).toMatch(/10\/20\/30 min/);
     expect(r.out).toMatch(new RegExp(`Method v?${VERSION.replace(/\./g, "\\.")}`, "i"));
     expect(r.out).toMatch(/not a measurement/i);
@@ -155,10 +159,24 @@ describe("CCW-M4.4 ccwatts pace --demo (PACE-C1)", () => {
 
   it("PACE-C1 writes nothing to CCWATTS_HOME and doesn't offer the saved-file line", () => {
     const h = home();
-    const r = cli(["pace", "--demo"], { HOME: h, CCWATTS_HOME: join(h, ".ccwatts") });
+    const r = cli(["pace", "--demo"], { ...PIN, HOME: h, CCWATTS_HOME: join(h, ".ccwatts") });
     expect(r.code).toBe(0);
     expect(existsSync(join(h, ".ccwatts"))).toBe(false);
     expect(r.out).not.toMatch(/Saved to/);
+  });
+
+  it("PACE-NOW-1 with NODE_ENV=test, CCWATTS_NOW sets the demo's today", () => {
+    const r = cli(["pace", "--demo"], { ...PIN, HOME: home(), NO_COLOR: "1" });
+    expect(r.code, r.err).toBe(0);
+    expect(r.out.split("\n")[2]).toMatch(/· pace, week of Oct 26 \(partial\)$/);
+  });
+
+  it("PACE-NOW-2 without NODE_ENV=test, CCWATTS_NOW is ignored (PS-R16)", () => {
+    const forced = cli(["pace", "--demo"], { HOME: home(), NO_COLOR: "1", CCWATTS_NOW: "2025-03-13T15:00:00Z" });
+    const real = cli(["pace", "--demo"], { HOME: home(), NO_COLOR: "1" });
+    expect(forced.code, forced.err).toBe(0);
+    expect(forced.out).not.toMatch(/Mar 10/);
+    expect(forced.out.split("\n")[2]).toBe(real.out.split("\n")[2]);
   });
 });
 

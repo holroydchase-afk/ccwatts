@@ -31,7 +31,7 @@ Developers run AI agents all day, and almost nobody can see what that costs in e
 
 | Playground on a laptop | Share card | Playground on a phone |
 |---|---|---|
-| ![Playground on a laptop, showing sample data](docs/images/playground-laptop.png) | ![Receipt card](docs/images/receipt-sample.png) | ![Playground on a phone, showing sample data](docs/images/playground-phone.png) |
+| ![Playground on a laptop with the demo bar, showing sample data](docs/images/playground-laptop.png) | ![Share card made from the sample data](docs/images/receipt-sample.png) | ![Playground on a phone in dark mode, showing sample data](docs/images/playground-phone.png) |
 
 In the playground, a **"What if?" slider** moves the least certain assumption, what a cache read costs (the method uses 10% of fresh input and tests 1% to 25%), and recomputes your number and its range live. It's a what-if only: the share card and LinkedIn post always use the published estimate.
 
@@ -84,6 +84,10 @@ npx ccwatts nudge --preview                      # one line from each persona, c
 npx ccwatts nudge on --persona grandma --after 23
 npx ccwatts nudge off
 ```
+
+![ccwatts nudge --preview in a terminal: one bedtime line from each of the eight personas, at a sample time of 1:14am](docs/images/cli-nudge.gif)
+
+The lines rotate, so each persona has more than one way of saying it.
 
 It's off by default. It only shows in the status line (set it up with `/ccwatts:statusline` in the plugin, or see [Status line](#status-line) below; `/ccwatts:nudge` turns the nudge on from the plugin), with no notifications or sounds, and it never blocks work. The setting lives in `~/.ccwatts/nudge.json`.
 
@@ -149,9 +153,11 @@ TypeScript monorepo: `packages/core` holds the pure parsing, energy model and re
 
 If you clone it to contribute, `npm install` turns on a pre-commit hook (`.githooks/pre-commit`) that refuses a commit containing a home path, an email address, a token or key, or a `.env` file. `npm test` and CI run the same check (`scripts/check-private.ts`) over the whole repo.
 
+The repo's `.claude/settings.json` also has a Stop hook (`scripts/save-session-counts.ts`) for the maintainer's cloud sessions: after each turn it saves a counts-only copy of the session log to `/mnt/project-files/ccwatts-usage/`. On your machine that folder doesn't exist, so it writes nothing and makes no network calls; set `CCWATTS_SAVE_DIR` if you want the copies yourself.
+
 ## Status
 
-v0.1.2 on npm (includes the `ccwatts mcp` server), plus a Claude Code plugin from this repo that registers it. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
+v0.2.0 (Pace, the bedtime nudge and the `ccwatts mcp` server; on npm once the release workflow runs), plus a Claude Code plugin from this repo that registers it. Next steps: run it on real logs from a few developers (friend beta) and get an outside check of the cache-read factor.
 
 ## License
 
