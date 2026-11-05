@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+Studio standard: follow holroydchase-afk/studio-agents docs/studio-standard.md; this file's hard rules win where they say more.
+
 Claude Code reads this file automatically at the start of every session in this repo.
 
 ## What this repo is
@@ -10,16 +12,19 @@ ccwatts (working name) is an open-source CLI that reads local Claude Code logs a
 
 1. `ANCHORS.md`: why it exists, decisions, candidate anchors, open proposals. **It wins any conflict with PLAN.md.**
 2. `PLAN.md`: stack, repo layout, energy model, the three MVP surfaces, and the plan (milestones M1–M3, tasks like M1.2; the old S1–S10 labels map to them in HANDOFF.md).
+3. `HANDOFF.md`: status header, what's done, in progress, the exact next step, blockers.
+4. `docs/product/DECISIONS.md` (index of Chase's calls), `docs/eng/LESSONS.md` (read before picking a version or calling a build ready), `docs/product/ACCOUNTS.md` (before anything that locks the name), `docs/product/MARKETING.md` (the only claims public copy may use).
 
 Note: ANCHORS and PLAN number their decisions independently. "ANCHORS D3" and "PLAN D3" are different decisions, so always cite the file.
 
 ## Who does what
 
-- **Chase** decides product questions, reviews, and ships. He works about an hour a night.
+- **Chase** decides product questions and gives the go for anything live. He works about an hour a night.
+- **Merging** follows the studio standard, section 5: Claude merges its own PRs on green, oldest first. A merge that changes something live (the Pages playground, an npm or plugin release) waits for Chase's go, with the open PRs listed in merge order.
 - **Claude Code** builds, with no limit on session length or scope (Chase, Oct 20). Long runs are fine; keep one PR per PLAN.md task (M1.2) so each can be reviewed and merged on its own.
 
 ## Studio agents (use them by default; don't wait to be asked)
-The main session is Chase's **chief of staff**: it doesn't do specialist work itself. It sends each piece of work to the agent below with the Agent tool, one lane at a time, and reports back briefly. At the start of every session or scheduled run it reads this table and `ls .claude/agents/`. The team comes from holroydchase-afk/studio-agents (re-sync with its `scripts/sync.sh`).
+The main session is Chase's **chief of staff**: it doesn't do specialist work itself. It sends each piece of work to the agent below with the Agent tool, one lane at a time, and reports back briefly. It introduces itself by role, warmly, the first time it talks to Chase in any thread, chat or scheduled-run report (for example "Hi Chase, I'm Charlie's chief of staff"), then leads with the answer. At the start of every session or scheduled run it reads this table and `ls .claude/agents/`. The team comes from holroydchase-afk/studio-agents (re-sync with its `scripts/sync.sh`).
 
 | Moment | Agent |
 |---|---|
@@ -31,12 +36,17 @@ The main session is Chase's **chief of staff**: it doesn't do specialist work it
 | A new dependency, vendor, paid service, schema change or CI/deploy workflow; picking a new project's stack | `architect` |
 | Before any publish or release (npm, plugin, store, deploy tag); after a version bump | `release-captain` |
 | README, landing or portfolio copy; a name or tagline; after a milestone, the "why I built it" story | `positioning` |
+| End of any turn where Chase made a call, a plan changed or a lesson was learned (runs in the background) | `story-keeper` |
 
-**One task, in order:** staff-pm scopes it, qa-tdd writes the failing test (red), engineer builds, qa-tdd runs all suites 3x (green), then ux-reviewer and privacy-security if users or the public will see it, positioning for any copy. Review findings get IDs (`<CODE>-R<n>`, P0 to P2) and each fix gets its own failing test first.
+**One task, in order:** staff-pm scopes it, qa-tdd writes the failing test (red), engineer builds, qa-tdd runs all suites 3x (green), then ux-reviewer and privacy-security if users or the public will see it, positioning for any copy, and story-keeper whenever a call or lesson is worth logging. Review findings get IDs (`<CODE>-R<n>`, P0 to P2) and each fix gets its own failing test first.
 
 **Relay qa-tdd's verdict as-is.** When qa-tdd hands back, paste its final ```qa block verbatim into your reply and the PR body, with every QA-R ID; never summarize a flaky or red verdict as green. In this repo the checker is `npx tsx scripts/check-qa-report.ts <report>` (the TypeScript port of studio-agents' `check-qa-report.mjs`).
 
 **The `Agents:` line (CI enforces it).** Every PR body has a line starting `Agents:` naming who ran and the verdict, for example `Agents: staff-pm scoped M1.2; qa-tdd red then green, 3x; ux-reviewer no P0/P1`. A PR that changes anything other than docs must name `qa-tdd` on that line, or say `qa-tdd skipped: <reason>`. `.github/workflows/agents-check.yml` fails the PR otherwise, and runs `scripts/check-agents.sh` so this table and `.claude/agents/` never drift. Bot PRs and titles with `[skip agents]` are exempt.
+
+**Every agent on that line must really have run.** A hook logs each Agent tool call to `.claude/agent-runs/<branch>.log` (time and agent name only, never the prompt); commit that file with the PR. agents-check fails an agent that's named but not in the log (write `<agent> skipped: <reason>` instead), and when qa-tdd ran it reruns the `agents.verify` command from `studio-checks.json` 3x on CI. Never edit the log by hand.
+
+**Repo notes for agents.** The synced agent files speak studio-wide (`node scripts/<tool>.mjs`). ccwatts-specific knowledge, including the TypeScript names of those tools, lives in `docs/eng/AGENT-NOTES.md`; pass the matching section to each agent. Never hand-edit `.claude/agents/` (a re-sync overwrites it).
 
 ## Hard rules (non-negotiable)
 
