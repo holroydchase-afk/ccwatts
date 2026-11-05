@@ -25,7 +25,7 @@ Each problem ends with where it happened, for example `tap targets under 44px: s
 
 ## Use it
 
-Runs with [`tsx`](https://tsx.is) (a dev dependency; works on Node 20). Needs Playwright with Chromium,
+Runs with [`tsx`](https://tsx.is) (a dev dependency; works on Node 22+). Needs Playwright with Chromium,
 which is not a dependency; its types come from the `playwright-core` dev dependency. If
 `import("playwright")` doesn't resolve, set `PLAYWRIGHT_MODULE` to its `index.mjs`, and `CHROMIUM_PATH`
 to a browser binary if needed.

@@ -36,7 +36,7 @@ The MVP has three surfaces:
 
 ## Stack and repo layout
 
-- TypeScript (strict), Node 20+, npm workspaces, Vitest, esbuild or tsup.
+- TypeScript (strict), Node 22+, npm workspaces, Vitest, esbuild or tsup.
 - Minimal dependencies. Each new runtime dependency needs a one-line reason in the PR.
 
 ```
