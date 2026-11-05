@@ -25,7 +25,7 @@ Then ask "how much energy did my sessions use this week?". Tools: `energy_summar
 - **Local only.** No network calls, no accounts, no telemetry. It reads token counts, never prompt or response text.
 - **Pace is opt-in.** `ccwatts pace` keeps `~/.ccwatts/pace.jsonl` (daily minutes and whole hours only), created only when you run it. Delete it any time. It is never shared unless you pass `receipt --share-pace`.
 - **Ranges, not false precision.** Every number shows a low–high range and the method version.
-- **No runtime dependencies.** Everything, including the MCP SDK, is bundled. Node 20+.
+- **No runtime dependencies.** Everything, including the MCP SDK, is bundled. Node 22+.
 
 Try it in your browser first, on sample data: https://chaseholroyd.com/ccwatts/
 

@@ -17,5 +17,5 @@ Rules:
 - After the output, add at most two short sentences: the main driver of the number if the output names one, and one useful next command (`/ccwatts history`, `/ccwatts --by project`, `/ccwatts receipt` to share, `/ccwatts --method` for sources).
 - The CLI reads token counts only. Never open or quote the user's log files yourself.
 - If the CLI says no logs were found, say where it looked and that `--path <dir>` points it elsewhere.
-- If `node` is missing, say that ccwatts needs Node.js 20 or newer.
+- If `node` is missing, say that ccwatts needs Node.js 22 or newer.
 - The plugin also adds the ccwatts MCP tools (`energy_summary`, `energy_by_project`, `energy_weekly`, `methodology`). For a question in words, like "how much energy did I use this week?", you can answer from those tools instead of running the CLI, with the same rules: keep the range and the method version.

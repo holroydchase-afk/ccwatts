@@ -93,7 +93,7 @@ It's off by default. It only shows in the status line (set it up with `/ccwatts:
 
 ## Try it
 
-ccwatts is on npm. With Node 20+:
+ccwatts is on npm. With Node 22+:
 
 ```
 npx ccwatts               # your last 30 days

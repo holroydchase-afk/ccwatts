@@ -37,7 +37,7 @@ jobs:
           echo "ok: $line"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       # qa-tdd's verify command (studio-checks.json agents.verify) needs the workspace installed and built.
       - run: npm ci && npm run build

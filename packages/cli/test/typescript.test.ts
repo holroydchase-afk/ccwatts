@@ -44,10 +44,27 @@ describe("TypeScript only (TS-1)", () => {
     expect(cfg.include).toEqual(expect.arrayContaining(["scripts", "tools", "packages/web/build.ts"]));
   });
 
-  it("TS-1e keeps Node 20: scripts run through tsx, not Node's type stripping", () => {
+  it("TS-1e NODE-22a: minimum is Node 22; scripts run through tsx, not Node's type stripping", () => {
     const pkg = JSON.parse(read("package.json"));
-    expect(pkg.engines.node).toBe(">=20");
+    expect(pkg.engines.node).toBe(">=22.12");
+    const cli = JSON.parse(read("packages/cli/package.json"));
+    expect(cli.engines.node).toBe(">=22");
     expect(pkg.devDependencies.tsx).toBeTruthy();
     expect(JSON.stringify(pkg.scripts)).not.toMatch(/strip-types/);
+  });
+
+  it("NODE-22b CI tests the minimum Node and the latest LTS", () => {
+    const ci = read(".github/workflows/ci.yml");
+    expect(ci).toMatch(/node: \[22, 26\]/);
+    expect(ci).not.toMatch(/node-version: 20\b/);
+    for (const wf of ["pages.yml", "agents-check.yml"]) {
+      expect(read(`.github/workflows/${wf}`)).not.toMatch(/node-version: 20\b/);
+    }
+  });
+
+  it("NODE-22c user-facing copy says Node 22+", () => {
+    for (const f of ["README.md", "packages/cli/README.md", "packages/web/src/template.html", "plugins/ccwatts/skills/ccwatts/SKILL.md"]) {
+      expect(read(f), f).not.toMatch(/Node(\.js)? 20/);
+    }
   });
 });

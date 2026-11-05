@@ -65,7 +65,7 @@ describe("CLI on npm (recruiter-ready RR-22)", () => {
     expect(html).toMatch(/id="cli-line"[^>]*>[^<]*Prefer the terminal\?/);
     expect(html).toContain('id="cli-cmd"');
     expect(html).toContain("`npx ${");
-    expect(html).toContain("Node 20+");
+    expect(html).toContain("Node 22+");
   });
 });
 
