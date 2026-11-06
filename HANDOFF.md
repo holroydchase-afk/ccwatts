@@ -15,6 +15,7 @@ blockers: []
 Live status for whoever picks up the build next (human or Claude). Updated every push. Keep this file under 8 KB: dated history goes to `docs/history/HANDOFF-archive.md` (Done log, old decisions, planning-ID map), and `git log` has the rest.
 
 ## Portfolio / public presence
+- 2026-11-06: portfolio ccwatts page redesigned in the new shared product-page template (holroydchase-afk.github.io PR #56, merged): range-bar check against Hausfather (METHODOLOGY.md numbers, token mix labeled illustrative), proof, try-it commands. The page says npm has the CLI (0.1.1 live) and that 0.2.0 waits on the Trusted Publisher; update it when 0.2.0 publishes (Product Studio).
 - 2026-11-05: the playground's try-it line now says "with Node 22+" (was 20+) once NODE-22 merges and Pages deploys. If the portfolio mentions a Node version, update it (Product Studio).
 - 2026-11-02: the playground footer will read v0.2.0 after this merges and Pages deploys. Portfolio page refresh (stale screenshot, add Pace + nudge) filed as holroydchase-afk.github.io intake #48.
 - **Portfolio page:** https://chaseholroyd.com/ccwatts.html (source: `tools/build.py` in `holroydchase-afk.github.io`). It links the playground and this repo.
