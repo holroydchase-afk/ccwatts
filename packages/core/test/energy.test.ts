@@ -100,6 +100,25 @@ describe("sanity checks", () => {
     expect(kwh).toBeGreaterThan(70);
     expect(kwh).toBeLessThan(330);
   });
+
+  // Other open-source Claude Code estimators, read 2026-11-10 (Opus factors, Wh per million tokens incl. their PUE).
+  // They disagree with ccwatts on output energy and on input vs output, but the two offset on agentic use.
+  // gwittebolle: gCO2e/M at 287 g/kWh; benjaminpope: Wh/M x PUE 1.14; tokentoll: Sonnet x1.7 x PUE 1.2; claude-cost: one rate.
+  it("a heavy agentic day lands inside ccwatts' range for every other open-source estimator we checked", () => {
+    const day = { input: 100_000, cacheWrite: 1_000_000, cacheRead: 20_000_000, output: 150_000 };
+    const others: Record<string, { input: number; cacheWrite: number; cacheRead: number; output: number }> = {
+      "github.com/gwittebolle/claude-carbon": { input: 78 / 0.287, cacheWrite: 78 / 0.287, cacheRead: 6.2 / 0.287, output: 1652 / 0.287 },
+      "github.com/benjaminpope/claude-code-carbon-dashboard": { input: 238 * 1.14, cacheWrite: 238 * 1.14, cacheRead: 238 * 0.08 * 1.14, output: 5050 * 1.14 },
+      "github.com/codeandqa/tokentoll": { input: 200 * 1.7 * 1.2, cacheWrite: 200 * 1.7 * 1.2, cacheRead: 20 * 1.7 * 1.2, output: 600 * 1.7 * 1.2 },
+      "github.com/tighe-ecc/claude-cost": { input: 250, cacheWrite: 250, cacheRead: 25, output: 500 },
+    };
+    const ours = energyForCounts(day, "opus", params);
+    for (const [tool, f] of Object.entries(others)) {
+      const wh = (day.input * f.input + day.cacheWrite * f.cacheWrite + day.cacheRead * f.cacheRead + day.output * f.output) / 1e6;
+      expect(wh, tool).toBeGreaterThan(ours.low);
+      expect(wh, tool).toBeLessThan(ours.high);
+    }
+  });
 });
 
 describe("comparisons", () => {

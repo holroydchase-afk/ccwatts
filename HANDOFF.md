@@ -3,9 +3,10 @@
 stage: beta
 goal: portfolio
 milestone: CCW-M4
-now: HANDOFF trimmed to a status page (history in docs/history/HANDOFF-archive.md); NODE-22 PR #89 open
-next: Chase merges the NODE-22 PR; then publish 0.2.0 once Chase re-adds the npm Trusted Publisher (issue #38); later majors TS 7, tsup 9, zod 4
+now: GITHUB HOLD (Chase, Nov 10): no push/PR/merge/CI until he says "lift GitHub hold". Drafted locally: method v0.1.1 (sources from 6 similar tools + 4 papers, no number changes) + CLAUDE.md greeting fix
+next: after the hold lifts, open the method v0.1.1 PR from the patch in /mnt/project-files/ccwatts-reviews/; then publish 0.2.0 once Chase re-adds the npm Trusted Publisher (issue #38); later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
+  - Say "lift GitHub hold" so the method v0.1.1 PR can open
   - Re-add the npm Trusted Publisher, then run Publish for 0.2.0 (issue #38)
   - Go on M4.7 Leverage (proposed in IDEAS.md)
   - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
@@ -26,12 +27,13 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-10: method v0.1.1 drafted (not pushed, GitHub hold). Compared ccwatts with 6 open-source Claude Code estimators and read Jegham et al. (2505.09598), Epoch AI, TokenPowerBench, GreenCache and EcoLogits. No parameter values changed: params notes cite Epoch and Jegham, Chase chose to keep ranges, not widen them (Nov 10). METHODOLOGY.md gains "How ccwatts compares" and a correlated-parameters open question, and a new sanity test keeps the other tools' heavy-agentic-day totals (0.85–1.6 kWh) inside our range. CLAUDE.md's example greeting said "Charlie's chief of staff"; now CCWatts. Survey: /mnt/project-files/ccwatts-reviews/2026-11-09-similar-tools-and-sources.md.
 - 2026-11-05: HANDOFF.md trimmed from about 59 KB to a short status page (Chase's efficiency review: every session and subagent read the whole file first). The full Done log, every old decision and the planning-ID map moved word for word to `docs/history/HANDOFF-archive.md`. CCWatts' Intake check and the disabled night shift scheduled tasks were deleted (Chase: "Cut"); intakes for this repo get picked up when Chase opens the project. Dev work stays on the most capable model (Chase, Nov 5).
 - 2026-11-05: NODE-22 (PR #89): minimum Node 22, vitest 5, @types/node 22.
 - 2026-11-02: 0.2.0 bumped (Pace, bedtime nudge, MCP server); publish waits on the npm Trusted Publisher (issue #38).
 
 ## In progress
-- PR #89 (NODE-22) open for Chase. This PR stacks on it.
+- Method v0.1.1 patch waiting for the GitHub hold to lift (Chase, Nov 10). One thread, a few pushes a day, no bursts when it lifts.
 
 ## Exact next step
 1. Chase merges #89, then this PR.
@@ -42,7 +44,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 ## Decisions to review (open only; settled ones are in the archive)
 - Pace on the public playground (Oct 31): ANCHORS D10 says no public pieces before the friend beta; Chase's recruiter-ready ask overrode it for the sample-only Pace section. Say "hold M4.5" to take it off the live page.
 - Proposed ANCHORS D15 (architect, Oct 31; not in ANCHORS until Chase says yes): Pace keeps daily counts in a separate local `~/.ccwatts/pace.jsonl`, counts only, never shared without `--share-pace`.
-- Pace method version (Oct 31): params.json gained a `pace` section but `version` stays 0.1.0 because energy numbers didn't change. Say "bump to 0.1.1" for the strict reading of METHODOLOGY's rule.
+
 - Repo settings only Chase can change: secret scanning and push protection on; an `npm-publish` environment (required reviewer: Chase, branch main), then `environment: npm-publish` in `publish.yml`.
 
 ## Blockers
