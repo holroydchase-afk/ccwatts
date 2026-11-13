@@ -3,10 +3,9 @@
 stage: beta
 goal: portfolio
 milestone: CCW-M4
-now: GITHUB HOLD (Chase, Nov 10): no push/PR/merge/CI until he says "lift GitHub hold". Drafted locally: method v0.1.1 (sources from 6 similar tools + 4 papers, no number changes) + CLAUDE.md greeting fix
-next: after the hold lifts, open the method v0.1.1 PR from the patch in /mnt/project-files/ccwatts-reviews/; then publish 0.2.0 once Chase re-adds the npm Trusted Publisher (issue #38); later majors TS 7, tsup 9, zod 4
+now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me"). Method v0.1.1 PR open; working the stable-demo plan (/mnt/project-files/ccwatts-reviews/2026-11-13-stable-demo-plan.md), a few pushes a day
+next: merge method v0.1.1 on green; then "Sample month" label on the playground; then check:live after each Pages deploy; then publish 0.2.0 once Chase re-adds the npm Trusted Publisher (issue #38); later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
-  - Say "lift GitHub hold" so the method v0.1.1 PR can open
   - Re-add the npm Trusted Publisher, then run Publish for 0.2.0 (issue #38)
   - Go on M4.7 Leverage (proposed in IDEAS.md)
   - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
@@ -33,7 +32,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - 2026-11-02: 0.2.0 bumped (Pace, bedtime nudge, MCP server); publish waits on the npm Trusted Publisher (issue #38).
 
 ## In progress
-- Method v0.1.1 patch waiting for the GitHub hold to lift (Chase, Nov 10). One thread, a few pushes a day, no bursts when it lifts.
+- Method v0.1.1 PR (this one). Hold lifted Nov 13; restart slowly: one thread, a few pushes a day, no bursts. Stable-demo plan (Nov 13): playground passes check:live; P0 is npm still on 0.1.1 while the page shows Pace and v0.2.0.
 
 ## Exact next step
 1. Chase merges #89, then this PR.
