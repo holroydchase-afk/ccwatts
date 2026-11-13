@@ -39,8 +39,8 @@ import {
 } from "@ccwatts/core";
 import type { PagePayload } from "./inject.js";
 import { noUsageStatus, readLogFiles, readPaste, type ReadResult } from "./read.js";
+import { windowLabel, type WindowId } from "./labels.js";
 
-type WindowId = "7d" | "30d" | "all";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const esc = (s: string) =>
@@ -70,8 +70,6 @@ const state: { rows: RollupRow[]; source: "history" | "sample" | "files"; window
  */
 const pace: { days: PaceDay[] | null; source: "history" | "sample" | "files"; off?: "skipped" | "unreadable" | undefined } =
   payload.mode === "dashboard" ? { days: payload.pace ?? null, source: "history", off: payload.paceOff } : { days: samplePace, source: "sample" };
-
-const WINDOW_LABEL: Record<WindowId, string> = { "7d": "last 7 days", "30d": "last 30 days", all: "all time" };
 
 /** Windows count back from today for real data, and from the last day in the file for sample data. */
 function windowRows(rows: RollupRow[], id: WindowId): RollupRow[] {
@@ -391,7 +389,7 @@ function render(share = true) {
   const published = estimateFor(rows);
   const e = whatIfActive() ? estimateFor(rows, viewParams) : published;
   lastEstimate = e;
-  const label = WINDOW_LABEL[state.window];
+  const label = windowLabel(state.window, state.source);
   const pill = $("source-pill");
   pill.textContent = state.source === "sample" ? "Sample data" : state.source === "history" ? "Your history" : "Your files";
   pill.classList.toggle("sample", state.source === "sample");
@@ -409,7 +407,8 @@ function render(share = true) {
   renderRank("by-project", e.byProject, projectName, e);
   renderExplain(e);
   renderWhatIf(e, published);
-  if (share) renderShare(published, label);
+  // The share card already says "(Sample data)" and keeps its own wording (core receipt.ts).
+  if (share) renderShare(published, windowLabel(state.window, "history"));
   renderPace();
 }
 
