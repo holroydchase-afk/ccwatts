@@ -47,7 +47,7 @@ describe("historyCsv", () => {
     const csv = historyCsv(rows, params).split("\n");
     expect(csv[0]).toBe("date,model,project,responses,input,cache_write,cache_read,output,wh_low,wh_central,wh_high,method_version");
     expect(csv).toHaveLength(rows.length + 1);
-    expect(csv[1]).toMatch(/,0\.1\.0$/);
+    expect(csv[1].endsWith(`,${params.version}`)).toBe(true);
   });
 });
 

@@ -41,7 +41,7 @@ energy (Wh) = Σ over token types:  tokens × output_wh_per_1k[tier] / 1000 × r
 
 In agentic sessions, most tokens are cache reads: context the model has already processed and reuses on the next turn. Zeke Hausfather found cache reads were about 96% of his tokens, and ccwatts' own M1.1 test log showed about 93%. Reading from the cache skips most of the work of processing those tokens again, so each one costs much less than fresh input. How much less is the single biggest uncertainty in the whole estimate. ccwatts uses 10% of fresh input (Hausfather's central case and Anthropic's price ratio), bounded at 1% and 25%.
 
-## Parameters (v0.1.0)
+## Parameters (v0.1.1)
 
 | Parameter | Value | Low | High | Label | Source |
 |---|---|---|---|---|---|
@@ -73,7 +73,7 @@ The playground's "What if?" slider lets you move `cache_read_vs_input` within it
 
 These run as unit tests (`packages/core/test/energy.test.ts`), so a parameter change that breaks them fails the build.
 
-| Check | Reference | ccwatts v0.1.0 |
+| Check | Reference | ccwatts v0.1.1 |
 |---|---|---|
 | Typical chat query (1k input, 400 output, Sonnet) | Microsoft Research median frontier query 0.34 Wh (IQR 0.18–0.67); Google median Gemini prompt 0.24 Wh | **0.42 Wh** (0.16–1.1) |
 | Heavy agentic day, about $17 of Opus API spend (20M cache reads, 1M cache writes, 0.1M input, 0.15M output) | [Simon Couch](https://simonpcouch.com/blog/2026-01-20-cc-impact/): a heavy day is about one dishwasher load or a fridge-day, roughly 1–2 kWh | **1.3 kWh** (0.2–4.5) |
@@ -83,7 +83,7 @@ These run as unit tests (`packages/core/test/energy.test.ts`), so a parameter ch
 
 ## Pace (work rhythm)
 
-Pace is not an energy number. It counts how long and when you worked, from the timestamps Claude Code already logs. It is covered by method version 0.1.0, and its thresholds live in the `pace` section of `params.json`, apart from the energy parameters.
+Pace is not an energy number. It counts how long and when you worked, from the timestamps Claude Code already logs. It is covered by the method version, and its thresholds live in the `pace` section of `params.json`, apart from the energy parameters.
 
 - **Blocks.** Log lines are sorted by time and split wherever the idle gap is longer than a threshold. The threshold is a **GUESS** (heuristic, not measured): 20 minutes, with 10 and 30 as the bounds. The 10-minute gap splits more often and gives the low active time; 30 gives the high. So active time is always a range.
 - **Human turns, from structure only.** A block counts as your active time only if it holds at least one turn you typed. That is decided from the line's structure, never its text: a `user` line that is not `isMeta`, `isSidechain` or `isCompactSummary`, has no `toolUseResult` and no `tool_result` block, and, when the line has an `origin`, has `origin.kind` = `"human"`. Details: `packages/core/README.md`.
@@ -93,6 +93,21 @@ Pace is not an energy number. It counts how long and when you worked, from the t
 
 **Caveat: older logs over-count.** Logs written before Claude Code added `origin` don't say who wrote a line. There, any plain text or image `user` line counts as human, so some automated lines (a hook or command output written as plain text) can make an agent block look like your time. Active time from those logs may run high.
 
+## How ccwatts compares
+
+We read six other open-source Claude Code estimators on Nov 10, 2026. They split into two camps:
+
+- **Output costs about the same as ours.** [tokentoll](https://github.com/codeandqa/tokentoll) and [claude-cost](https://github.com/tighe-ecc/claude-cost) use about 0.5–0.6 Wh per 1k Sonnet output tokens, with input at about 0.3–0.5× output. They lean on [Epoch AI](https://epoch.ai/gradient-updates/how-much-energy-does-chatgpt-use) and [Google, 2025](https://arxiv.org/abs/2508.15734).
+- **Output costs about 5× more, input much less.** [claude-carbon](https://github.com/gwittebolle/claude-carbon) and [claude-code-carbon-dashboard](https://github.com/benjaminpope/claude-code-carbon-dashboard) use about 2.5–2.9 Wh per 1k Sonnet output, with input at about 0.05× output. They lean on [Jegham et al., "How Hungry is AI?"](https://arxiv.org/abs/2505.09598), which estimates Claude 3.7 Sonnet at 0.95 Wh for a 100-input, 300-output prompt. That paper infers hardware from API latency and throughput rather than measuring it.
+
+All of them put cache reads at 0.08–0.1× input, inside our bounds.
+
+The two camps cancel out on agentic use. For the heavy agentic day above (Opus, 20M cache reads), the four tools whose factors are published land at 0.85–1.6 kWh. ccwatts says 1.3 kWh (0.2–4.5). A unit test keeps every one of them inside our range.
+
+**Where we differ:** for an output-heavy, chat-shaped Sonnet query (1k input, 400 output), the Jegham numbers give about 1.35 Wh. That's above our high of 1.1. Claude Code sessions are mostly cache reads, so this barely moves real totals. We don't simply raise the output bound, because these sources pair high output energy with low input energy. Widening each bound on its own would count that disagreement twice (see Open questions).
+
+[EcoLogits](https://ecologits.ai) models energy per output token from the [ML.ENERGY](https://ml.energy/leaderboard) measurements of open models on H100s. For Anthropic it lists a PUE of 1.09–1.14 (AWS and Google). Our comprehensive boundary already includes PUE. For closed models, EcoLogits has to guess the parameter count (it assumes about 2T parameters for Claude 3 Opus), so we cite its method and PUE, not its per-token values.
+
 ## Versioning
 
 - Any change to `params.json` bumps `version`, and every output prints the method version it used.
@@ -101,5 +116,6 @@ Pace is not an energy number. It counts how long and when you worked, from the t
 ## Open questions
 
 - **Cache-read factor.** This needs an outside check, for example from Hausfather or the EcoLogits maintainers. It drives most of an agentic total.
+- **Correlated parameters.** Sources that put output energy high put input energy low (see How ccwatts compares). The model treats `output_wh_per_1k` and `input_vs_output` as independent. Treating them as correlated would let the bounds cover both camps without widening agentic ranges.
 - **Tier scaling.** Opus and Haiku are scaled from Sonnet using price gaps. If Anthropic discloses model sizes or energy, those labels move toward DISCLOSED.
 - **Thinking tokens** are counted as output, which is how they're billed.
