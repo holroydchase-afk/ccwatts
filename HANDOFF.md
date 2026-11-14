@@ -4,7 +4,7 @@ stage: beta
 goal: portfolio
 milestone: CCW-M4
 now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me"). Method v0.1.1 PR open; working the stable-demo plan (/mnt/project-files/ccwatts-reviews/2026-11-13-stable-demo-plan.md), a few pushes a day
-next: merge DEMO-DATES ("a sample month" label) on green; then check:live after each Pages deploy; then publish 0.2.0 once Chase re-adds the npm Trusted Publisher (issue #38); later majors TS 7, tsup 9, zod 4
+next: merge LIVE-CHECK on green; then publish 0.2.0 once Chase re-adds the npm Trusted Publisher (issue #38); later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
   - Re-add the npm Trusted Publisher, then run Publish for 0.2.0 (issue #38)
   - Go on M4.7 Leverage (proposed in IDEAS.md)
@@ -27,6 +27,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-14: LIVE-CHECK: pages.yml gains a live-check job after deploy that runs `npm run check:live` (read-only, contents: read, retries ~11 min for the Pages cache). Architect review: ARCH-R1 (retry window) and R4 (no write permissions, tested) fixed; R2 (commit SHA in page) and R3 (pass page_url) left as P2.
 - 2026-11-13: GitHub hold lifted (Chase). Merged #91, #92 and method v0.1.1 (#93). DEMO-DATES: sample windows say "a sample month / week" instead of "last 30 / 7 days"; your own data keeps "last N days"; the share card keeps its wording.
 - 2026-11-10: method v0.1.1 drafted (not pushed, GitHub hold). Compared ccwatts with 6 open-source Claude Code estimators and read Jegham et al. (2505.09598), Epoch AI, TokenPowerBench, GreenCache and EcoLogits. No parameter values changed: params notes cite Epoch and Jegham, Chase chose to keep ranges, not widen them (Nov 10). METHODOLOGY.md gains "How ccwatts compares" and a correlated-parameters open question, and a new sanity test keeps the other tools' heavy-agentic-day totals (0.85–1.6 kWh) inside our range. CLAUDE.md's example greeting said "Charlie's chief of staff"; now CCWatts. Survey: /mnt/project-files/ccwatts-reviews/2026-11-09-similar-tools-and-sources.md.
 - 2026-11-05: HANDOFF.md trimmed from about 59 KB to a short status page (Chase's efficiency review: every session and subagent read the whole file first). The full Done log, every old decision and the planning-ID map moved word for word to `docs/history/HANDOFF-archive.md`. CCWatts' Intake check and the disabled night shift scheduled tasks were deleted (Chase: "Cut"); intakes for this repo get picked up when Chase opens the project. Dev work stays on the most capable model (Chase, Nov 5).

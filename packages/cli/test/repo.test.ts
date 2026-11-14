@@ -198,6 +198,20 @@ describe("workflows (RB-4)", () => {
     expect(build).toMatch(/if:.*github\.event\.workflow_run\.conclusion == 'success'/s);
   });
 
+  it("RB-4e LIVE-CHECK: pages.yml checks the live page after every deploy, read-only, with retries", () => {
+    const pages = read(`${wfDir}/pages.yml`);
+    const start = pages.search(/^ {2}live-check:/m);
+    expect(start).toBeGreaterThan(pages.search(/^ {2}deploy:/m));
+    const job = pages.slice(start);
+    expect(job).toMatch(/needs:\s*deploy/);
+    expect(job).toMatch(/permissions:\s*\n\s*contents:\s*read/);
+    expect(job).toMatch(/persist-credentials:\s*false/);
+    expect(job).toMatch(/npm run check:live/);
+    expect(job).not.toMatch(/pages:\s*write|id-token:\s*write/); // ARCH-R4
+    // ARCH-R1: Pages caches for up to 10 minutes (max-age=600), so retries span at least 11 minutes.
+    expect(job).toMatch(/for attempt in \$\(seq 1 12\)/);
+  });
+
   it("RB-4d publish.yml refuses non-main refs, drops credentials and the npm cache", () => {
     const pub = read(`${wfDir}/publish.yml`);
     expect(pub).toMatch(/refs\/heads\/main/);

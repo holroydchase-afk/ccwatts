@@ -52,3 +52,37 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # LIVE-CHECK: load the deployed page like a visitor (phone and laptop width) and fail the run if it
+  # isn't the real thing: scripts/check-live.ts. Reads only; the page request is the only traffic.
+  live-check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright (outside the repo, not a project dependency)
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" --no-save playwright@1.64.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps --only-shell chromium
+      - name: The live playground works
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/pw/node_modules/playwright/index.mjs
+        # Pages' CDN caches for up to 10 minutes (max-age=600), so retry for about 11 before failing.
+        run: |
+          for attempt in $(seq 1 12); do
+            npm run check:live && exit 0
+            [ "$attempt" -lt 12 ] || break
+            echo "Attempt $attempt failed; retrying in 60 s"
+            sleep 60
+          done
+          exit 1
