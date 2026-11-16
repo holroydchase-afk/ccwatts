@@ -51,6 +51,8 @@ Output tokens cost the most. Fresh input costs less, and **cache reads** (the ag
 
 ## Pace (opt-in)
 
+> **Not on npm yet.** Pace, the bedtime nudge and the MCP server are in v0.2.0. npm still has 0.1.1, so `npx ccwatts pace` and `npx ccwatts nudge` won't work until 0.2.0 publishes. Today they run through the [Claude Code plugin](#inside-claude-code) or a build from source (`npm install && npm run build && node packages/cli/dist/index.js pace --demo`).
+
 `ccwatts pace` shows your work rhythm from the same logs: active hours this week (a range), time past 10pm, longest stretch, days off, and how long agents worked on their own, with a four-week table. It compares you only with your own earlier weeks. It's a heuristic, not a measurement, and it never gives a verdict.
 
 ![Pace section on the playground: four weeks of active hours with low–high ranges, time past 10pm and agent-only hours, on synthetic sample data](docs/images/pace-playground.png)
@@ -65,6 +67,8 @@ npx ccwatts pace          # your own logs
 - It's never shared. `ccwatts receipt` adds one line with this week's active hours only if you pass `--share-pace`.
 
 ## Bedtime nudge (opt-in)
+
+> In v0.2.0, not on npm yet (see the note under [Pace](#pace-opt-in)).
 
 Working late? Turn on the bedtime nudge and, from 11pm to 5am, the status line gets a second line suggesting bed, in a persona you pick: serious (`coach`, `researcher`, `stoic`) or funny (`grandma`, `narrator`, `pirate`, `haiku`, `sergeant`), or `random` for a new one each hour.
 
@@ -93,7 +97,7 @@ It's off by default. It only shows in the status line (set it up with `/ccwatts:
 
 ## Try it
 
-ccwatts is on npm. With Node 22+:
+ccwatts 0.1.1 is on npm. With Node 22+:
 
 ```
 npx ccwatts               # your last 30 days
@@ -133,7 +137,7 @@ It runs on stdio: Claude Code starts it when it needs it and talks to it over a 
 
 Installing the plugin (above) also adds the MCP tools: the plugin registers the server itself, so there is nothing else to run. `/mcp` lists it as `plugin:ccwatts:ccwatts`, and you can switch it off there.
 
-Without the plugin:
+Without the plugin (needs 0.2.0 on npm; from a clone, use the line further down):
 
 ```
 claude mcp add ccwatts -- npx -y ccwatts mcp
