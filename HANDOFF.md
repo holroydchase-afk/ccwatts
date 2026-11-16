@@ -4,9 +4,8 @@ stage: beta
 goal: portfolio
 milestone: CCW-M4
 now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me"). Method v0.1.1 PR open; working the stable-demo plan (/mnt/project-files/ccwatts-reviews/2026-11-13-stable-demo-plan.md), a few pushes a day
-next: merge LIVE-CHECK on green; then publish 0.2.0 once Chase re-adds the npm Trusted Publisher (issue #38); later majors TS 7, tsup 9, zod 4
+next: 0.2.0 is on npm (Nov 16); post the v0.2.0 GitHub Release and send the portfolio INTAKE; later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
-  - Re-add the npm Trusted Publisher, then run Publish for 0.2.0 (issue #38)
   - Go on M4.7 Leverage (proposed in IDEAS.md)
   - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
 blockers: []
@@ -27,6 +26,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-16: PUBLISHED ccwatts@0.2.0 on npm with provenance (Chase re-added the Trusted Publisher and ran Publish; run 43902387836). Verified with an empty HOME: `npx ccwatts@0.2.0 --version`, `--demo`, `pace --demo`, `nudge --preview`, and `mcp --demo` over stdio (initialize, tools/list, energy_summary). README "not on npm yet" labels removed. Issue #38 can close. Next: GitHub Release v0.2.0 and the portfolio INTAKE (box C in the stable-demo plan).
 - 2026-11-16: INTERVIEW-READY (Chase has an interview today). Verified live: playground passes check:live and every control works (windows, What-if slider, Pace, Save PNG, own-file load), no console errors; `npx ccwatts@0.1.1 --demo` and `history --demo` work. Half-baked for a visitor: README showed `npx ccwatts pace`/`nudge`/`mcp`, which 0.1.1 doesn't have; README now labels them "in v0.2.0, not on npm yet" and points to the plugin or a source build. Repo About box is still empty (Chase, box B in the stable-demo plan).
 - 2026-11-14: LIVE-CHECK: pages.yml gains a live-check job after deploy that runs `npm run check:live` (read-only, contents: read, retries ~11 min for the Pages cache). Architect review: ARCH-R1 (retry window) and R4 (no write permissions, tested) fixed; R2 (commit SHA in page) and R3 (pass page_url) left as P2.
 - 2026-11-13: GitHub hold lifted (Chase). Merged #91, #92 and method v0.1.1 (#93). DEMO-DATES: sample windows say "a sample month / week" instead of "last 30 / 7 days"; your own data keeps "last N days"; the share card keeps its wording.
@@ -40,7 +40,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 
 ## Exact next step
 1. Chase merges #89, then this PR.
-2. Chase re-adds the npm Trusted Publisher (holroydchase-afk / ccwatts / publish.yml / environment blank), then Actions → Publish → Run workflow on main with confirm_version 0.2.0. After it publishes: Pages redeploys the footer, run `npm run check:live`, tick issue #38 (release-captain REL-1).
+2. Done Nov 16: 0.2.0 published. Remaining: GitHub Release v0.2.0, close issue #38, portfolio INTAKE (box C in the stable-demo plan).
 3. Then only on Chase's go: M4.7 Leverage (IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
 - The old, longer next-step list is in the archive; most of it shipped.
 
@@ -51,5 +51,4 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Repo settings only Chase can change: secret scanning and push protection on; an `npm-publish` environment (required reviewer: Chase, branch main), then `environment: npm-publish` in `publish.yml`.
 
 ## Blockers
-- npm Trusted Publisher (step 2 above).
 - M2.1 local run needs Chase to use Claude Code on his Mac (parser already verified on real cloud logs, Oct 23). Not blocking.
