@@ -1,0 +1,10 @@
+[
+  { "id": "claude-opus-4-6", "tier": "opus" },
+  { "id": "claude-sonnet-4-6", "tier": "sonnet" },
+  { "id": "claude-haiku-4-5", "tier": "haiku" },
+  { "id": "claude-opus-5-5", "tier": "opus" },
+  { "id": "claude-sonnet-5-5", "tier": "sonnet" },
+  { "id": "claude-haiku-5-5", "tier": "haiku" },
+  { "id": "claude-fable-5-2", "tier": "opus" },
+  { "id": "claude-mythos-5-2", "tier": "opus" }
+]

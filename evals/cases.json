@@ -1,0 +1,118 @@
+[
+  {
+    "id": "chat-query",
+    "title": "Typical chat query (1k input, 400 output, Sonnet)",
+    "tier": "sonnet",
+    "tokens": {
+      "input": 1000,
+      "cacheWrite": 0,
+      "cacheRead": 0,
+      "output": 400
+    },
+    "inputs": "assumed",
+    "gate": "central-in-reference",
+    "references": [
+      {
+        "name": "Microsoft Research: median frontier-model query, 0.31 Wh (IQR 0.16 to 0.60)",
+        "low": 0.16,
+        "high": 0.6,
+        "central": 0.31,
+        "source": "https://arxiv.org/abs/2509.20241",
+        "as_of": "2026-11-18"
+      }
+    ]
+  },
+  {
+    "id": "heavy-agentic-day",
+    "title": "Heavy agentic day, about $17 of Opus API spend (20M cache reads)",
+    "tier": "opus",
+    "tokens": {
+      "input": 100000,
+      "cacheWrite": 1000000,
+      "cacheRead": 20000000,
+      "output": 150000
+    },
+    "inputs": "assumed",
+    "gate": "central-in-reference",
+    "references": [
+      {
+        "name": "Simon Couch: a heavy day is about one dishwasher load or a fridge-day, roughly 1 to 2 kWh",
+        "low": 1000,
+        "high": 2000,
+        "source": "https://simonpcouch.com/blog/2026-01-20-cc-impact/",
+        "as_of": "2026-10-21"
+      }
+    ]
+  },
+  {
+    "id": "hausfather-8-weeks",
+    "title": "8 weeks of heavy use at about 3 kWh a day, 96% cache reads",
+    "tier": "opus",
+    "tokens": {
+      "input": 300000,
+      "cacheWrite": 2500000,
+      "cacheRead": 55000000,
+      "output": 400000
+    },
+    "days": 56,
+    "inputs": "assumed",
+    "gate": "central-in-reference",
+    "references": [
+      {
+        "name": "Hausfather: about 170 kWh (70 to 330) over 8 weeks",
+        "low": 70000,
+        "high": 330000,
+        "central": 170000,
+        "source": "https://www.theclimatebrink.com/p/the-real-energy-use-of-agentic-ai",
+        "as_of": "2026-10-21"
+      }
+    ]
+  },
+  {
+    "id": "cross-tool-heavy-day",
+    "title": "The same heavy agentic day, priced with four other open-source estimators' Opus factors",
+    "tier": "opus",
+    "tokens": {
+      "input": 100000,
+      "cacheWrite": 1000000,
+      "cacheRead": 20000000,
+      "output": 150000
+    },
+    "inputs": "assumed",
+    "gate": "reference-in-range",
+    "references": [
+      {
+        "name": "claude-carbon",
+        "low": 1594.4,
+        "high": 1594.4,
+        "central": 1594.4,
+        "source": "https://github.com/gwittebolle/claude-carbon",
+        "as_of": "2026-11-10"
+      },
+      {
+        "name": "claude-code-carbon-dashboard",
+        "low": 1596.1,
+        "high": 1596.1,
+        "central": 1596.1,
+        "source": "https://github.com/benjaminpope/claude-code-carbon-dashboard",
+        "as_of": "2026-11-10"
+      },
+      {
+        "name": "tokentoll",
+        "low": 1448.4,
+        "high": 1448.4,
+        "central": 1448.4,
+        "source": "https://github.com/codeandqa/tokentoll",
+        "as_of": "2026-11-10"
+      },
+      {
+        "name": "claude-cost",
+        "low": 850,
+        "high": 850,
+        "central": 850,
+        "source": "https://github.com/tighe-ecc/claude-cost",
+        "as_of": "2026-11-10"
+      }
+    ]
+  }
+]

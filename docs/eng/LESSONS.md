@@ -2,6 +2,11 @@
 
 Post mortems, newest first: what happened, why, and the rule or guard it added. Write one after any lost evening, broken demo or wrong call. Read this before picking a version or calling a build ready.
 
+## 2026-11-18: the newest models were priced at half
+**What:** model ids containing "fable" or "mythos" matched no tier and fell back to Sonnet, which is half of Opus. The summary showed a note, but the `--by` table did not. A portfolio review found it, not a test.
+**Why:** the tiers were a substring list written when three model families existed, and nothing listed the model ids we expect to see.
+**Guard:** `evals/models.json` lists every current model id with its tier, and the scorecard test fails on a fallback. When Anthropic ships a model, add its id there.
+
 ## 2026-11-01: a studio re-sync rewrites our TypeScript tool names
 **What:** `sync.sh` put `node scripts/ux-rules.mjs` back into `ux-reviewer.md`, and `install-rules.sh` re-added `scripts/check-logs.mjs`, which the all-TypeScript rule (TS-1a) rejects.
 **Why:** studio-agents still ships `.mjs` tools, and ccwatts had hand-edited its agent files.

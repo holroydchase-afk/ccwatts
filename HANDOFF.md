@@ -3,9 +3,10 @@
 stage: beta
 goal: portfolio
 milestone: CCW-M4
-now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me"). Method v0.1.1 PR open; working the stable-demo plan (/mnt/project-files/ccwatts-reviews/2026-11-13-stable-demo-plan.md), a few pushes a day
-next: 0.2.0 is on npm (Nov 16); post the v0.2.0 GitHub Release and send the portfolio INTAKE; later majors TS 7, tsup 9, zod 4
+now: Portfolio review done Nov 18 (the review doc lives in the project, not the repo). EVAL PR open: eval scorecard (docs/EVALS.md), method v0.1.2
+next: design doc (docs/DESIGN.md), then README refocus and release hygiene (tags, CHANGELOG, GitHub Release v0.2.0, close #38), then friend beta kit
 waiting_on_chase:
+  - Go to merge the EVAL PR (method v0.1.2 changes the playground footer)
   - Go on M4.7 Leverage (proposed in IDEAS.md)
   - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
 blockers: []
@@ -14,10 +15,8 @@ blockers: []
 Live status for whoever picks up the build next (human or Claude). Updated every push. Keep this file under 8 KB: dated history goes to `docs/history/HANDOFF-archive.md` (Done log, old decisions, planning-ID map), and `git log` has the rest.
 
 ## Portfolio / public presence
+- 2026-11-18: after the EVAL PR merges and Pages deploys, the playground footer reads method v0.1.2. The portfolio page's "Status" line is stale (it says 0.2.0 waits on npm); an INTAKE was written for Product Studio.
 - 2026-11-13: the playground hero now reads "Claude Code electricity · a sample month" (was "last 30 days" over fixed Sep–Oct sample dates, which looked stale). Footer reads method v0.1.1 after PR #93. Portfolio copy unaffected.
-- 2026-11-06: portfolio ccwatts page redesigned in the new shared product-page template (holroydchase-afk.github.io PR #56, merged): range-bar check against Hausfather (METHODOLOGY.md numbers, token mix labeled illustrative), proof, try-it commands. The page says npm has the CLI (0.1.1 live) and that 0.2.0 waits on the Trusted Publisher; update it when 0.2.0 publishes (Product Studio).
-- 2026-11-05: the playground's try-it line now says "with Node 22+" (was 20+) once NODE-22 merges and Pages deploys. If the portfolio mentions a Node version, update it (Product Studio).
-- 2026-11-02: the playground footer will read v0.2.0 after this merges and Pages deploys. Portfolio page refresh (stale screenshot, add Pace + nudge) filed as holroydchase-afk.github.io intake #48.
 - **Portfolio page:** https://chaseholroyd.com/ccwatts.html (source: `tools/build.py` in `holroydchase-afk.github.io`). It links the playground and this repo.
 - **Live playground:** https://chaseholroyd.com/ccwatts/, deployed from this repo's `main` by `.github/workflows/pages.yml`. Deploys have succeeded since Oct 21, so CCW-M1.9 is live.
 - **Demo data:** the playground opens on labeled synthetic sample data. Visitors can pick their own `.jsonl` files, which are parsed in the browser and never uploaded.
@@ -26,25 +25,24 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-18: EVAL (built, PR open). `npm run evals` writes `docs/EVALS.md` from `evals/models.json` and `evals/cases.json`: model coverage (8 ids), 4 reference checks with assumed inputs labeled, and a sensitivity table. `npx tsx scripts/run-evals.ts --check` and `packages/core/test/evals.test.ts` fail on a stale file or a failed check. It found two things: Fable and Mythos ids were priced as Sonnet (half of Opus), now the Opus tier as a floor (method v0.1.2, no parameter values changed); and Opus output energy drives about 37% of the heavy-day log range, cache reads about 24%. `--by` tables now print the unknown-model note. METHODOLOGY, README, LESSONS, MARKETING and STORY updated.
 - 2026-11-16: PUBLISHED ccwatts@0.2.0 on npm with provenance (Chase re-added the Trusted Publisher and ran Publish; run 43902387836). Verified with an empty HOME: `npx ccwatts@0.2.0 --version`, `--demo`, `pace --demo`, `nudge --preview`, and `mcp --demo` over stdio (initialize, tools/list, energy_summary). README "not on npm yet" labels removed. Issue #38 can close. Next: GitHub Release v0.2.0 and the portfolio INTAKE (box C in the stable-demo plan).
 - 2026-11-16: INTERVIEW-READY (Chase has an interview today). Verified live: playground passes check:live and every control works (windows, What-if slider, Pace, Save PNG, own-file load), no console errors; `npx ccwatts@0.1.1 --demo` and `history --demo` work. Half-baked for a visitor: README showed `npx ccwatts pace`/`nudge`/`mcp`, which 0.1.1 doesn't have; README now labels them "in v0.2.0, not on npm yet" and points to the plugin or a source build. Repo About box is still empty (Chase, box B in the stable-demo plan).
-- 2026-11-14: LIVE-CHECK: pages.yml gains a live-check job after deploy that runs `npm run check:live` (read-only, contents: read, retries ~11 min for the Pages cache). Architect review: ARCH-R1 (retry window) and R4 (no write permissions, tested) fixed; R2 (commit SHA in page) and R3 (pass page_url) left as P2.
-- 2026-11-13: GitHub hold lifted (Chase). Merged #91, #92 and method v0.1.1 (#93). DEMO-DATES: sample windows say "a sample month / week" instead of "last 30 / 7 days"; your own data keeps "last N days"; the share card keeps its wording.
-- 2026-11-10: method v0.1.1 drafted (not pushed, GitHub hold). Compared ccwatts with 6 open-source Claude Code estimators and read Jegham et al. (2505.09598), Epoch AI, TokenPowerBench, GreenCache and EcoLogits. No parameter values changed: params notes cite Epoch and Jegham, Chase chose to keep ranges, not widen them (Nov 10). METHODOLOGY.md gains "How ccwatts compares" and a correlated-parameters open question, and a new sanity test keeps the other tools' heavy-agentic-day totals (0.85–1.6 kWh) inside our range. CLAUDE.md's example greeting said "Charlie's chief of staff"; now CCWatts. Survey: /mnt/project-files/ccwatts-reviews/2026-11-09-similar-tools-and-sources.md.
-- 2026-11-05: HANDOFF.md trimmed from about 59 KB to a short status page (Chase's efficiency review: every session and subagent read the whole file first). The full Done log, every old decision and the planning-ID map moved word for word to `docs/history/HANDOFF-archive.md`. CCWatts' Intake check and the disabled night shift scheduled tasks were deleted (Chase: "Cut"); intakes for this repo get picked up when Chase opens the project. Dev work stays on the most capable model (Chase, Nov 5).
-- 2026-11-05: NODE-22 (PR #89): minimum Node 22, vitest 5, @types/node 22.
-- 2026-11-02: 0.2.0 bumped (Pace, bedtime nudge, MCP server); publish waits on the npm Trusted Publisher (issue #38).
 
 ## In progress
-- Method v0.1.1 PR (this one). Hold lifted Nov 13; restart slowly: one thread, a few pushes a day, no bursts. Stable-demo plan (Nov 13): playground passes check:live; P0 is npm still on 0.1.1 while the page shows Pace and v0.2.0.
+- EVAL PR (this one): waits on Chase's go, because method v0.1.2 changes the playground footer.
+- Pace of work (since the hold lifted Nov 13): one thread, a few pushes a day, no bursts.
 
 ## Exact next step
-1. Chase merges #89, then this PR.
-2. Done Nov 16: 0.2.0 published. Remaining: GitHub Release v0.2.0, close issue #38, portfolio INTAKE (box C in the stable-demo plan).
-3. Then only on Chase's go: M4.7 Leverage (IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
-- The old, longer next-step list is in the archive; most of it shipped.
+1. Chase gives the go; merge the EVAL PR; check the playground footer reads method v0.1.2 (`npm run check:live`).
+2. Design doc (`docs/DESIGN.md`).
+3. README refocus and release hygiene: tags, CHANGELOG, GitHub Release v0.2.0, close issue #38.
+4. Friend beta kit. Only on Chase's go: M4.7 Leverage (IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
 
 ## Decisions to review (open only; settled ones are in the archive)
+- Microsoft Research figure (Nov 18): the paper's abstract now reads 0.31 Wh (IQR 0.16–0.60); README, PLAN, MARKETING and one params note still say 0.34 (0.18–0.67), recorded Oct 21 with no URL. The scorecard and METHODOLOGY use the current figure and link. Say "update 0.34" to change the rest (the portfolio page too, via INTAKE).
+- Fable and Mythos priced at the Opus tier as a floor (Nov 18; Claude's default, per PLAN "nearest tier"). Say "own tier" to give them their own sourced parameter.
+- The playground's What-if copy calls cache-read cost "the least certain assumption"; the scorecard shows Opus output energy drives more of the range. Copy left unchanged pending Chase.
 - Pace on the public playground (Oct 31): ANCHORS D10 says no public pieces before the friend beta; Chase's recruiter-ready ask overrode it for the sample-only Pace section. Say "hold M4.5" to take it off the live page.
 - Proposed ANCHORS D15 (architect, Oct 31; not in ANCHORS until Chase says yes): Pace keeps daily counts in a separate local `~/.ccwatts/pace.jsonl`, counts only, never shared without `--share-pace`.
 

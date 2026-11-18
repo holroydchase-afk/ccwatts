@@ -19,6 +19,7 @@
     "check:page": "tsx tools/showcase-check/cli.ts",
     "check:live": "tsx scripts/check-live.ts",
     "check:release": "tsx scripts/check-release.ts",
+    "evals": "tsx scripts/run-evals.ts",
     "start": "npm run build && node packages/cli/dist/index.js",
     "prepare": "[ -d .git ] && git config core.hooksPath .githooks || true"
   },

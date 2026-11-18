@@ -1,6 +1,6 @@
 # Methodology
 
-**Method version 0.1.0** · parameters in [`methodology/params.json`](methodology/params.json) · last reviewed Oct 21, 2026
+**Method version 0.1.2** · parameters in [`methodology/params.json`](methodology/params.json) · last reviewed Nov 18, 2026
 
 This page explains how ccwatts turns Claude Code token counts into an electricity estimate, and why the answer is always a range. The methodology and parameters are licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): reuse them freely, with credit.
 
@@ -35,13 +35,13 @@ energy (Wh) = Σ over token types:  tokens × output_wh_per_1k[tier] / 1000 × r
 | cache write | output × `input_vs_output` × `cache_write_vs_input` |
 | cache read | output × `input_vs_output` × `cache_read_vs_input` |
 
-**Model tiers.** A model id containing "opus" uses the Opus tier, and the same goes for "sonnet" and "haiku". Anything else falls back to the Sonnet tier, and the output shows a warning.
+**Model tiers.** A model id containing "opus" uses the Opus tier, and the same goes for "sonnet" and "haiku". An id containing "fable" or "mythos" also uses the Opus tier. Those models sit above Opus in Anthropic's lineup and have no public size or energy figures, so Opus is the nearest tier and the largest one ccwatts has. Treat that as a floor, not a measurement. Anything else falls back to the Sonnet tier, and the output shows a warning.
 
 ### Why cache reads get their own parameter
 
-In agentic sessions, most tokens are cache reads: context the model has already processed and reuses on the next turn. Zeke Hausfather found cache reads were about 96% of his tokens, and ccwatts' own M1.1 test log showed about 93%. Reading from the cache skips most of the work of processing those tokens again, so each one costs much less than fresh input. How much less is the single biggest uncertainty in the whole estimate. ccwatts uses 10% of fresh input (Hausfather's central case and Anthropic's price ratio), bounded at 1% and 25%.
+In agentic sessions, most tokens are cache reads: context the model has already processed and reuses on the next turn. Zeke Hausfather found cache reads were about 96% of his tokens, and ccwatts' own M1.1 test log showed about 93%. Reading from the cache skips most of the work of processing those tokens again, so each one costs much less than fresh input. How much less is the least certain single number here: the cache-read factor has the widest bounds of any parameter (1% to 25%). ccwatts uses 10% of fresh input (Hausfather's central case and Anthropic's price ratio). On a heavy agentic day, though, the Opus output energy moves the total range more (about 37% of the log range versus about 24% for cache reads), because every token type scales with it. See [docs/EVALS.md](docs/EVALS.md).
 
-## Parameters (v0.1.1)
+## Parameters (v0.1.2)
 
 | Parameter | Value | Low | High | Label | Source |
 |---|---|---|---|---|---|
@@ -71,11 +71,11 @@ The playground's "What if?" slider lets you move `cache_read_vs_input` within it
 
 ## Sanity checks
 
-These run as unit tests (`packages/core/test/energy.test.ts`), so a parameter change that breaks them fails the build.
+These run as unit tests (`packages/core/test/energy.test.ts`), so a parameter change that breaks them fails the build. The generated scorecard, [docs/EVALS.md](docs/EVALS.md), shows each check with its reference, which inputs were assumed, and which parameter drives the range.
 
-| Check | Reference | ccwatts v0.1.1 |
+| Check | Reference | ccwatts v0.1.2 |
 |---|---|---|
-| Typical chat query (1k input, 400 output, Sonnet) | Microsoft Research median frontier query 0.34 Wh (IQR 0.18–0.67); Google median Gemini prompt 0.24 Wh | **0.42 Wh** (0.16–1.1) |
+| Typical chat query (1k input, 400 output, Sonnet) | [Microsoft Research](https://arxiv.org/abs/2509.20241) median frontier query 0.31 Wh (IQR 0.16–0.60) as its abstract read on Nov 18, 2026 (ccwatts recorded 0.34, IQR 0.18–0.67, on Oct 21); Google median Gemini prompt 0.24 Wh | **0.42 Wh** (0.16–1.1) |
 | Heavy agentic day, about $17 of Opus API spend (20M cache reads, 1M cache writes, 0.1M input, 0.15M output) | [Simon Couch](https://simonpcouch.com/blog/2026-01-20-cc-impact/): a heavy day is about one dishwasher load or a fridge-day, roughly 1–2 kWh | **1.3 kWh** (0.2–4.5) |
 | 8 weeks of heavy use at about 3 kWh/day, 96% cache reads (illustrative token mix; Hausfather's exact counts aren't published) | Hausfather: about 170 kWh (70–330) | **194 kWh** (32–678) |
 

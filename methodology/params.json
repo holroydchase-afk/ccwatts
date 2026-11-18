@@ -1,6 +1,6 @@
 {
-  "version": "0.1.1",
-  "as_of": "2026-11-10",
+  "version": "0.1.2",
+  "as_of": "2026-11-18",
   "license": "CC BY 4.0",
   "boundary": "comprehensive: accelerators, host CPU and memory, idle capacity, and data-center overhead (PUE)",
   "interval": "low and high are each parameter's plausible bounds, treated as a ~90% interval",
@@ -13,7 +13,7 @@
       "label": "MODELED",
       "source": "https://www.theclimatebrink.com/p/the-real-energy-use-of-agentic-ai",
       "as_of": "2026-10-21",
-      "note": "Largest tier. Scaled up from the Sonnet value; Anthropic does not disclose model size or energy. Bounds cover published per-token estimates for frontier models."
+      "note": "Largest tier. Scaled up from the Sonnet value; Anthropic does not disclose model size or energy. Bounds cover published per-token estimates for frontier models. Fable and Mythos models (a class above Opus in Anthropic's lineup, no public size or energy figures) are priced at this tier, the largest ccwatts has; treat it as a floor, not a measurement."
     },
     "output_wh_per_1k.sonnet": {
       "value": 0.6,
@@ -68,7 +68,9 @@
   },
   "tiers": {
     "opus": [
-      "opus"
+      "opus",
+      "fable",
+      "mythos"
     ],
     "sonnet": [
       "sonnet"
