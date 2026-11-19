@@ -10,6 +10,8 @@ Project facts the studio agents need, kept here so a `sync.sh` never wipes them.
 ## qa-tdd
 - Suites: `npm test` (builds the web page first, then vitest), `npm run typecheck`, `npm run check:browser`, `npm run check:release`, `npm run check:kit`. `studio-checks.json` `agents.verify` is `npm test`, rerun 3x on CI.
 - QA report checker: `npx tsx scripts/check-qa-report.ts <report>`.
+- `npm run coverage` measures coverage (v8, text report over `packages/*/src`).
+- CLI `index.ts`, `mcp.ts`, `nudge.ts` and web `app.ts` read 0% because their tests run the built binary in a subprocess or a real browser, so read the `packages/core` numbers as the meaningful ones.
 
 ## ux-reviewer
 - Rules check: `npx tsx scripts/ux-rules.ts <page> [--click SEL]`. Screenshots: `npx tsx scripts/ux-shots.ts <page> --no-network` (ccwatts promises zero requests).
