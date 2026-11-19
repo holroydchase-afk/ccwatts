@@ -26,6 +26,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-19: COVERAGE (Chase asked, picked tests + command): `npm run coverage` (new devDependency @vitest/coverage-v8, same version as vitest; local only, not in CI). Core/src went 98.4% to 99.8% lines, 89.1% to 93.5% branches, with 23 characterization tests in packages/core/test/coverage-gaps.test.ts (COV-1 to COV-6: dropFuture, since, projectRef roots, adapter edges, mid-hour offset change in Pace, empty receipt). No product code changed. CLI index/mcp/nudge and web app.ts read 0% because their tests run the built binary or a real browser; caveat in docs/eng/AGENT-NOTES.md. Open: QA-R1 (P2), projectRef("C:\\") is named "C:" while "/" is "(root)".
 - 2026-11-16: PUBLISHED ccwatts@0.2.0 on npm with provenance (Chase re-added the Trusted Publisher and ran Publish; run 43902387836). Verified with an empty HOME: `npx ccwatts@0.2.0 --version`, `--demo`, `pace --demo`, `nudge --preview`, and `mcp --demo` over stdio (initialize, tools/list, energy_summary). README "not on npm yet" labels removed. Issue #38 can close. Next: GitHub Release v0.2.0 and the portfolio INTAKE (box C in the stable-demo plan).
 - 2026-11-16: INTERVIEW-READY (Chase has an interview today). Verified live: playground passes check:live and every control works (windows, What-if slider, Pace, Save PNG, own-file load), no console errors; `npx ccwatts@0.1.1 --demo` and `history --demo` work. Half-baked for a visitor: README showed `npx ccwatts pace`/`nudge`/`mcp`, which 0.1.1 doesn't have; README now labels them "in v0.2.0, not on npm yet" and points to the plugin or a source build. Repo About box is still empty (Chase, box B in the stable-demo plan).
 - 2026-11-14: LIVE-CHECK: pages.yml gains a live-check job after deploy that runs `npm run check:live` (read-only, contents: read, retries ~11 min for the Pages cache). Architect review: ARCH-R1 (retry window) and R4 (no write permissions, tested) fixed; R2 (commit SHA in page) and R3 (pass page_url) left as P2.
@@ -47,6 +48,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 ## Decisions to review (open only; settled ones are in the archive)
 - Pace on the public playground (Oct 31): ANCHORS D10 says no public pieces before the friend beta; Chase's recruiter-ready ask overrode it for the sample-only Pace section. Say "hold M4.5" to take it off the live page.
 - Proposed ANCHORS D15 (architect, Oct 31; not in ANCHORS until Chase says yes): Pace keeps daily counts in a separate local `~/.ccwatts/pace.jsonl`, counts only, never shared without `--share-pace`.
+- QA-R1 (P2, Nov 19): should a Windows drive root like `C:\` show as "(root)" the way `/` does? It shows "C:" today (no path leak). Say "root for Windows too" to change it.
 
 - Repo settings only Chase can change: secret scanning and push protection on; an `npm-publish` environment (required reviewer: Chase, branch main), then `environment: npm-publish` in `publish.yml`.
 
