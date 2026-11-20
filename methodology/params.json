@@ -137,5 +137,16 @@
       "start_hour": 22,
       "end_hour": 6
     }
+  },
+  "token_mix": {
+    "typical_claude_code": {
+      "label": "MEASURED",
+      "source": "Counts-only copies of 6 of the maintainer's Claude Code sessions, Oct-Nov 2026; light and heavy are the lowest and highest observed shares.",
+      "as_of": "2026-11-19",
+      "note": "Shares of a token total, for estimating from a total when the split is unknown. Observed: cache read 89.0-96.9%, cache write 2.6-10.6%, output 0.21-0.50%, fresh input about 0%. Central is the estimate; low uses the light mix, high the heavy mix.",
+      "central": { "input": 0.001, "cacheWrite": 0.04, "cacheRead": 0.955, "output": 0.004 },
+      "light": { "input": 0, "cacheWrite": 0.026, "cacheRead": 0.972, "output": 0.002 },
+      "heavy": { "input": 0.001, "cacheWrite": 0.106, "cacheRead": 0.888, "output": 0.005 }
+    }
   }
 }

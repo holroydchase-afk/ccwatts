@@ -101,6 +101,7 @@ npx ccwatts --by project  # also: model, day, type
 npx ccwatts history       # weekly trend, survives log cleanup
 npx ccwatts receipt       # share line, LinkedIn post and card
 npx ccwatts dashboard     # offline dashboard
+npx ccwatts estimate 88.8M --model opus  # just a token total, e.g. a cloud thread
 npx ccwatts --demo        # no Claude Code logs? try it on sample data
 ```
 
