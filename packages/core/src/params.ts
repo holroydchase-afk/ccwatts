@@ -1,4 +1,5 @@
 import data from "../../../methodology/params.json";
+import type { TokenType } from "./types.js";
 
 export type ConfidenceLabel = "DISCLOSED" | "MEASURED" | "MODELED" | "GUESS";
 
@@ -33,6 +34,20 @@ export interface PaceParams {
   late_night: { start_hour: number; end_hour: number };
 }
 
+/** Shares of a token total by type (they sum to 1), for estimating from a total. */
+export type TokenShares = Record<TokenType, number>;
+
+/** A measured token-type mix: central is the estimate, light and heavy bound the range. */
+export interface TokenMix {
+  label: ConfidenceLabel;
+  source: string;
+  as_of: string;
+  note: string;
+  central: TokenShares;
+  light: TokenShares;
+  heavy: TokenShares;
+}
+
 export interface Params {
   version: string;
   as_of: string;
@@ -44,6 +59,8 @@ export interface Params {
   tiers: Record<string, string[] | string>;
   comparisons: Record<string, Comparison>;
   pace: PaceParams;
+  /** Token-type mixes for `estimateFromTotal`, used only when a total is all we have. */
+  token_mix: { typical_claude_code: TokenMix };
 }
 
 /** The parameter set shipped with this build (methodology/params.json). */

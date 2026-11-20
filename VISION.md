@@ -17,6 +17,7 @@ A free, open-source tool that shows developers how much electricity their AI cod
 | 3 | AI logs contain private code and prompts, so devs won't hand them to a tool. | No servers, no accounts, no telemetry. Everything runs on your machine and reads counts only. The code is open so anyone can check. |
 | 4 | Claude Code deletes old logs, so your history vanishes. | Keep our own daily rollups of counts, so the trend survives. |
 | 5 | Non-developers (and LinkedIn readers) won't install a CLI. | A browser playground with sample data and a plain-English headline. |
+| 6 | Some Claude usage leaves no local log (cloud threads, chats). | Save counts-only copies from cloud sessions, or paste the token total the app shows; the range widens because the mix is assumed. |
 
 ## Principles (candidates, see ANCHORS.md C1–C4)
 

@@ -9,6 +9,8 @@ import {
   dedupe,
   defaultParams as params,
   estimate,
+  estimateFromTotal,
+  MIX_GUESSED,
   everyday,
   formatEnergy,
   hm,
@@ -21,6 +23,7 @@ import {
   clockHour,
   linkedInPost,
   num,
+  parseTokenCount,
   projectName,
   receiptSvg,
   rollup,
@@ -205,7 +208,7 @@ function renderExplain(e: Estimate) {
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   const readTokens = tokens ? Math.round((e.tokens.cacheRead / tokens) * 100) : 0;
   $("explain").textContent = e.responses
-    ? `Each time Claude Code takes a step, it re-reads the conversation so far. Most of that comes from a cache, which is cheap per token but happens constantly. Here, cache reads were ${readTokens}% of tokens and about ${share("cacheRead")}% of the electricity. Writing new context into the cache was ${share("cacheWrite")}%, and the text the model wrote back was ${share("output")}%. Long sessions grow the context the agent re-reads, so starting fresh sessions for new tasks is the simplest way to lower your number.`
+    ? `Each step, Claude Code re-reads the conversation so far, mostly from a cheap cache. Here that was ${readTokens}% of tokens and about ${share("cacheRead")}% of the electricity. Writing to the cache was ${share("cacheWrite")}% and the model's replies ${share("output")}%. Starting a fresh session for each new task is the simplest way to lower your number.`
     : "Load some usage to see what drives it.";
 }
 
@@ -432,6 +435,28 @@ function setWhatIf(value: number) {
   render(false);
 }
 
+/**
+ * "Have a token count?": a total typed in (a cloud thread or chat), estimated with the published
+ * method and the typical Claude Code mix. Nothing is stored or put in the URL.
+ */
+function renderManual() {
+  const out = $("manual-result");
+  const text = $<HTMLInputElement>("manual-tokens").value;
+  const tokens = parseTokenCount(text);
+  out.classList.toggle("error", text.trim() !== "" && tokens === null);
+  if (text.trim() === "") return void (out.textContent = "");
+  if (tokens === null) return void (out.textContent = "Couldn't read that as a token count. Try 88.8M, 1.2k or 88800000.");
+  const r = estimateFromTotal({ tokens, model: $<HTMLSelectElement>("manual-model").value }, params);
+  const t = formatEnergy(r.total);
+  // Same comparison line as `ccwatts estimate` prints (UX-R29), and the same note on the guessed mix (UX-R28).
+  out.innerHTML = [
+    `<span class="manual-kwh">≈ <b>${esc(t.central)}</b> (range ${esc(t.range)})</span>`,
+    `<span class="manual-compare">≈ ${esc(everyday(r.total.central / 1000, params))}</span>`,
+    `<span class="meta">Method v${esc(r.methodVersion)} · typical Claude Code mix assumed</span>`,
+    `<span class="meta">${esc(MIX_GUESSED)}</span>`,
+  ].join("");
+}
+
 /** Shows a line under the "Try it" box; errors are styled as errors and scrolled into view. */
 function setStatus(text: string, error = false) {
   const status = $("drop-status");
@@ -574,6 +599,10 @@ function wire() {
     }, 150);
   });
 
+  for (const id of ["manual-tokens", "manual-model"]) $(id).addEventListener("input", renderManual);
+  $("manual-model").addEventListener("change", renderManual);
+  renderManual();
+
   const slider = $<HTMLInputElement>("whatif-cache");
   slider.addEventListener("input", () => setWhatIf(Number(slider.value)));
   $("whatif-reset").addEventListener("click", () => {
@@ -617,7 +646,10 @@ function wireDemoBar() {
 }
 
 // The 4-week chart starts open where there's room; phones keep it folded (UX-R5 page budget).
-if (matchMedia("(min-width: 720px)").matches) $<HTMLDetailsElement>("pace-more").open = true;
+if (matchMedia("(min-width: 720px)").matches) {
+  $<HTMLDetailsElement>("pace-more").open = true;
+  $<HTMLDetailsElement>("whatif-box").open = true; // UX-R30: folded on phones, open on wide screens
+}
 wire();
 renderMethod();
 render();

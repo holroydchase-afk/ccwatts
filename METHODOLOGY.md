@@ -69,6 +69,22 @@ The comparison line ("about X miles in an EV") always uses the central value and
 
 The playground's "What if?" slider lets you move `cache_read_vs_input` within its published low and high. The chosen value is pinned (its low and high both equal it), so the what-if range comes only from the other parameters' bounds. A what-if never changes the published estimate: the share card, LinkedIn post, CLI and params.json always use the values above.
 
+## Estimating from a total
+
+Some Claude usage leaves no local log: cloud threads, claude.ai chats, any app that only shows a token total. `ccwatts estimate 88.8M` and the playground's "Have a token count?" box take that total and give a range. They read no logs and save nothing.
+
+A total hides the token-type mix, and the mix drives energy: an output token costs far more than a cache read. So ccwatts splits the total by a measured "typical Claude Code" mix, kept in the `token_mix` section of `params.json` (**MEASURED**, from counts-only copies of 6 Claude Code sessions, Oct to Nov 2026, 0.65M to 87.6M tokens each).
+
+| Mix | Cache read | Cache write | Output | Input |
+|---|---|---|---|---|
+| Central | 95.5% | 4% | 0.4% | 0.1% |
+| Light | 97.2% | 2.6% | 0.2% | 0% |
+| Heavy | 88.8% | 10.6% | 0.5% | 0.1% |
+
+Light and heavy are the lowest and highest shares we saw. The central value uses the central mix. The low end is the light mix's low, and the high end is the heavy mix's high. So the range covers both the usual parameter bounds and not knowing the mix, and it is wider than an estimate from logs. For 88.8M Opus tokens it is about 4.8 kWh (0.51 to 22.8).
+
+If you know the split, pass it (`--output`, `--cache-read`, `--cache-write`, `--input`). Those counts are used as they are, the rest of the total counts as cache read, and the range is the normal one. A chat is not a Claude Code session, so its mix may differ. Treat a chat estimate as rougher still.
+
 ## Sanity checks
 
 These run as unit tests (`packages/core/test/energy.test.ts`), so a parameter change that breaks them fails the build.

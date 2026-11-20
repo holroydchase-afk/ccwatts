@@ -143,6 +143,23 @@ kbd{font-family:var(--mono);font-size:.9em;border:1px solid var(--line);border-r
 .whatif-note{margin:0;font-size:15px;line-height:1.5;border-left:3px solid var(--sample);padding-left:10px}
 .whatif button{align-self:flex-start}
 #hero-eyebrow .whatif-flag{color:var(--sample)}
+/* "Have a token count?" (EST): a total typed in, for usage with no local log. Same box as What if. */
+.manual{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:65ch}
+.manual-fields{display:flex;gap:10px;align-items:flex-end}
+.manual-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.manual-field:first-child{flex:1 1 auto}
+.manual-field label{font-size:14px;color:var(--muted)}
+.manual input,.manual select{font:inherit;font-size:16px;min-height:44px;width:100%;border:1px solid var(--control);border-radius:8px;padding:8px 12px;background:var(--surface);color:var(--ink)}
+.manual input{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.manual select{cursor:pointer;width:auto}
+.manual input:focus-visible,.manual select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.manual-result{margin:0;font-size:clamp(17px,3vw,20px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.manual-result:empty{display:none}
+.manual-result b{color:var(--accent)}
+.manual-result>span{display:block}
+.manual-result .manual-compare{font-size:16px}
+.manual-result .meta{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.manual-result.error{color:var(--danger);font-size:15px;border-left:3px solid;padding-left:10px}
 /* Pace (M4.5): work rhythm by week, same visual language as the energy chart. Numbers, never a verdict. */
 .pace-title{display:flex;flex-direction:column;gap:4px}
 @media (max-width:719px){.pace-title .eyebrow{display:none}}
@@ -279,16 +296,41 @@ Leave out everything else, especially message content. Save the lines as ccwatts
   <section>
     <h2>What drives your number</h2>
     <p class="explain" id="explain"></p>
-    <div class="whatif" id="whatif">
-      <div class="whatif-head">
-        <label for="whatif-cache">What if? Cache-read cost</label>
-        <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
+    <details id="whatif-box">
+      <summary class="disclose">What if cache reads cost more or less?</summary>
+      <div class="whatif" id="whatif">
+        <div class="whatif-head">
+          <label for="whatif-cache">What if? Cache-read cost</label>
+          <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
+        </div>
+        <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
+        <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
+        <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
+        <p class="whatif-note" id="whatif-note" role="status" hidden></p>
+        <button type="button" id="whatif-reset" hidden>Reset</button>
       </div>
-      <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
-      <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
-      <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
-      <p class="whatif-note" id="whatif-note" role="status" hidden></p>
-      <button type="button" id="whatif-reset" hidden>Reset</button>
+    </details>
+  </section>
+
+  <section id="manual" aria-labelledby="manual-h">
+    <h2 id="manual-h">Have a token count?</h2>
+    <div class="manual">
+      <div class="manual-fields">
+        <div class="manual-field">
+          <label for="manual-tokens">Total tokens</label>
+          <input type="text" id="manual-tokens" placeholder="88.8M" autocomplete="off" spellcheck="false" autocapitalize="off" enterkeyhint="done" aria-describedby="manual-hint">
+        </div>
+        <div class="manual-field">
+          <label for="manual-model">Model</label>
+          <select id="manual-model">
+            <option value="opus" selected>Opus</option>
+            <option value="sonnet">Sonnet</option>
+            <option value="haiku">Haiku</option>
+          </select>
+        </div>
+      </div>
+      <p class="manual-result" id="manual-result" role="status" aria-live="polite"></p>
+      <p class="note" id="manual-hint">For a cloud thread or chat that shows a token total. Local Claude Code logs give a tighter range.</p>
     </div>
   </section>
 
