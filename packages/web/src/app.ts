@@ -683,6 +683,9 @@ function selectTab(tab: HTMLElement, focus = false) {
     $(t.getAttribute("aria-controls") ?? "").hidden = !on;
   }
   if (focus) tab.focus({ preventScroll: true });
+  // On a narrow phone the tab row scrolls sideways: bring the picked tab into view (UX-R62).
+  const list = $("tabs");
+  if (list.scrollWidth > list.clientWidth + 1) tab.scrollIntoView({ inline: "nearest", block: "nearest" });
   // Charts draw at their on-screen width; redraw once the panel is shown, in case the width changed.
   const panel = tab.getAttribute("aria-controls");
   if (panel === "p-electricity" && lastEstimate) renderChart(lastEstimate);
@@ -758,8 +761,7 @@ function wireTabs() {
   window.addEventListener("hashchange", route);
 }
 
-/** Light / Dark / System (studio principle 10). The choice stays in this browser's localStorage. */
-const THEME_KEY = `${APP_NAME}-theme`;
+/** Light / Dark / System (studio principle 10). Kept in memory for this visit only (PS-R1): a reload goes back to System. */
 function applyTheme(pick: string) {
   const root = document.documentElement;
   if (pick === "light" || pick === "dark") root.dataset.theme = pick;
@@ -767,25 +769,8 @@ function applyTheme(pick: string) {
   for (const b of document.querySelectorAll<HTMLElement>("[data-theme-pick]")) b.setAttribute("aria-pressed", String(b.dataset.themePick === (root.dataset.theme ?? "system")));
 }
 function wireTheme() {
-  let saved: string | null = null;
-  try {
-    saved = localStorage.getItem(THEME_KEY);
-  } catch {
-    // Storage blocked: the choice lasts until reload.
-  }
-  applyTheme(saved ?? "system");
-  for (const b of document.querySelectorAll<HTMLElement>("[data-theme-pick]")) {
-    b.addEventListener("click", () => {
-      const pick = b.dataset.themePick ?? "system";
-      applyTheme(pick);
-      try {
-        if (pick === "system") localStorage.removeItem(THEME_KEY);
-        else localStorage.setItem(THEME_KEY, pick);
-      } catch {
-        // Storage blocked: still applied for this visit.
-      }
-    });
-  }
+  applyTheme("system");
+  for (const b of document.querySelectorAll<HTMLElement>("[data-theme-pick]")) b.addEventListener("click", () => applyTheme(b.dataset.themePick ?? "system"));
 }
 
 /** The studio demo bar (DEMO-BAR): a disclosure button over a push-down drawer; Esc closes it. */

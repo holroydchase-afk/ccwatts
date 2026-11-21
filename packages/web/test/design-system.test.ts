@@ -724,23 +724,17 @@ async function pageTokens(page: Page) {
 }
 
 withBrowser("DS-9 people pick Light, Dark or System (principle 10)", () => {
-  it("DS-9 with the OS in light, picking Dark shows the dark Paper tokens, marks Dark as picked, and survives a reload via localStorage only", async () => {
+  // Persistence moved to PS-R1 (privacy-security, Nov 21): the choice lasts this visit only, no storage.
+  it("DS-9 with the OS in light, picking Dark shows the dark Paper tokens and marks Dark as picked", async () => {
     const page = await open({ width: 1280, colorScheme: "light" });
     const found = await pickTheme(page, "Dark");
     await page.waitForTimeout(50);
     const after = await pageTokens(page);
     const picked = found && (await themeIsPicked(page, "Dark"));
-    await page.reload();
-    await ready(page);
-    const reloaded = await pageTokens(page);
-    const store = await page.evaluate(() => ({ local: Object.values(localStorage).join("|"), cookie: document.cookie }));
     await page.close();
     expect(found, "no Light / Dark / System control named Dark").toBe(true);
     expect(after).toEqual({ bg: rgbOf(PAPER.dark.bg), ink: rgbOf(PAPER.dark.ink) });
     expect(picked, "Dark is not marked picked (aria-checked / aria-pressed / selected)").toBe(true);
-    expect(reloaded, "after reload").toEqual({ bg: rgbOf(PAPER.dark.bg), ink: rgbOf(PAPER.dark.ink) });
-    expect(store.local.toLowerCase()).toContain("dark");
-    expect(store.cookie).toBe("");
   });
 
   it("DS-9 with the OS in dark, picking Light shows the light Paper tokens; picking System goes back to dark", async () => {
@@ -757,6 +751,124 @@ withBrowser("DS-9 people pick Light, Dark or System (principle 10)", () => {
     expect(light && system, "no Light or System choice").toBe(true);
     expect(asLight).toEqual({ bg: rgbOf(PAPER.light.bg), ink: rgbOf(PAPER.light.ink) });
     expect(asSystem).toEqual({ bg: rgbOf(PAPER.dark.bg), ink: rgbOf(PAPER.dark.ink) });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Fix round on 13d193c: privacy-security PS-R1, PS-R2; ux-reviewer UX-R61, UX-R62, UX-R64.
+// ---------------------------------------------------------------------------------------------
+describe("PS-R1 no browser storage (static)", () => {
+  it("PS-R1 the built page contains no localStorage and no sessionStorage", () => {
+    expect(html.match(/localStorage|sessionStorage/g) ?? []).toEqual([]);
+  });
+});
+
+withBrowser("PS-R1 the theme choice lasts this visit only", () => {
+  it("PS-R1 picking Dark applies the dark tokens; after a reload the page is back on System (OS light shows light, System picked)", async () => {
+    const page = await open({ width: 1280, colorScheme: "light" });
+    const found = await pickTheme(page, "Dark");
+    await page.waitForTimeout(50);
+    const dark = await pageTokens(page);
+    await page.reload();
+    await ready(page);
+    const reloaded = await pageTokens(page);
+    const system = await themeIsPicked(page, "System");
+    const stored = await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length, cookie: document.cookie }));
+    await page.close();
+    expect(found, "no Dark choice").toBe(true);
+    expect(dark).toEqual({ bg: rgbOf(PAPER.dark.bg), ink: rgbOf(PAPER.dark.ink) });
+    expect(reloaded, "after reload").toEqual({ bg: rgbOf(PAPER.light.bg), ink: rgbOf(PAPER.light.ink) });
+    expect(system, "System marked picked after reload").toBe(true);
+    expect(stored).toEqual({ local: 0, session: 0, cookie: "" });
+  });
+});
+
+withBrowser("PS-R2 hostile hashes land on Overview", () => {
+  for (const hash of ["#<img src=x onerror=alert(1)>", '#"]']) {
+    it(`PS-R2 loading the page at ${JSON.stringify(hash)} shows Overview, adds no img and throws no page error`, async () => {
+      const page = await browser!.newPage({ viewport: { width: 1280, height: 900 } });
+      const errors: string[] = [];
+      const dialogs: string[] = [];
+      page.on("pageerror", (e) => errors.push(String(e)));
+      page.on("dialog", (d) => {
+        dialogs.push(d.message());
+        void d.dismiss();
+      });
+      // Count imgs on a clean load first, so the hostile load is compared with the same page.
+      await page.goto(url);
+      await ready(page);
+      const imgs = await page.evaluate(() => document.querySelectorAll("img").length);
+      await page.goto("about:blank");
+      await page.goto(url + hash);
+      await ready(page);
+      await page.waitForTimeout(150);
+      const got = {
+        overview: await isSelected(page, "Overview"),
+        overviewShown: (await panelOf(page, "Overview"))?.isVisible() ?? false,
+        imgs: await page.evaluate(() => document.querySelectorAll("img").length),
+        xImg: await page.evaluate(() => [...document.querySelectorAll("img")].filter((i) => i.getAttribute("src") === "x").length),
+      };
+      await page.close();
+      expect({ ...got, overviewShown: await got.overviewShown }).toEqual({ overview: "true", overviewShown: true, imgs, xImg: 0 });
+      expect(errors, "page errors").toEqual([]);
+      expect(dialogs, "dialogs").toEqual([]);
+    });
+  }
+});
+
+withBrowser("UX-R61 the Overview number outranks the heading", () => {
+  for (const [width, height] of [[390, 844], [1280, 800]] as const) {
+    it(`UX-R61 at ${width}px #ov-energy's value is 34px or more and bigger than the h1; the h1 is 22px`, async () => {
+      const page = await open({ width, height });
+      const got = await page.evaluate(() => {
+        const row = document.getElementById("ov-energy");
+        // The value element: the one inside the row whose own text holds the central number.
+        const els = row ? [...row.querySelectorAll<HTMLElement>("*")].filter((e) => [...e.childNodes].some((n) => n.nodeType === 3 && /\d/.test(n.textContent ?? ""))) : [];
+        const value = els.sort((a, b) => parseFloat(getComputedStyle(b).fontSize) - parseFloat(getComputedStyle(a).fontSize))[0];
+        const h1 = document.querySelector("h1");
+        return { value: value ? parseFloat(getComputedStyle(value).fontSize) : 0, h1: h1 ? parseFloat(getComputedStyle(h1).fontSize) : 0 };
+      });
+      await page.close();
+      expect(got.h1, "h1 font-size").toBe(22);
+      expect(got.value, "#ov-energy value font-size").toBeGreaterThanOrEqual(34);
+      expect(got.value, "value bigger than h1").toBeGreaterThan(got.h1);
+    });
+  }
+});
+
+withBrowser("UX-R62 tabs on a 320px screen", () => {
+  it("UX-R62 at 320px the selected Method tab is fully inside the viewport, and the tablist fades at the right edge (mask-image) or doesn't overflow", async () => {
+    const page = await open({ width: 320, height: 640 });
+    const selected = await selectTab(page, "Method");
+    await page.waitForTimeout(300);
+    const got = await page.evaluate(() => {
+      const tab = [...document.querySelectorAll<HTMLElement>("[role=tab]")].find((t) => t.getAttribute("aria-selected") === "true");
+      const list = document.querySelector<HTMLElement>("[role=tablist]")!;
+      const r = tab?.getBoundingClientRect();
+      const cs = getComputedStyle(list);
+      const mask = cs.getPropertyValue("mask-image") || cs.getPropertyValue("-webkit-mask-image");
+      return {
+        name: tab?.textContent?.trim(),
+        inside: !!r && r.left >= -0.5 && r.right <= window.innerWidth + 0.5,
+        tab: r ? `${r.left.toFixed(1)}..${r.right.toFixed(1)} of ${window.innerWidth}` : "none",
+        overflows: list.scrollWidth > list.clientWidth + 1,
+        mask: mask && mask !== "none" ? mask : "",
+      };
+    });
+    await page.close();
+    expect(selected, "no Method tab").toBe(true);
+    expect(got.name).toBe("Method");
+    expect(got.inside, `selected tab spans ${got.tab}`).toBe(true);
+    expect(!got.overflows || got.mask !== "", `tablist overflows with no fade (mask-image: "${got.mask || "none"}")`).toBe(true);
+  });
+});
+
+describe("UX-R64 the Your logs row doesn't repeat the privacy line", () => {
+  it("UX-R64 #ov-logs text says neither \"never leaves\" nor \"never uploaded\"", () => {
+    const row = /<a[^>]*id="ov-logs"[\s\S]*?<\/a>/.exec(html)?.[0];
+    expect(row, "no #ov-logs in the built page").toBeDefined();
+    const text = row!.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    expect(text).not.toMatch(/never leaves|never uploaded/i);
   });
 });
 

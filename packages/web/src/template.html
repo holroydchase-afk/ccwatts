@@ -65,7 +65,6 @@ h1{font-size:22px;line-height:28px;font-weight:600;text-wrap:balance}
 .privacy{display:flex;gap:8px;align-items:flex-start}
 .privacy svg{flex:none;width:16px;height:16px;margin-top:4px;color:var(--ink)}
 .privacy b{font-weight:600}
-@media (min-width:720px){h1{font-size:28px;line-height:34px}}
 h2{font-size:22px;line-height:28px;font-weight:600;text-wrap:balance}
 h3{font-size:17px;line-height:22px;font-weight:600}
 code,kbd,pre{font-family:var(--mono);font-size:1em}
@@ -79,7 +78,8 @@ kbd{border:1px solid var(--tab-line);border-radius:4px;padding:0 4px}
 .tabs [role=tab][aria-selected="true"]{color:var(--accent);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
 .tabs [role=tab]:focus-visible{outline-offset:-2px}
 @media (max-width:599px){.tabs{gap:0;justify-content:space-between}.tabs [role=tab]{padding:0 4px}.thumb{width:72px}}
-@media (max-width:374px){.tabs [role=tab]{padding:0}}
+/* Under 375px the five tabs can overflow: fade the right edge so the row reads as scrollable (UX-R62). */
+@media (max-width:374px){.tabs{padding-right:24px;scroll-padding-right:24px;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent)}.tabs [role=tab]{padding:0 4px}}
 /* An unselected panel stays laid out (charts keep their size) but is invisible, unfocusable and takes no space. */
 [role=tabpanel]{display:flex;flex-direction:column;gap:24px;min-width:0}
 [role=tabpanel][hidden]{display:flex!important;visibility:hidden;position:absolute;top:0;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));height:0;overflow:hidden;padding:0;border:0}
@@ -100,7 +100,7 @@ main button.primary:hover,.btn.primary:hover{box-shadow:none;text-decoration:und
 .seg button{background:transparent;padding:12px 16px;font-weight:500}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);font-weight:600;box-shadow:inset 0 0 0 2px var(--accent)}
 /* Overview: a settings-style grouped list. Each row is one whole tap target into its detail. */
-.ov{display:flex;flex-direction:column;gap:24px;max-width:720px}
+.ov{display:flex;flex-direction:column;gap:24px}
 .group{display:flex;flex-direction:column;gap:8px}
 .group-title{color:var(--muted);padding:0 16px}
 .list{background:var(--surface);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
@@ -111,7 +111,7 @@ main button.primary:hover,.btn.primary:hover{box-shadow:none;text-decoration:und
 .row:focus-visible{outline-offset:-2px;border-radius:12px}
 .row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .row-title{font-weight:600}
-.row-value{font-size:28px;line-height:34px;font-weight:600}
+.row-value{font-size:34px;line-height:40px;font-weight:600}
 .row-value small{font-size:17px;font-weight:500}
 .row-text{color:var(--ink)}
 .row-detail{color:var(--muted)}
@@ -314,7 +314,7 @@ footer p{max-width:65ch}
       <div class="group">
         <div class="list">
           <a class="row" id="ov-share" href="#share"><img class="thumb" id="ov-share-thumb" alt="" width="1200" height="627"><span class="row-main"><span class="row-title">Share card</span><span class="row-detail">Save a PNG or copy a LinkedIn post</span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
-          <a class="row" id="ov-logs" href="#drop" hidden><span class="row-main"><span class="row-title">Use your own logs</span><span class="row-detail">Read in this browser, never uploaded</span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+          <a class="row" id="ov-logs" href="#drop" hidden><span class="row-main"><span class="row-title">Use your own logs</span><span class="row-detail">Drop in a log folder or .jsonl files</span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
         </div>
       </div>
     </div>
