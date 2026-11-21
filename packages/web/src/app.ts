@@ -95,6 +95,26 @@ function estimateFor(rows: RollupRow[], p: Params = params): Estimate {
   return e;
 }
 
+/** Where the central estimate sits between low and high, 0..1, on a log scale (the bounds multiply). */
+function rangeAt(e: Estimate): number {
+  const { low: lo, central: c, high: hi } = e.total;
+  return lo > 0 && hi > lo ? Math.min(1, Math.max(0, Math.log(c / lo) / Math.log(hi / lo))) : 0.5;
+}
+
+/** The Overview's first row: the window's central kWh, its range and the method version, with the range bar. */
+function renderOverviewEnergy(e: Estimate, label: string) {
+  const t = formatEnergy(e.total);
+  const [value, unit] = t.central.split(" ");
+  $("ov-energy-title").textContent = `Electricity · ${label}${whatIfActive() ? " · what-if" : ""}`;
+  $("ov-energy-value").innerHTML = e.responses ? `${esc(value ?? "")} <small>${esc(unit ?? "")}</small>` : "No usage in this window";
+  const bar = $("ov-energy-bar");
+  bar.hidden = !e.responses;
+  bar.innerHTML = e.responses ? `<span class="range-dot" style="left:${(rangeAt(e) * 100).toFixed(1)}%"></span>` : "";
+  $("ov-energy-detail").textContent = e.responses ? `range ${t.range} ${t.unit} · method v${params.version}` : `method v${params.version}`;
+  const share = e.total.central ? Math.round(((e.byType.find((b) => b.key === "cacheRead")?.energy.central ?? 0) / e.total.central) * 100) : 0;
+  $("ov-drives-text").textContent = e.responses ? `${share}% comes from re-reading the conversation` : "Load some usage to see what drives it";
+}
+
 function renderHero(e: Estimate, label: string) {
   const t = formatEnergy(e.total);
   const [value, unit] = t.central.split(" ");
@@ -123,23 +143,27 @@ function renderRangeBar(e: Estimate, t: ReturnType<typeof formatEnergy>, fixed: 
     return;
   }
   const [low, high] = t.range.split(" – ");
-  const { low: lo, central: c, high: hi } = e.total;
-  const at = lo > 0 && hi > lo ? Math.min(1, Math.max(0, Math.log(c / lo) / Math.log(hi / lo))) : 0.5;
+  const at = rangeAt(e);
   el.setAttribute("aria-label", `Plausible range ${t.range} ${t.unit}, central ${t.central}${fixed}`);
   el.innerHTML =
     `<span class="range-track"><span class="range-dot" style="left:${(at * 100).toFixed(1)}%"></span></span>` +
     `<span class="range-ends"><span class="range-low">${esc(low ?? "")} ${esc(t.unit)}</span><span class="range-cap">Plausible range<span class="range-scale"> · log scale</span></span><span class="range-high">${esc(high ?? "")} ${esc(t.unit)}</span></span>`;
 }
 
+/** Token types bottom to top, each in a data colour: ink family and ochre/brown, never the accent. */
+const SERIES: [TokenType, string][] = [["cacheRead", "--c1"], ["cacheWrite", "--c2"], ["output", "--c3"], ["input", "--c4"]];
+
+/** A chart's on-screen width: it draws 1:1, so its 17px labels stay 17px on a phone and a laptop. */
+const chartWidth = (svg: Element) => Math.round(Math.max(280, svg.getBoundingClientRect().width || 720));
+
 function renderChart(e: Estimate) {
   const svg = $("chart");
-  // Draw at the chart's on-screen width (320 to 720 px) so labels keep their size on a phone.
-  const W = Math.round(Math.min(720, Math.max(320, svg.getBoundingClientRect().width || 720)));
+  const W = chartWidth(svg);
   const H = 240;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-  const pad = { l: 44, r: 8, t: 22, b: 28 };
+  const pad = { l: 52, r: 8, t: 36, b: 34 };
   const days = e.byDay;
-  $("legend").innerHTML = (["cacheRead", "cacheWrite", "output", "input"] as TokenType[]).map((t) => `<span><i style="background:var(--t-${t})"></i>${TYPE_LABELS[t]}</span>`).join("");
+  $("legend").innerHTML = SERIES.map(([t, c]) => `<span><i style="background:var(${c})"></i>${TYPE_LABELS[t]}</span>`).join("");
   if (!days.length) {
     svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">No usage in this window</text>`;
     svg.setAttribute("aria-label", "Daily electricity by token type: no usage in this window");
@@ -155,27 +179,29 @@ function renderChart(e: Estimate) {
   const parts: string[] = [];
   for (let v = 0; v <= top + 1e-9; v += step) {
     parts.push(`<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`);
-    parts.push(`<text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end">${num(v)}</text>`);
+    parts.push(`<text x="${pad.l - 8}" y="${y(v) + 6}" text-anchor="end">${num(v)}</text>`);
   }
-  parts.push(`<text x="0" y="10">${esc(total.unit)} per day, central estimate</text>`);
+  parts.push(`<text x="0" y="17">${esc(total.unit)} per day, central estimate</text>`);
   // Each day's energy split by token type, using that day's type shares of the central value.
   days.forEach((d, i) => {
     let acc = 0;
     const x = pad.l + i * bw + bw * 0.12;
     const w = Math.max(1, bw * 0.76);
-    for (const type of ["cacheRead", "cacheWrite", "output", "input"] as TokenType[]) {
+    for (const [type, colour] of SERIES) {
       const wh = typeShare(d, type);
       if (wh <= 0) continue;
       const v0 = acc / scale;
       acc += wh;
       const v1 = acc / scale;
-      parts.push(`<rect x="${x.toFixed(1)}" y="${y(v1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.5, y(v0) - y(v1)).toFixed(1)}" fill="var(--t-${type})"><title>${esc(d.key)} ${esc(TYPE_LABELS[type])} ${num(wh / scale)} ${esc(total.unit)}</title></rect>`);
+      parts.push(`<rect x="${x.toFixed(1)}" y="${y(v1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.5, y(v0) - y(v1)).toFixed(1)}" fill="var(${colour})"><title>${esc(d.key)} ${esc(TYPE_LABELS[type])} ${num(wh / scale)} ${esc(total.unit)}</title></rect>`);
     }
   });
-  const labelIdx = days.length === 1 ? [0] : [0, Math.floor((days.length - 1) / 2), days.length - 1];
+  // Fewer date ticks on a phone, so 17px labels never collide.
+  const last = days.length - 1;
+  const labelIdx = days.length === 1 ? [0] : W < 480 ? [0, last] : [0, Math.floor(last / 2), last];
   for (const i of new Set(labelIdx)) {
-    const anchor = i === 0 ? "start" : i === days.length - 1 ? "end" : "middle";
-    const x = i === 0 ? pad.l : i === days.length - 1 ? W - pad.r : pad.l + (i + 0.5) * bw;
+    const anchor = i === 0 ? "start" : i === last ? "end" : "middle";
+    const x = i === 0 ? pad.l : i === last ? W - pad.r : pad.l + (i + 0.5) * bw;
     parts.push(`<text x="${x}" y="${H - 8}" text-anchor="${anchor}">${esc(days[i]!.key.slice(5))}</text>`);
   }
   svg.innerHTML = parts.join("");
@@ -273,6 +299,7 @@ function renderPace() {
   if (!any) {
     $("pace-chart").innerHTML = "";
     $("pace-table").innerHTML = "";
+    renderPaceOverview(null, off ? $("pace-optin").textContent ?? "" : empty.textContent);
     return;
   }
   // UX-R40/R41: same lead as the CLI. Early in a week it describes the last full week, and this week
@@ -284,6 +311,7 @@ function renderPace() {
   $("pace-agents").textContent = line.agents ? keep(line.agents) : "";
   $("pace-agents").hidden = !line.agents;
   renderPaceChart(weeks);
+  renderPaceOverview({ week: weeks[line.focus]!, current: line.focus === 0 }, "");
   const rows = weeks
     .map(
       (w, i) =>
@@ -291,6 +319,20 @@ function renderPace() {
     )
     .join("");
   $("pace-table").innerHTML = `<caption>Pace by week, newest first</caption><thead><tr><th>Week of</th><th>Active (h)</th><th>Past ${esc(LATE)}</th><th>Longest</th><th>Days off</th><th>Agent-only (h)</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+/** The Overview's Pace row: the same week and numbers as the Pace lead, or why there is none. */
+function renderPaceOverview(shown: { week: PaceWeek; current: boolean } | null, why: string) {
+  if (!shown) {
+    $("ov-pace-title").textContent = "Pace";
+    $("ov-pace-text").textContent = pace.days === null ? "Pace is off. Open to see how to turn it on." : why;
+    $("ov-pace-detail").textContent = "";
+    return;
+  }
+  const { week, current } = shown;
+  $("ov-pace-title").textContent = `Pace · ${current ? "this week so far" : `week of ${monthDay(week.start)}`}`;
+  $("ov-pace-text").textContent = `About ${paceHours(week.activeHours.central)} active hours`;
+  $("ov-pace-detail").textContent = keep(`range ${paceHoursRange(week.activeHours)} hours`);
 }
 
 /** Never break inside "2h 51m" or "12 – 14" when the line wraps. */
@@ -302,10 +344,10 @@ const weekLabel = (w: PaceWeek, i: number) => (i === 0 ? `${monthDay(w.start)} (
 /** Four weeks, oldest on the left: active hours (central, low–high whisker, the part past 10pm on top) beside agent-only hours. */
 function renderPaceChart(newestFirst: PaceWeek[]) {
   const svg = $("pace-chart");
-  const W = Math.round(Math.min(720, Math.max(320, svg.getBoundingClientRect().width || 720)));
-  const H = 230;
+  const W = chartWidth(svg);
+  const H = 270;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-  const pad = { l: 36, r: 8, t: 26, b: 40 };
+  const pad = { l: 40, r: 8, t: 56, b: 56 };
   const weeks = [...newestFirst].reverse();
   const max = Math.max(...weeks.map((w) => Math.max(w.activeHours.high, w.agentHours.high)), 1);
   const step = niceStep(max / 3);
@@ -315,9 +357,9 @@ function renderPaceChart(newestFirst: PaceWeek[]) {
   const parts: string[] = [];
   for (let v = 0; v <= top + 1e-9; v += step) {
     parts.push(`<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`);
-    parts.push(`<text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end">${num(v)}</text>`);
+    parts.push(`<text x="${pad.l - 8}" y="${y(v) + 6}" text-anchor="end">${num(v)}</text>`);
   }
-  parts.push(`<text x="0" y="10">hours per week, starting Monday</text>`);
+  parts.push(`<text x="0" y="17">hours per week, starting Monday</text>`);
   // The week in progress is drawn in full colour with a hatch over it, so it reads as "not done yet",
   // not as a short week (UX-R40, AC-R47).
   parts.push(`<defs><pattern id="sofar" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--hatch)" stroke-width="3"/></pattern></defs>`);
@@ -342,12 +384,12 @@ function renderPaceChart(newestFirst: PaceWeek[]) {
       partial && v > 0 ? `<rect x="${f(x)}" y="${f(y(v))}" width="${f(width)}" height="${f(Math.max(0.5, base - y(v)))}" rx="2" fill="url(#sofar)" aria-hidden="true"/>` : "";
     const title = `Week of ${label}: about ${paceHours(a.central)} active hours (range ${paceHoursRange(a)}), ${hm(w.lateNightHours * 60)} past ${LATE}`;
     if (a.central > 0) {
-      parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(0.5, base - y(a.central)))}" rx="2" fill="var(--accent)"><title>${esc(title)}</title></rect>`);
-      if (late > 0) parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(1.5, y(a.central - late) - y(a.central)))}" rx="2" fill="var(--t-cacheWrite)"><title>${esc(`${hm(w.lateNightHours * 60)} past ${LATE}`)}</title></rect>`);
+      parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(0.5, base - y(a.central)))}" rx="2" fill="var(--c1)"><title>${esc(title)}</title></rect>`);
+      if (late > 0) parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(1.5, y(a.central - late) - y(a.central)))}" rx="2" fill="var(--c2)"><title>${esc(`${hm(w.lateNightHours * 60)} past ${LATE}`)}</title></rect>`);
       parts.push(hatch(x0, ba, a.central));
     }
     parts.push(whisker(x0 + ba / 2, a.low, a.high, "var(--ink)"));
-    if (a.high > 0) parts.push(`<text class="val" x="${f(x0 + ba / 2)}" y="${f(y(a.high) - 7)}" text-anchor="middle">${esc(paceHours(a.central))}h</text>`);
+    if (a.high > 0) parts.push(`<text class="val" x="${f(x0 + ba / 2)}" y="${f(y(a.high) - 8)}" text-anchor="middle">${esc(paceHours(a.central))}h</text>`);
     const g = w.agentHours;
     if (g.central > 0) {
       parts.push(`<rect x="${f(x1)}" y="${f(y(g.central))}" width="${f(bg)}" height="${f(Math.max(0.5, base - y(g.central)))}" rx="2" class="agent"><title>${esc(`Agents on their own: about ${paceHours(g.central)} hours (range ${paceHoursRange(g)})`)}</title></rect>`);
@@ -356,8 +398,8 @@ function renderPaceChart(newestFirst: PaceWeek[]) {
     }
     const cx = pad.l + (i + 0.5) * gw;
     const [day, extra] = label.split(" (");
-    parts.push(`<text x="${f(cx)}" y="${H - 22}" text-anchor="middle">${esc(day!)}</text>`);
-    if (extra) parts.push(`<text x="${f(cx)}" y="${H - 8}" text-anchor="middle">${esc(extra.replace(")", ""))}</text>`);
+    parts.push(`<text x="${f(cx)}" y="${H - 30}" text-anchor="middle">${esc(day!)}</text>`);
+    if (extra) parts.push(`<text x="${f(cx)}" y="${H - 6}" text-anchor="middle">${esc(extra.replace(")", ""))}</text>`);
   });
   svg.innerHTML = parts.join("");
   const summary = newestFirst
@@ -376,7 +418,9 @@ function renderShare(e: Estimate, label: string) {
   currentSvg = receiptSvg(input);
   currentLine = shareLine(input);
   currentPost = linkedInPost(input);
-  ($("card") as HTMLImageElement).src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(currentSvg)}`;
+  const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(currentSvg)}`;
+  ($("card") as HTMLImageElement).src = src;
+  ($("ov-share-thumb") as HTMLImageElement).src = src;
   // "Open full size" opens the same card from memory (a blob: URL): nothing is fetched.
   if (fullSizeUrl) URL.revokeObjectURL(fullSizeUrl);
   fullSizeUrl = URL.createObjectURL(new Blob([currentSvg], { type: "image/svg+xml" }));
@@ -434,6 +478,7 @@ function render(share = true) {
   $("demo-copy-files").hidden = !own;
   $("lede").textContent = LEDE[state.source];
   renderHero(e, label);
+  renderOverviewEnergy(e, label);
   renderChart(e);
   renderRank("by-model", e.byModel, shortModel, e);
   renderRank("by-project", e.byProject, projectName, e);
@@ -555,7 +600,7 @@ function wire() {
 
   if (payload.mode === "playground") {
     const drop = $("drop");
-    $("tab-drop").hidden = false;
+    $("ov-logs").hidden = false;
     $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
     $("read-paste").addEventListener("click", () => {
       // Pasted from a chat, the lines may sit inside a ``` code fence; the adapter skips those lines.
@@ -589,6 +634,7 @@ function wire() {
   }
 
   wireTabs();
+  wireTheme();
   // Charts draw at their on-screen width; a hidden tab's chart is redrawn when the tab opens.
   let resizeTimer = 0;
   let pageWidth = window.innerWidth;
@@ -597,8 +643,8 @@ function wire() {
     resizeTimer = window.setTimeout(() => {
       if (window.innerWidth === pageWidth) return;
       pageWidth = window.innerWidth;
-      if (lastEstimate && !$("p-breakdown").hidden) renderChart(lastEstimate);
-      if (paceShown.length && !$("pace").hidden) renderPaceChart(paceShown);
+      if (lastEstimate) renderChart(lastEstimate);
+      if (paceShown.length) renderPaceChart(paceShown);
     }, 150);
   });
 
@@ -614,26 +660,20 @@ function wire() {
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;
   $("cli-cmd").textContent = `npx ${APP_NAME}`;
   ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
-  if (payload.mode === "playground") {
-    wireDemoBar();
-    const jump = $("jump");
-    jump.hidden = false;
-    // "Use your own logs" opens the Your logs tab instead of scrolling to a hidden panel.
-    jump.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      selectTab($("tab-drop"), true);
-      $("tabs").scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    });
-    if (location.hash === "#drop") selectTab($("tab-drop"));
-  }
+  if (payload.mode === "playground") wireDemoBar();
+  route();
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;
   document.title = payload.mode === "dashboard" ? `${APP_NAME} dashboard` : `${APP_NAME} playground`;
 }
 
-/** Tabs under the hero (WAI-ARIA tabs): one panel at a time, roving tabindex, arrows wrap, Home/End. */
+/**
+ * Tabs at the top (WAI-ARIA tabs): one panel at a time, roving tabindex, arrows wrap, Home/End.
+ * Each view has a hash (#electricity, #pace, #share, #method; none for Overview, #drop for Your
+ * logs in the playground), so deep links and the Back button work.
+ */
 const allTabs = () => [...document.querySelectorAll<HTMLElement>("#tabs [role=tab]")];
-const shownTabs = () => allTabs().filter((t) => !t.hidden);
+const tabFor = (hash: string) => allTabs().find((t) => t.dataset.hash === hash);
 
 function selectTab(tab: HTMLElement, focus = false) {
   for (const t of allTabs()) {
@@ -643,24 +683,109 @@ function selectTab(tab: HTMLElement, focus = false) {
     $(t.getAttribute("aria-controls") ?? "").hidden = !on;
   }
   if (focus) tab.focus({ preventScroll: true });
-  // A hidden chart measures 0 wide and draws at full width; redraw at the real width once shown.
+  // Charts draw at their on-screen width; redraw once the panel is shown, in case the width changed.
   const panel = tab.getAttribute("aria-controls");
-  if (panel === "p-breakdown" && lastEstimate) renderChart(lastEstimate);
+  if (panel === "p-electricity" && lastEstimate) renderChart(lastEstimate);
   if (panel === "pace" && paceShown.length) renderPaceChart(paceShown);
+}
+
+/** Shows the view the address names. Unknown hashes show the Overview. */
+function route() {
+  const logs = location.hash === "#drop" && payload.mode === "playground";
+  selectTab((logs ? undefined : tabFor(location.hash)) ?? tabFor("")!);
+  $("ov-list").hidden = logs;
+  $("drop").hidden = !logs;
+  $("drop-back").hidden = !logs;
+}
+
+/** Goes to a view and adds it to the history, so Back returns. Never reloads, never fetches. */
+function go(hash: string, replace = false) {
+  if (hash !== location.hash) {
+    const url = hash || location.pathname + location.search;
+    try {
+      history[replace ? "replaceState" : "pushState"](null, "", url);
+    } catch {
+      location.hash = hash; // some file:// setups refuse pushState; the hashchange listener routes
+      return;
+    }
+  }
+  route();
+}
+
+/** The tabs are sticky: once the page is scrolled past where they start, go back there for the new view. */
+function toViewTop() {
+  const start = $("privacy").getBoundingClientRect().bottom + window.scrollY;
+  if (window.scrollY > start) window.scrollTo({ top: start });
 }
 
 function wireTabs() {
   const list = $("tabs");
-  for (const t of allTabs()) t.addEventListener("click", () => selectTab(t));
+  for (const t of allTabs())
+    t.addEventListener("click", () => {
+      go(t.dataset.hash ?? "");
+      toViewTop();
+    });
   list.addEventListener("keydown", (ev) => {
-    const tabs = shownTabs();
+    const tabs = allTabs();
     const i = tabs.indexOf(document.activeElement as HTMLElement);
     if (i < 0) return;
     const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[ev.key];
     if (next === undefined) return;
     ev.preventDefault();
-    selectTab(tabs[(next + tabs.length) % tabs.length]!, true);
+    const tab = tabs[(next + tabs.length) % tabs.length]!;
+    go(tab.dataset.hash ?? "", true);
+    tab.focus({ preventScroll: true });
   });
+  // Overview rows: each is one link into its detail.
+  for (const id of ["ov-energy", "ov-pace", "ov-share", "ov-logs", "drop-back"]) {
+    const a = $<HTMLAnchorElement>(id);
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      go(id === "drop-back" ? "" : (a.getAttribute("href") ?? ""));
+      toViewTop();
+      // The row just hid with its list, so keep keyboard focus nearby: the way back, the row, or the tab.
+      const next = id === "ov-logs" ? $("drop-back") : id === "drop-back" ? $("ov-logs") : allTabs().find((t) => t.getAttribute("aria-selected") === "true");
+      next?.focus({ preventScroll: true });
+    });
+  }
+  $("ov-drives").addEventListener("click", (ev) => {
+    ev.preventDefault();
+    go("#electricity");
+    $("drives").scrollIntoView({ block: "start" });
+    $("tab-electricity").focus({ preventScroll: true });
+  });
+  window.addEventListener("popstate", route);
+  window.addEventListener("hashchange", route);
+}
+
+/** Light / Dark / System (studio principle 10). The choice stays in this browser's localStorage. */
+const THEME_KEY = `${APP_NAME}-theme`;
+function applyTheme(pick: string) {
+  const root = document.documentElement;
+  if (pick === "light" || pick === "dark") root.dataset.theme = pick;
+  else delete root.dataset.theme;
+  for (const b of document.querySelectorAll<HTMLElement>("[data-theme-pick]")) b.setAttribute("aria-pressed", String(b.dataset.themePick === (root.dataset.theme ?? "system")));
+}
+function wireTheme() {
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(THEME_KEY);
+  } catch {
+    // Storage blocked: the choice lasts until reload.
+  }
+  applyTheme(saved ?? "system");
+  for (const b of document.querySelectorAll<HTMLElement>("[data-theme-pick]")) {
+    b.addEventListener("click", () => {
+      const pick = b.dataset.themePick ?? "system";
+      applyTheme(pick);
+      try {
+        if (pick === "system") localStorage.removeItem(THEME_KEY);
+        else localStorage.setItem(THEME_KEY, pick);
+      } catch {
+        // Storage blocked: still applied for this visit.
+      }
+    });
+  }
 }
 
 /** The studio demo bar (DEMO-BAR): a disclosure button over a push-down drawer; Esc closes it. */

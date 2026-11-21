@@ -12,7 +12,7 @@ import { launch } from "../../../tools/showcase-check/check.ts";
 //
 // API choices pinned here (for the engineer):
 //  - AC-R47: the newest (in-progress) Pace week's active bar is drawn like any other week: computed
-//    fill = --accent, fill-opacity 1, opacity 1. A later sibling <rect fill="url(#sofar)"> overlaps it,
+//    fill = --c1 (the active-hours data colour; STUDIO-DS: data never uses the accent), fill-opacity 1, opacity 1. A later sibling <rect fill="url(#sofar)"> overlaps it,
 //    with a <pattern id="sofar"> in the document. #pace-legend has an item "This week, so far".
 //    No `.agent.partial` class, no `fill-opacity="0.5"` and no `.agent.partial` CSS rule.
 //  - AC-R48: #pace-lead, #pace-legend and #pace-chart are not inside a closed <details> at 390px.
@@ -60,8 +60,8 @@ async function open({ width, height = 900, colorScheme = "light" }: Opts): Promi
   return page;
 }
 
-/** AC-T1 tab names, in order. "Your logs" (panel #drop) is playground-only and its position isn't pinned. */
-const TABS = ["Breakdown", "Pace", "What if", "Share", "Method"] as const;
+/** AC-T1 tab names, in order (STUDIO-DS, Nov 21). "Your logs" (#drop) is no longer a tab: the Overview row #ov-logs opens it. */
+const TABS = ["Overview", "Electricity", "Pace", "Share", "Method"] as const;
 /** Click the [role=tab] with this exact name; false (no wait) when the page has no such tab. */
 async function selectTab(page: Page, name: string): Promise<boolean> {
   const tab = page.getByRole("tab", { name, exact: true });
@@ -118,7 +118,7 @@ describe("VISUAL-REFRESH static (AC-R47, AC-R48, AC-R51, AC-R52)", () => {
 // ---------------------------------------------------------------------------------------------
 withBrowser("VISUAL-REFRESH AC-R47 so-far week at full colour with a hatch (real browser)", () => {
   for (const colorScheme of ["light", "dark"] as const) {
-    it(`AC-R47 the newest week's active bar resolves to --accent at full opacity, hatched by url(#sofar) (${colorScheme})`, async () => {
+    it(`AC-R47 the newest week's active bar resolves to --c1 (not the accent) at full opacity, hatched by url(#sofar) (${colorScheme})`, async () => {
       const page = await open({ width: 1280, colorScheme });
       // Select Pace first: getBBox on a display:none panel returns zeros, so this test must not
       // depend on how hidden tab panels are laid out.
@@ -126,9 +126,11 @@ withBrowser("VISUAL-REFRESH AC-R47 so-far week at full colour with a hatch (real
       const r = await page.evaluate(() => {
         const svg = document.getElementById("pace-chart")!;
         const probe = document.createElement("span");
-        probe.style.color = "var(--accent)";
+        probe.style.color = "var(--c1)";
         document.body.append(probe);
         const accent = getComputedStyle(probe).color;
+        probe.style.color = "var(--accent)";
+        const realAccent = getComputedStyle(probe).color;
         probe.remove();
         const rects = [...svg.querySelectorAll("rect")];
         const hatch = rects.filter((el) => el.getAttribute("fill") === "url(#sofar)");
@@ -146,6 +148,7 @@ withBrowser("VISUAL-REFRESH AC-R47 so-far week at full colour with a hatch (real
         const after = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
         return {
           accent,
+          realAccent,
           activeCount: active.length,
           newestFill: newest ? getComputedStyle(newest).fill : null,
           newestFillOpacity: newest ? getComputedStyle(newest).fillOpacity : null,
@@ -161,6 +164,7 @@ withBrowser("VISUAL-REFRESH AC-R47 so-far week at full colour with a hatch (real
       await page.close();
       expect(r.activeCount, "no active-hours bars drawn in #pace-chart").toBeGreaterThan(0);
       expect(r.newestFill).toBe(r.accent);
+      expect(r.newestFill, "data marks never use the accent (DS-6)").not.toBe(r.realAccent);
       expect(r.newestFillOpacityAttr, "fill-opacity attribute on the so-far bar").toBeNull();
       expect(Number(r.newestFillOpacity), "computed fill-opacity of the so-far bar").toBe(1);
       for (const o of r.newestOpacity) expect(Number(o), "opacity on the so-far bar or a parent").toBe(1);
@@ -214,53 +218,10 @@ withBrowser("VISUAL-REFRESH AC-R48 Pace chart shows on a phone once the Pace tab
   });
 });
 
-/** Visible elements with their own text, outside #drop (PR #101); ux-rules V2 rounding. */
-const fontSizes = (page: Page) =>
-  page.evaluate(() => {
-    const vis = (el: Element) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
-    const sizes = new Set<number>();
-    for (const el of document.querySelectorAll("body *")) {
-      if (!vis(el) || el.closest("#drop")) continue;
-      if (![...el.childNodes].some((n) => n.nodeType === 3 && (n.textContent ?? "").trim())) continue;
-      sizes.add(Math.round(parseFloat(getComputedStyle(el).fontSize) * 2) / 2);
-    }
-    return [...sizes].sort((a, b) => a - b);
-  });
-
-/** Corner radii on visible elements outside #drop; pills and circles skipped (ux-rules V5). */
-const radii = (page: Page) =>
-  page.evaluate(() => {
-    const out = new Set<string>();
-    for (const el of document.querySelectorAll<HTMLElement>("body *")) {
-      if (!(el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden") || el.closest("#drop")) continue;
-      const raw = getComputedStyle(el).borderTopLeftRadius, r = parseFloat(raw);
-      if (raw.includes("%") ? r >= 50 : r >= Math.min(el.offsetWidth, el.offsetHeight) / 2 - 1) continue;
-      if (r > 0) out.add(raw.includes("%") ? `${r}%` : String(r));
-    }
-    return [...out].sort((a, b) => parseFloat(a) - parseFloat(b));
-  });
-
-withBrowser("VISUAL-REFRESH AC-R49 type scale (ux-rules V2)", () => {
-  for (const width of [1280, 390]) {
-    it(`AC-R49 visible text uses 8 font sizes or fewer at ${width}px (outside #drop)`, async () => {
-      const page = await open({ width });
-      const sizes = await fontSizes(page);
-      await page.close();
-      expect(sizes.length, `font sizes: ${sizes.join(", ")}px`).toBeLessThanOrEqual(8);
-    });
-  }
-});
-
-withBrowser("VISUAL-REFRESH AC-R52 shape language and no emoji (ux-rules V5)", () => {
-  for (const width of [1280, 390]) {
-    it(`AC-R52 visible elements use 4 corner radii or fewer at ${width}px (outside #drop)`, async () => {
-      const page = await open({ width });
-      const r = await radii(page);
-      await page.close();
-      expect(r.length, `radii: ${r.join(", ")}px`).toBeLessThanOrEqual(4);
-    });
-  }
-
+// AC-R49 (8 font sizes or fewer) and AC-R52's radius count are retired (STUDIO-DS, Nov 21): the studio
+// type ramp and corner set replace them, and design-system.test.ts DS-3 (17px floor, weights) and DS-5
+// (radii 0/4/12/pill, the 4px spacing grid) check every view against that scale.
+withBrowser("VISUAL-REFRESH AC-R52 no emoji", () => {
   it("AC-R52 the rendered page text has no emoji, and the privacy note carries an inline SVG", async () => {
     const page = await open({ width: 1280 });
     const r = await page.evaluate(() => {
@@ -277,6 +238,7 @@ withBrowser("VISUAL-REFRESH AC-R52 shape language and no emoji (ux-rules V5)", (
 withBrowser("VISUAL-REFRESH AC-R51 hero range bar", () => {
   it("AC-R51 #hero-range has a track, a central dot inside it, and low/high labels; role=img labelled low, central, high", async () => {
     const page = await open({ width: 1280 });
+    expect(await selectTab(page, "Electricity"), "no Electricity tab (the statement lives there)").toBe(true);
     const want = expectedHero("30d");
     const r = await page.evaluate(() => {
       const root = document.getElementById("hero-range");
@@ -308,6 +270,7 @@ withBrowser("VISUAL-REFRESH AC-R51 hero range bar", () => {
 
   it("AC-R51 the range bar follows the 7 days / 30 days / All time window", async () => {
     const page = await open({ width: 1280 });
+    expect(await selectTab(page, "Electricity"), "no Electricity tab").toBe(true);
     const seen: Record<string, { low: string | null; high: string | null; label: string }> = {};
     for (const [id, btn] of [["7d", "7 days"], ["all", "All time"], ["30d", "30 days"]] as const) {
       await page.getByRole("button", { name: btn, exact: true }).click();
@@ -358,32 +321,30 @@ const tabState = (page: Page) =>
     };
   });
 
-withBrowser("VISUAL-REFRESH AC-T1 tabs under the hero", () => {
-  it("AC-T1 one tablist after the hero, tabs Breakdown, Pace, What if, Share, Method (+ Your logs), each controlling a tabpanel", async () => {
+withBrowser("VISUAL-REFRESH AC-T1 tabs at the top, Overview first (STUDIO-DS)", () => {
+  it("AC-T1 one tablist above every panel, tabs Overview, Electricity, Pace, Share, Method, each controlling a tabpanel", async () => {
     const page = await open({ width: 1280 });
     const s = await tabState(page);
     const order = await page.evaluate(() => {
       const list = document.querySelector("[role=tablist]");
-      const after = (a: Element | null, b: Element | null) => !!a && !!b && !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-      const inPanel = (id: string) => !!document.getElementById(id)?.closest("[role=tabpanel]");
+      const before = (a: Element | null, b: Element | null) => !!a && !!b && !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
       return {
-        afterHero: ["hero-big", "hero-range", "w-30d"].every((id) => after(document.getElementById(id), list)),
-        heroInPanel: ["hero-big", "hero-range", "w-30d"].some(inPanel),
+        beforePanels: [...document.querySelectorAll("[role=tabpanel]")].every((p) => before(list, p)),
+        listInPanel: !!list?.closest("[role=tabpanel]"),
       };
     });
     await page.close();
     expect(s.lists, "[role=tablist] count").toBe(1);
-    expect(s.tabs.map((t) => t.name).filter((n) => (TABS as readonly string[]).includes(n))).toEqual([...TABS]);
-    expect(s.tabs.map((t) => t.name), "playground mode has a Your logs tab").toContain("Your logs");
+    expect(s.tabs.map((t) => t.name)).toEqual([...TABS]);
     for (const t of s.tabs) {
       expect(t.controls, `${t.name} has no aria-controls`).toBeTruthy();
       expect(t.panelRole, `${t.name}'s aria-controls doesn't point to a [role=tabpanel]`).toBe("tabpanel");
     }
-    expect(order.afterHero, "tablist should come after the big number, range bar and window picker").toBe(true);
-    expect(order.heroInPanel, "the hero must stay outside the tab panels").toBe(false);
+    expect(order.beforePanels, "the tablist should come before every panel").toBe(true);
+    expect(order.listInPanel, "the tablist must not sit inside a panel").toBe(false);
   });
 
-  it("AC-T1 panels hold the right content: Breakdown #chart, Pace #pace-chart, What if #whatif-cache, Share #save-png, Method #params, Your logs #drop", async () => {
+  it("AC-T1 panels hold the right content: Overview #ov-energy, Electricity #chart #hero-range #whatif-cache, Pace #pace-chart, Share #save-png, Method #params", async () => {
     const page = await open({ width: 1280 });
     const r = await page.evaluate(() => {
       const tabs = [...document.querySelectorAll("[role=tablist] [role=tab]")];
@@ -391,29 +352,26 @@ withBrowser("VISUAL-REFRESH AC-T1 tabs under the hero", () => {
         const t = tabs.find((x) => (x.textContent ?? "").trim() === name);
         return t ? document.getElementById(t.getAttribute("aria-controls") ?? "") : null;
       };
-      const has = (name: string, id: string) => { const p = panelOf(name); return !!p && (p.id === id || !!p.querySelector(`#${id}`)); };
-      return { Breakdown: has("Breakdown", "chart"), Pace: has("Pace", "pace-chart"), "What if": has("What if", "whatif-cache"), Share: has("Share", "save-png"), Method: has("Method", "params"), "Your logs": has("Your logs", "drop") };
+      const has = (name: string, ...ids: string[]) => { const p = panelOf(name); return !!p && ids.every((id) => p.id === id || !!p.querySelector(`#${id}`)); };
+      return { Overview: has("Overview", "ov-energy", "ov-pace"), Electricity: has("Electricity", "chart", "hero-range", "whatif-cache"), Pace: has("Pace", "pace-chart"), Share: has("Share", "save-png"), Method: has("Method", "params") };
     });
     await page.close();
-    expect(r).toEqual({ Breakdown: true, Pace: true, "What if": true, Share: true, Method: true, "Your logs": true });
+    expect(r).toEqual({ Overview: true, Electricity: true, Pace: true, Share: true, Method: true });
   });
 
-  it("AC-T1 Breakdown is selected by default and exactly its panel is visible", async () => {
+  it("AC-T1 Overview is selected by default and exactly its panel is visible", async () => {
     const page = await open({ width: 1280 });
     const s = await tabState(page);
     await page.close();
-    const selected = s.tabs.filter((t) => t.selected === "true").map((t) => t.name);
-    expect(selected).toEqual(["Breakdown"]);
-    for (const t of s.tabs) if (t.name !== "Breakdown") expect(t.selected, `${t.name} aria-selected`).toBe("false");
+    expect(s.tabs.filter((t) => t.selected === "true").map((t) => t.name)).toEqual(["Overview"]);
     expect(s.visiblePanels.length, "visible [role=tabpanel] count").toBe(1);
-    expect(s.tabs.find((t) => t.name === "Breakdown")?.panelShown).toBe(true);
+    expect(s.tabs.find((t) => t.name === "Overview")?.panelShown).toBe(true);
   });
 
   it("AC-T1 clicking each tab keeps aria-selected and panel visibility in sync", async () => {
     const page = await open({ width: 1280 });
-    const names = [...TABS, "Your logs"];
     const missing: string[] = [];
-    for (const name of names) {
+    for (const name of [...TABS].reverse()) {
       if (!(await selectTab(page, name))) { missing.push(name); continue; }
       const s = await tabState(page);
       for (const t of s.tabs) {
@@ -430,38 +388,44 @@ withBrowser("VISUAL-REFRESH AC-T1 tabs under the hero", () => {
 
   it("AC-T1 ArrowRight/ArrowLeft move selection and focus, wrapping at the ends, with a roving tabindex", async () => {
     const page = await open({ width: 1280 });
-    const first = page.getByRole("tab", { name: "Breakdown", exact: true });
-    expect(await first.count(), "no Breakdown tab").toBe(1);
+    const first = page.getByRole("tab", { name: "Overview", exact: true });
+    expect(await first.count(), "no Overview tab").toBe(1);
     await first.focus();
     const now = async () => {
       const s = await tabState(page);
       return { focused: s.tabs.find((t) => t.focused)?.name, selected: s.tabs.filter((t) => t.selected === "true").map((t) => t.name), tabbable: s.tabs.filter((t) => t.tabindex !== "-1").map((t) => t.name), last: s.tabs.at(-1)?.name };
     };
-    const start = await now();
-    expect(start.tabbable, "only the selected tab is in the Tab order").toEqual(["Breakdown"]);
+    expect((await now()).tabbable, "only the selected tab is in the Tab order").toEqual(["Overview"]);
     await page.keyboard.press("ArrowRight");
-    expect(await now()).toMatchObject({ focused: "Pace", selected: ["Pace"], tabbable: ["Pace"] });
+    expect(await now()).toMatchObject({ focused: "Electricity", selected: ["Electricity"], tabbable: ["Electricity"] });
     await page.keyboard.press("ArrowLeft");
-    expect(await now()).toMatchObject({ focused: "Breakdown", selected: ["Breakdown"] });
+    expect(await now()).toMatchObject({ focused: "Overview", selected: ["Overview"] });
     await page.keyboard.press("ArrowLeft");
     const wrapped = await now();
     expect(wrapped.focused, "ArrowLeft on the first tab wraps to the last").toBe(wrapped.last);
     expect(wrapped.selected).toEqual([wrapped.last]);
     await page.keyboard.press("ArrowRight");
-    expect(await now()).toMatchObject({ focused: "Breakdown", selected: ["Breakdown"] });
+    expect(await now()).toMatchObject({ focused: "Overview", selected: ["Overview"] });
     await page.close();
   });
 
-  it("AC-T1 clicking #jump selects the Your logs tab and shows #drop", async () => {
+  it("AC-T1 clicking #ov-logs shows #drop inside the Overview (still the one selected tab) with a way back", async () => {
     const page = await open({ width: 1280 });
-    await page.locator("#jump").click();
+    await page.locator("#ov-logs").click();
     await page.waitForTimeout(100);
     const s = await tabState(page);
     const dropShown = await page.locator("#drop").isVisible();
+    const listShown = await page.locator("#ov-list").isVisible();
+    const hash = await page.evaluate(() => location.hash);
+    await page.locator("#drop-back").click();
+    await page.waitForTimeout(100);
+    const backList = await page.locator("#ov-list").isVisible();
+    const backDrop = await page.locator("#drop").isVisible();
     await page.close();
-    expect(s.tabs.filter((t) => t.selected === "true").map((t) => t.name)).toEqual(["Your logs"]);
-    expect(dropShown).toBe(true);
+    expect(s.tabs.filter((t) => t.selected === "true").map((t) => t.name)).toEqual(["Overview"]);
+    expect({ dropShown, listShown, hash }).toEqual({ dropShown: true, listShown: false, hash: "#drop" });
     expect(s.visiblePanels.length).toBe(1);
+    expect({ backList, backDrop }).toEqual({ backList: true, backDrop: false });
   });
 });
 
@@ -576,7 +540,6 @@ withBrowser("VISUAL-REFRESH AC-T4 less grey text", () => {
 // ---------------------------------------------------------------------------------------------
 // Second-round ux-reviewer findings (AC-R55..AC-R58).
 // ---------------------------------------------------------------------------------------------
-const MONO_STACK = /monospace|Menlo|Consolas|SF Mono|Courier|ui-monospace/i;
 
 withBrowser("VISUAL-REFRESH AC-R55 tabs start above the fold on an iPhone 13", () => {
   it("AC-R55 at 390x844 on first load the top of [role=tablist] is at y <= 560", async () => {
@@ -591,8 +554,8 @@ withBrowser("VISUAL-REFRESH AC-R55 tabs start above the fold on an iPhone 13", (
   });
 });
 
-withBrowser("VISUAL-REFRESH AC-R56 short first paragraph in What if and Method", () => {
-  for (const name of ["What if", "Method"] as const) {
+withBrowser("VISUAL-REFRESH AC-R56 short first paragraph in Electricity (it holds What if now) and Method", () => {
+  for (const name of ["Electricity", "Method"] as const) {
     it(`AC-R56 the first visible paragraph in ${name} is 2 sentences or fewer and 260 characters or fewer`, async () => {
       const page = await open({ width: 1280 });
       expect(await selectTab(page, name), `no [role=tab] named "${name}"`).toBe(true);
@@ -613,23 +576,8 @@ withBrowser("VISUAL-REFRESH AC-R56 short first paragraph in What if and Method",
   }
 });
 
-withBrowser("VISUAL-REFRESH AC-R57 small labels in the sans face, not shouting", () => {
-  it("AC-R57 hero .eyebrow, .range-cap and every .rank .rng: not monospace, text-transform none, 13px or more", async () => {
-    const page = await open({ width: 1280 });
-    const els = await page.evaluate(() =>
-      [...document.querySelectorAll(".hero .eyebrow, .range-cap, .rank .rng")].map((el) => {
-        const s = getComputedStyle(el);
-        return { sel: `${el.className}${el.id ? "#" + el.id : ""}`, font: s.fontFamily, transform: s.textTransform, size: parseFloat(s.fontSize) };
-      }));
-    await page.close();
-    for (const cls of ["eyebrow", "range-cap", "rng"]) expect(els.some((e) => e.sel.split(/[ #]/).includes(cls)), `no .${cls} on the page`).toBe(true);
-    for (const e of els) {
-      expect(e.font, `${e.sel} font-family`).not.toMatch(MONO_STACK);
-      expect(e.transform, `${e.sel} text-transform`).toBe("none");
-      expect(e.size, `${e.sel} font-size`).toBeGreaterThanOrEqual(13);
-    }
-  });
-});
+// AC-R57 (small labels 13px+, sans, no caps) is retired in favour of design-system.test.ts DS-3: every
+// visible text is 17px or more, weight 400/500/600, never uppercase or italic (STUDIO-DS, Nov 21).
 
 withBrowser("VISUAL-REFRESH AC-R58 one rule under the tabs on a phone", () => {
   it("AC-R58 at 390px the tablist draws the bottom border; unselected tabs (Pace, Share, ...) draw none", async () => {
@@ -644,7 +592,7 @@ withBrowser("VISUAL-REFRESH AC-R58 one rule under the tabs on a phone", () => {
       const tabs = [...document.querySelectorAll<HTMLElement>("[role=tab]")].filter((t) => t.getClientRects().length > 0);
       return {
         listDraws: !!list && draws(list),
-        // The selected tab's accent underline is the one allowed exception (it marks the selection, not a row).
+        // The selected tab's accent underline is an inset box-shadow, not a border (it marks the selection, not a row).
         unselectedWithBorder: tabs.filter((t) => t.getAttribute("aria-selected") !== "true" && draws(t)).map((t) => t.textContent?.trim()),
       };
     });

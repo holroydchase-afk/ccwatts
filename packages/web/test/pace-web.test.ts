@@ -247,7 +247,7 @@ describe("CCW-M4.5 lead and second line (UX-R40, UX-R41)", () => {
     expect(html).toContain(" hours in ");
   });
 
-  it("UX-R40 (VISUAL-REFRESH AC-R47) the in-progress week is drawn in full colour with the #sofar hatch over it", () => {
+  it("UX-R40 (VISUAL-REFRESH AC-R47) the in-progress week is drawn in its full data colour (--c1, never the accent) with the #sofar hatch over it", () => {
     // QA-R4: the newest week is the in-progress one, even on a Sunday when it already has 7 days.
     expect(app).toMatch(/const partial = w === newestFirst\[0\]/);
     expect(app).not.toMatch(/daysCounted < 7/);
@@ -255,6 +255,9 @@ describe("CCW-M4.5 lead and second line (UX-R40, UX-R41)", () => {
     expect(app).not.toMatch(/fill-opacity="0\.5"/);
     expect(template).not.toMatch(/\.agent\.partial/);
     expect(app).toMatch(/<pattern[^>]*id="sofar"/);
+    // STUDIO-DS (DS-6): the active-hours bar uses the --c1 data colour; the accent only marks what you can tap.
+    expect(app).toMatch(/fill="var\(--c1\)"><title>\$\{esc\(title\)\}/);
+    expect(app).not.toMatch(/fill="var\(--accent\)"/);
     expect(app).toMatch(/partial && v > 0 \? `<rect[^`]*fill="url\(#sofar\)"/);
     expect(paceSection(template)).toMatch(/id="pace-legend"[\s\S]*This week, so far/);
   });

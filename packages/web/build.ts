@@ -47,19 +47,25 @@ const pct = (v: number) => `${Math.round(v * 100)}%`;
 const at = (cacheRead.value - cacheRead.low) / (cacheRead.high - cacheRead.low);
 const mark = `calc(${(at * 100).toFixed(2)}% + ${(8 - 16 * at).toFixed(1)}px)`;
 
+// Atkinson Hyperlegible Next (SIL OFL, src/fonts/OFL.txt), inlined so the page loads no font file.
+const font = readFileSync(here("src/fonts/AtkinsonHyperlegibleNext-latin.woff2")).toString("base64");
+
 const hash = createHash("sha256").update(script).digest("base64");
-// Nothing can be fetched: no connect-src, no external scripts, styles, fonts or frames.
+// Nothing can be fetched: no connect-src, no external scripts, styles or frames. The one font is a
+// data: URL in the page itself (font-src data:, QA-R8).
 const csp = [
   "default-src 'none'",
   `script-src 'sha256-${hash}'`,
   "style-src 'unsafe-inline'",
   "img-src data: blob:",
+  "font-src data:",
   "base-uri 'none'",
   "form-action 'none'",
 ].join("; ");
 
 const html = readFileSync(here("src/template.html"), "utf8")
   .replace("__CSP__", () => csp)
+  .replace("__FONT__", () => font)
   .replaceAll("__PLAYGROUND_URL__", () => PLAYGROUND_URL)
   .replace("__WHATIF_MIN__", () => String(cacheRead.low))
   .replace("__WHATIF_MAX__", () => String(cacheRead.high))

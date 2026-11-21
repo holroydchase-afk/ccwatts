@@ -35,9 +35,13 @@ writeFileSync(noUsage, JSON.stringify({ type: "user", timestamp: "2026-10-01T10:
 const MONO = /monospace|Menlo|Consolas|SF Mono|Courier/i;
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-// VISUAL-REFRESH: the page shows one tab panel at a time under the hero. Checks on panel content
-// select its tab first (Breakdown is the default).
+// STUDIO-DS: the page shows one tab panel at a time (Overview is the default). Checks on panel content
+// select its tab first. Your logs (#drop) is no longer a tab: the Overview row #ov-logs opens it.
 const tab = (page: import("playwright-core").Page, name: string) => page.getByRole("tab", { name, exact: true }).click();
+const openLogs = async (page: import("playwright-core").Page) => {
+  await tab(page, "Overview");
+  await page.click("#ov-logs");
+};
 const problems: string[] = [];
 for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
   const page = await browser.newPage({ viewport });
@@ -57,35 +61,30 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   if (!(await barText()).includes("Sample data")) problems.push(`DEMO-BAR: did not open on sample data (bar says "${await barText()}")`);
 
-  // Keyboard: Tab reaches "Use your own logs" and the tabs; Enter on it opens Your logs, and Tab then
-  // reaches both file pickers (recruiter-ready RR-5, now through the Your logs tab).
+  // Keyboard: Tab reaches the tabs and the Overview row "Use your own logs" (#ov-logs); Enter on it opens
+  // Your logs, and Tab then reaches both file pickers (recruiter-ready RR-5, now through #ov-logs).
   const reached = new Set<string | undefined>();
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
   }
-  // Phones hide #jump (AC-R55); there the keyboard path is the tabs: End selects Your logs.
-  const wide = viewport.width >= 600;
-  for (const id of wide ? ["jump", "tab-breakdown"] : ["tab-breakdown"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
-  if (wide) {
-    await page.focus("#jump");
-    await page.keyboard.press("Enter");
-  } else {
-    await page.focus("#tab-breakdown");
-    await page.keyboard.press("End");
-  }
+  for (const id of ["tab-overview", "ov-logs"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
+  await page.focus("#ov-logs");
+  await page.keyboard.press("Enter");
   for (let i = 0; i < 6; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
   }
-  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} from the Your logs tab at ${viewport.width}px`);
+  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} from Your logs (#ov-logs) at ${viewport.width}px`);
 
-  // Tap targets: every button 44px tall or more (RR-9).
-  const short = await page.$$eval("button, label.btn", (els) => (els as HTMLElement[]).filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).map((e) => e.id || (e.textContent ?? "").trim()));
-  // Chart labels stay readable on a phone: drawn at the screen's pixel width, not scaled down (RR-8).
-  const label = await page.$eval("#chart text", (t) => t.getBoundingClientRect().height);
-  if (label < 11) problems.push(`chart labels ${label.toFixed(1)}px tall at ${viewport.width}px (want 11+)`);
-  // Method table: no sideways scroll inside it on a phone, distinct source links 44px tall (RR-10, RR-11).
+  // Tap targets: every button 48px tall or more (RR-9, STUDIO-DS target 48).
+  const short = await page.$$eval("main button, label.btn", (els) => (els as HTMLElement[]).filter((e) => e.offsetParent && e.getBoundingClientRect().height < 48).map((e) => e.id || (e.textContent ?? "").trim()));
+  // Chart labels stay readable on a phone: drawn at the screen's pixel width, never scaled down (RR-8):
+  // 17px text (STUDIO-DS body floor) at real size.
+  await tab(page, "Electricity");
+  const label = await page.$eval("#chart text", (t) => parseFloat(getComputedStyle(t).fontSize) * ((t as SVGGraphicsElement).getScreenCTM()?.a ?? 1));
+  if (label < 16.95) problems.push(`chart labels ${label.toFixed(1)}px at ${viewport.width}px (want 17+)`);
+  // Method table: no sideways scroll inside it on a phone, distinct source links 48px tall (RR-10, RR-11).
   // Closed <details> content takes no space now, so open the Method tab and the parameter table first.
   await tab(page, "Method");
   await page.click("#params-box > summary");
@@ -93,18 +92,18 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if (table.over > 1) problems.push(`method table scrolls sideways by ${table.over}px at ${viewport.width}px`);
   const links = await page.$$eval("#params a", (as) => as.map((a) => ({ t: (a.textContent ?? "").trim(), h: a.getBoundingClientRect().height })));
   if (links.some((l) => l.t === "source")) problems.push("source links don't name their source");
-  if (links.some((l) => l.h < 44)) problems.push(`source links under 44px at ${viewport.width}px`);
+  if (links.some((l) => l.h < 48)) problems.push(`source links under 48px at ${viewport.width}px`);
   await page.click("#params-box > summary");
   // Phones get a hint that logs live on a computer (RR-13).
-  await tab(page, "Your logs");
+  await openLogs(page);
   const hint = await page.$eval("#phone-hint", (h) => h.getBoundingClientRect().height > 0).catch(() => null);
   if (hint !== viewport.width < 600) problems.push(`phone hint ${hint ? "shown" : "missing"} at ${viewport.width}px`);
-  await tab(page, "Breakdown");
+  await tab(page, "Electricity");
   // CCW-UX1: the hero's meta line breaks between items, never inside a date or a number.
   const metaParts = await page.$$eval("#hero-meta > span", (ss) => ss.map((s) => ({ t: s.textContent, lines: s.getClientRects().length })));
   if (metaParts.length < 3) problems.push("hero meta line isn't split into items");
   for (const m of metaParts) if (m.lines > 1) problems.push(`hero meta item "${m.t}" wraps at ${viewport.width}px`);
-  if (short.length) problems.push(`buttons under 44px at ${viewport.width}px: ${short.join(", ")}`);
+  if (short.length) problems.push(`buttons under 48px at ${viewport.width}px: ${short.join(", ")}`);
 
   // UX-R4: reading text is in the sans stack; mono is for numbers and code only.
   // Callbacks that run in the page declare no named functions: tsx keeps function names with an
@@ -120,7 +119,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       post: post!,
     };
   });
-  if (MONO.test(fonts.body) || !/Helvetica|Arial|sans-serif/i.test(fonts.body)) problems.push(`UX-R4: body font is ${fonts.body}, want the sans stack`);
+  if (!/^"?Atkinson Hyperlegible Next"?, system-ui, sans-serif$/.test(fonts.body)) problems.push(`UX-R4/STUDIO-DS: body font is ${fonts.body}, want "Atkinson Hyperlegible Next", system-ui, sans-serif`);
   for (const p of fonts.paragraphs) if (MONO.test(p.f)) problems.push(`UX-R4: paragraph ${p.id} is monospace at ${viewport.width}px`);
   if (!fonts.methodNotes.length || fonts.methodNotes.some((f) => MONO.test(f))) problems.push("UX-R4: method descriptions are monospace (or missing)");
   if (MONO.test(fonts.post)) problems.push("UX-R4: LinkedIn post preview is monospace");
@@ -132,16 +131,16 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     if (height >= 4500) problems.push(`UX-R5: page is ${height}px tall at ${viewport.width}x${viewport.height} (want under 4500)`);
   }
 
-  // UX-R3: the hero links to the "Try it" box, which comes after the chart and the rankings.
+  // UX-R3 (STUDIO-DS): the "Try it" box sits in the Overview, apart from the chart and the rankings,
+  // and the Overview row "Use your own logs" opens it.
   const order = await page.evaluate(() => {
     const drop = document.querySelector("#drop");
-    const after = ["#chart", "#by-model", "#by-project"].every((sel) =>
-      !!(drop && (document.querySelector(sel)?.compareDocumentPosition(drop) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING));
-    const link = [...document.querySelectorAll(".hero a")].find((a) => a.textContent?.trim() === "Use your own logs");
-    return { after, link: link?.getAttribute("href") ?? null };
+    const apart = !!drop?.closest("#p-overview") && ["#chart", "#by-model", "#by-project"].every((sel) => !document.querySelector(sel)?.closest("#p-overview"));
+    const row = document.querySelector("#ov-logs");
+    return { apart, link: row && /Use your own logs/.test(row.textContent ?? "") ? row.getAttribute("href") : null };
   });
-  if (!order.after) problems.push("UX-R3: 'Try it on your own logs' is not after the chart and the By model/By project lists");
-  if (order.link !== "#drop") problems.push(`UX-R3: hero has no 'Use your own logs' link to #drop (got ${order.link})`);
+  if (!order.apart) problems.push("UX-R3: 'Try it on your own logs' is not in the Overview, apart from the chart and the By model/By project lists");
+  if (order.link !== "#drop") problems.push(`UX-R3: no Overview row 'Use your own logs' linking to #drop (got ${order.link})`);
 
   // UX-R1: errors are announced from #drop-status, and the hero isn't a live region.
   const live = await page.evaluate(() => ({
@@ -172,7 +171,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   // WI-3, WI-4 (CCW-M2.6.5): the "What if?" cache-read slider recomputes the hero, says it's a
   // what-if, leaves the share card and LinkedIn post on the published estimate, and Reset undoes it.
-  await tab(page, "What if");
+  await tab(page, "Electricity"); // the What if slider sits under "What drives your number"
   if (!(await page.$("#whatif-cache"))) problems.push(`WI-3: no #whatif-cache slider at ${viewport.width}px`);
   else {
     const share = () => page.evaluate(() => `${document.querySelector("#card")?.getAttribute("src")}|${document.querySelector("#post")?.textContent}`);
@@ -181,10 +180,10 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     const shareBefore = await share();
     const box = await page.$eval("#whatif-cache", (s) => s.getBoundingClientRect().height);
     if (box < 44) problems.push(`WI-3: slider is ${box.toFixed(1)}px tall at ${viewport.width}px (want 44+)`);
-    // WI-R7: 48px slider box; WI-R6: the 1% / published / 25% scale is 13px or more.
+    // WI-R7: 48px slider box; WI-R6: the 1% / published / 25% scale is 17px or more (STUDIO-DS).
     if (box < 48) problems.push(`WI-R7: slider is ${box.toFixed(1)}px tall at ${viewport.width}px (want 48+)`);
     const scalePx = await page.$eval(".whatif-scale", (s) => parseFloat(getComputedStyle(s).fontSize)).catch(() => 0);
-    if (scalePx < 13) problems.push(`WI-R6: .whatif-scale is ${scalePx}px at ${viewport.width}px (want 13+)`);
+    if (scalePx < 17) problems.push(`WI-R6: .whatif-scale is ${scalePx}px at ${viewport.width}px (want 17+)`);
     if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note missing or shown before the slider moves");
     await page.$eval("#whatif-cache", (s: HTMLInputElement) => {
       s.value = s.max;
@@ -277,8 +276,9 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if ((await barText()).includes("Sample data")) problems.push(`DEMO-BAR: bar still says Sample data after loading a file ("${await barText()}")`);
   const wantFilesLong = viewport.width >= 600;
   if ((await barText()).includes("read in this browser only") !== wantFilesLong) problems.push(`DEMO-BAR: "· read in this browser only" ${wantFilesLong ? "missing" : "shown"} at ${viewport.width}px ("${await barText()}")`);
+  await tab(page, "Electricity");
   await page.click("#w-7d");
-  await tab(page, "Your logs");
+  await openLogs(page);
   await page.click("#use-sample");
   if (!(await barText()).includes("Sample data") || (await barText()).includes("Your files")) problems.push(`DEMO-BAR: bar says "${await barText()}" after Use sample data (want Sample data)`);
   // Claude Code on the web: the copied prompt's counts-only output, pasted inside a code fence, loads.
@@ -438,7 +438,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       await toggle.click();
       if (!(await panel.evaluate((p) => (p as HTMLElement).innerText)).includes(FILES_COPY)) problems.push(`DEMO-BAR-9: drawer copy isn't the own-files copy after loading a file ${at}`);
       await toggle.click();
-      await page.getByRole("tab", { name: "Your logs", exact: true }).click();
+      await openLogs(page);
       await page.click("#use-sample");
       const back2 = await toggle.evaluate((t) => (t as HTMLElement).innerText);
       if (!back2.includes("Sample data") || back2.includes("Your files")) problems.push(`DEMO-BAR-9: bar says "${back2}" after Use sample data ${at}`);
@@ -516,6 +516,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   page.on("pageerror", (e) => problems.push(`PS-R2 page error: ${e}`));
   await page.goto(pathToFileURL(crafted).href);
+  await page.getByRole("tab", { name: "Electricity", exact: true }).click();
   await page.click("#w-all");
   if (await page.$("#xss")) problems.push("PS-R2: a row's date was rendered as markup (found <i id=xss> in the page)");
   await page.close();
@@ -528,11 +529,12 @@ for (const p of await showcaseCheck({
   browser,
   viewports: [{ width: 1280, height: 900 }, { width: 390, height: 844 }],
   tapTargets: "button, label.btn", // RR-9
-  // RR-5. Not the pickers (QA-R5): they sit in the Your logs tab, so the RR-5 loop above opens it first.
-  // Not #jump either: phones hide it (AC-R55), and the RR-5 loop checks it on wide screens.
-  keyboardReach: ["tab-breakdown"],
+  // RR-5. Not the pickers (QA-R5): they sit in Your logs, so the RR-5 loop above opens it via #ov-logs first.
+  keyboardReach: ["tab-overview", "ov-logs"],
   tabPresses: 12,
-  minTextPx: 11, // the chart-label floor from RR-8
+  // 12px: the studio demo bar's badge (exempt, QA-R9; DEMO-BANNER standard). The kit can't exempt one
+  // region, so the 17px STUDIO-DS floor for the rest of the page is design-system.test.ts DS-3.
+  minTextPx: 12,
 })) problems.push(`showcase kit: ${p}`);
 
 await browser.close();
