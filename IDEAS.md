@@ -23,6 +23,11 @@ A running log. Add to the top of each section. Every entry starts with the probl
 - **Decided so far:** Chase gave the go on Oct 31, 2026. Shipped name is "pace". The studio morning digest does not show finish times.
 - **Source:** Intake #71 from Product Studio, Oct 30, 2026.
 
+### Pace as its own product · 💡 idea (Chase, Nov 21)
+- **Problem:** hours-with-Claude tracking stands on its own for developers who don't care about energy, but inside ccwatts it sits behind an electricity estimator.
+- **Idea:** split Pace into its own small tool later. For now it stays inside ccwatts (one strong portfolio piece) and gets its own linkable tab (`/ccwatts/#pace`) in the overview redesign.
+- **Signal to split:** people ask for Pace alone (issues, replies, demo feedback). ccwatts has no analytics, so we won't count link visits.
+
 ### Measure the token-type ratios ourselves ("ccwatts bench") · 💡 idea
 - **Problem:** The cache-read and output factors come from other people's estimates, and they disagree. Skeptics will ask where the ratios come from.
 - **Idea:** Rent an H100 for a few hours, run open models on vLLM, meter the GPU with NVML/Zeus, and publish measured input, output and cache-read ratios as METHODOLOGY v0.2.
