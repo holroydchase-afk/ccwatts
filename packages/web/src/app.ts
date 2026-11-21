@@ -127,9 +127,8 @@ function renderRangeBar(e: Estimate, t: ReturnType<typeof formatEnergy>, fixed: 
   const at = lo > 0 && hi > lo ? Math.min(1, Math.max(0, Math.log(c / lo) / Math.log(hi / lo))) : 0.5;
   el.setAttribute("aria-label", `Plausible range ${t.range} ${t.unit}, central ${t.central}${fixed}`);
   el.innerHTML =
-    `<span class="range-cap">Plausible range · log scale</span>` +
     `<span class="range-track"><span class="range-dot" style="left:${(at * 100).toFixed(1)}%"></span></span>` +
-    `<span class="range-ends"><span class="range-low">${esc(low ?? "")} ${esc(t.unit)}</span><span class="range-high">${esc(high ?? "")} ${esc(t.unit)}</span></span>`;
+    `<span class="range-ends"><span class="range-low">${esc(low ?? "")} ${esc(t.unit)}</span><span class="range-cap">Plausible range<span class="range-scale"> · log scale</span></span><span class="range-high">${esc(high ?? "")} ${esc(t.unit)}</span></span>`;
 }
 
 function renderChart(e: Estimate) {
@@ -226,9 +225,14 @@ function renderExplain(e: Estimate) {
   const share = (k: TokenType) => (e.total.central ? Math.round(((e.byType.find((b) => b.key === k)?.energy.central ?? 0) / e.total.central) * 100) : 0);
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   const readTokens = tokens ? Math.round((e.tokens.cacheRead / tokens) * 100) : 0;
+  // A two-sentence lead; the longer why sits behind "Why this happens" (AC-R56).
   $("explain").textContent = e.responses
-    ? `Each time Claude Code takes a step, it re-reads the conversation so far. Most of that comes from a cache, which is cheap per token but happens constantly. Here, cache reads were ${readTokens}% of tokens and about ${share("cacheRead")}% of the electricity. Writing new context into the cache was ${share("cacheWrite")}%, and the text the model wrote back was ${share("output")}%. Long sessions grow the context the agent re-reads, so starting fresh sessions for new tasks is the simplest way to lower your number.`
+    ? `Most of the electricity comes from re-reading the conversation so far (${share("cacheRead")}% here). A fresh session per task is the simplest way to lower it.`
     : "Load some usage to see what drives it.";
+  $("explain-box").hidden = !e.responses;
+  $("explain-more").textContent = e.responses
+    ? `Each time Claude Code takes a step, it re-reads the conversation so far. Most of that comes from a cache, which is cheap per token but happens constantly. Here, cache reads were ${readTokens}% of tokens and about ${share("cacheRead")}% of the electricity. Writing new context into the cache was ${share("cacheWrite")}%, and the text the model wrote back was ${share("output")}%. Long sessions grow the context the agent re-reads, so starting fresh sessions for new tasks is the simplest way to lower your number.`
+    : "";
 }
 
 /** Today's local date, YYYY-MM-DD, in the browser's own zone. */
@@ -391,7 +395,8 @@ function sourceName(url: string): string {
 }
 
 function renderMethod() {
-  $("method-intro").textContent = `Energy = tokens × energy per token, by model family and token type. Each parameter below has a low and high bound, and they combine into the range you see. The boundary is ${params.boundary}. Labels say how solid each number is: MODELED is derived from published figures, GUESS is a best estimate with wide bounds. Method v${params.version}, parameters as of ${params.as_of}, licensed ${params.license}.`;
+  $("method-intro").textContent = `Energy = tokens × energy per token, by model family and token type. Each parameter has a low and high bound, and they combine into the range you see.`;
+  $("method-more").textContent = `The boundary is ${params.boundary}. Labels say how solid each number is: MODELED is derived from published figures, GUESS is a best estimate with wide bounds. Method v${params.version}, parameters as of ${params.as_of}, licensed ${params.license}.`;
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>

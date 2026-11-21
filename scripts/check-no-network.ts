@@ -64,9 +64,16 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
   }
-  for (const id of ["jump", "tab-breakdown"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
-  await page.focus("#jump");
-  await page.keyboard.press("Enter");
+  // Phones hide #jump (AC-R55); there the keyboard path is the tabs: End selects Your logs.
+  const wide = viewport.width >= 600;
+  for (const id of wide ? ["jump", "tab-breakdown"] : ["tab-breakdown"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
+  if (wide) {
+    await page.focus("#jump");
+    await page.keyboard.press("Enter");
+  } else {
+    await page.focus("#tab-breakdown");
+    await page.keyboard.press("End");
+  }
   for (let i = 0; i < 6; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
@@ -521,7 +528,9 @@ for (const p of await showcaseCheck({
   browser,
   viewports: [{ width: 1280, height: 900 }, { width: 390, height: 844 }],
   tapTargets: "button, label.btn", // RR-9
-  keyboardReach: ["jump", "tab-breakdown"], // RR-5: the pickers sit in the Your logs tab, checked above
+  // RR-5. Not the pickers (QA-R5): they sit in the Your logs tab, so the RR-5 loop above opens it first.
+  // Not #jump either: phones hide it (AC-R55), and the RR-5 loop checks it on wide screens.
+  keyboardReach: ["tab-breakdown"],
   tabPresses: 12,
   minTextPx: 11, // the chart-label floor from RR-8
 })) problems.push(`showcase kit: ${p}`);

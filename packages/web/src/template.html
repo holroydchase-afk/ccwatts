@@ -51,21 +51,22 @@ h1{font-size:22px;line-height:1.2;margin:0;letter-spacing:-.01em;text-wrap:balan
 .privacy{display:flex;gap:8px;align-items:center;font-size:13px;margin:0}
 .privacy svg{flex:none;width:14px;height:14px;color:var(--accent)}
 .privacy b{color:var(--accent)}
-@media (min-width:600px){h1{font-size:32px}}
+@media (min-width:720px){h1{font-size:32px}}
 /* The statement: amount, plausible range, window. */
 .hero{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px}
-.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.eyebrow{font-size:13px;font-weight:600;color:var(--muted)}
+.hero .eyebrow{color:var(--ink)}
 .bill-main{display:flex;flex-direction:column;gap:14px}
 .big{font-weight:700;font-size:clamp(56px,11vw,96px);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .big small{font-size:22px;font-weight:500;margin-left:.25em;letter-spacing:0}
 .range{display:flex;flex-direction:column;gap:8px;min-width:0}
-.range-cap{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.range-cap{font-family:var(--sans);font-size:13px;font-weight:600;text-align:center}
 .range-track{position:relative;height:6px;border-radius:999px;background:var(--line);margin:6px 0}
 .range-track::before,.range-track::after{content:"";position:absolute;top:-5px;width:2px;height:16px;background:var(--ink)}
 .range-track::before{left:0}
 .range-track::after{right:0}
 .range-dot{position:absolute;top:50%;width:16px;height:16px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 3px var(--surface);transform:translate(-50%,-50%)}
-.range-ends{display:flex;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.range-ends{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
 .range-empty{font-size:15px}
 @media (min-width:720px){
   .hero{padding:24px 28px}
@@ -101,8 +102,7 @@ button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);bor
 .tabs [role=tab]:focus-visible{outline-offset:-2px}
 @media (max-width:599px){
   .tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
-  .tabs [role=tab]{justify-content:center;padding:8px 4px;border-bottom:1px solid var(--line);margin-bottom:0}
-  .tabs [role=tab][aria-selected="true"]{border-bottom:2px solid var(--accent)}
+  .tabs [role=tab]{justify-content:center;padding:8px 4px}
 }
 [role=tabpanel]{padding-top:8px}
 /* An unselected panel stays laid out (charts keep their size) but is invisible, unfocusable and takes no space. */
@@ -130,7 +130,7 @@ code{font-family:var(--mono);font-size:.92em}
 .rank .val b{font-weight:700}
 .rank .bar{grid-column:1/-1;height:6px;background:var(--line);border-radius:999px;overflow:hidden}
 .rank .bar span{display:block;height:100%;background:var(--accent)}
-.rank .rng{grid-column:1/-1;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.rank .rng{grid-column:1/-1;font-size:13px;font-variant-numeric:tabular-nums}
 .explain{max-width:65ch;margin:0}
 .note{font-family:var(--sans);font-size:13px;line-height:1.5;margin:0}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
@@ -230,6 +230,28 @@ footer{font-size:13px;border-top:1px solid var(--line);padding-top:16px;margin-t
 .demo-bar__actions{display:flex;flex-wrap:wrap;gap:0 20px;align-items:center}
 .demo-bar__actions a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-weight:600;text-underline-offset:3px}
 @media (prefers-reduced-motion:no-preference){.rank .bar span{transition:width .3s ease}}
+/* Phone layout for the top of the page (AC-R55); last, so it wins over the rules above. */
+@media (max-width:719px){
+  h1{font-size:24px}
+  .wrap{gap:14px;padding-top:16px}
+  .hero{padding:16px;gap:10px}
+  .meta{padding-top:10px}
+  /* The number and its range bar share a row, so the tabs start above the fold (AC-R55). */
+  .bill-main{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+  .range{display:grid;grid-template-columns:auto auto;grid-template-areas:"cap cap" "track track" "low high";gap:6px 8px}
+  .range-ends{display:contents}
+  .range-cap{grid-area:cap;text-align:left}
+  .range-track{grid-area:track;margin:4px 0}
+  .range-low{grid-area:low}
+  .range-high{grid-area:high;text-align:right}
+  .range-empty{grid-column:1/-1}
+  .range-scale{display:none}
+}
+@media (max-width:599px){
+  /* On a phone the lede, the privacy detail and the "Use your own logs" link step aside: the h1 and
+     the lock line say it, and the Your logs tab sits right under the card. */
+  .lede,.privacy-more,.jump{display:none}
+}
 </style>
 </head>
 <body>
@@ -259,7 +281,7 @@ footer{font-size:13px;border-top:1px solid var(--line);padding-top:16px;margin-t
     <p class="lede" id="lede">Electricity estimates for Claude Code, the AI coding agent, from its local logs. Try it on your own logs below.</p>
   </div>
 
-  <div class="privacy" id="privacy"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><div><b>Your logs never leave this browser.</b> No network requests; it reads token counts only.</div></div>
+  <div class="privacy" id="privacy"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><div><b>Your logs never leave this browser.</b><span class="privacy-more"> No network requests; it reads token counts only.</span></div></div>
 
   <section class="hero">
     <span class="eyebrow" id="hero-eyebrow">Claude Code electricity</span>
@@ -340,6 +362,10 @@ Leave out everything else, especially message content. Save the lines as ccwatts
     <div class="block">
       <h2>What drives your number</h2>
       <p class="explain" id="explain"></p>
+      <details class="fine" id="explain-box">
+        <summary class="disclose">Why this happens</summary>
+        <p class="explain" id="explain-more"></p>
+      </details>
     </div>
     <div class="whatif" id="whatif">
       <div class="whatif-head">
@@ -406,6 +432,10 @@ Leave out everything else, especially message content. Save the lines as ccwatts
     <div class="block">
       <h2>How this is estimated</h2>
       <p class="explain" id="method-intro"></p>
+      <details class="fine" id="method-box">
+        <summary class="disclose">More on the method</summary>
+        <p class="explain" id="method-more"></p>
+      </details>
       <details id="params-box">
         <summary class="disclose">Show all parameters and sources</summary>
         <div class="tablewrap"><table id="params"></table></div>

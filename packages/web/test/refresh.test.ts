@@ -573,6 +573,94 @@ withBrowser("VISUAL-REFRESH AC-T4 less grey text", () => {
   });
 });
 
+// ---------------------------------------------------------------------------------------------
+// Second-round ux-reviewer findings (AC-R55..AC-R58).
+// ---------------------------------------------------------------------------------------------
+const MONO_STACK = /monospace|Menlo|Consolas|SF Mono|Courier|ui-monospace/i;
+
+withBrowser("VISUAL-REFRESH AC-R55 tabs start above the fold on an iPhone 13", () => {
+  it("AC-R55 at 390x844 on first load the top of [role=tablist] is at y <= 560", async () => {
+    const page = await open({ width: 390, height: 844 });
+    const top = await page.evaluate(() => {
+      const list = document.querySelector("[role=tablist]");
+      return list ? list.getBoundingClientRect().top + window.scrollY : null;
+    });
+    await page.close();
+    expect(top, "no [role=tablist]").not.toBeNull();
+    expect(top!, "tablist top (px from page top)").toBeLessThanOrEqual(560);
+  });
+});
+
+withBrowser("VISUAL-REFRESH AC-R56 short first paragraph in What if and Method", () => {
+  for (const name of ["What if", "Method"] as const) {
+    it(`AC-R56 the first visible paragraph in ${name} is 2 sentences or fewer and 260 characters or fewer`, async () => {
+      const page = await open({ width: 1280 });
+      expect(await selectTab(page, name), `no [role=tab] named "${name}"`).toBe(true);
+      const first = await page.evaluate(() => {
+        const panel = document.querySelector("[role=tabpanel]:not([hidden])");
+        const p = [...(panel?.querySelectorAll("p") ?? [])].find((el) =>
+          el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden" &&
+          !el.closest("details:not([open])") && (el.textContent ?? "").trim() !== "");
+        return p ? { id: p.id || p.className, text: (p.textContent ?? "").replace(/\s+/g, " ").trim() } : null;
+      });
+      await page.close();
+      expect(first, `no visible paragraph in ${name}`).not.toBeNull();
+      // A sentence ends at . ! or ? followed by a space and a capital, or the end (so "v0.1.1" and "e.g. a" don't count).
+      const sentences = (first!.text.match(/[.!?](?=\s+[A-Z"(]|\s*$)/g) ?? []).length || 1;
+      expect(sentences, `${name} p.${first!.id}: "${first!.text}"`).toBeLessThanOrEqual(2);
+      expect(first!.text.length, `${name} p.${first!.id}: "${first!.text}"`).toBeLessThanOrEqual(260);
+    });
+  }
+});
+
+withBrowser("VISUAL-REFRESH AC-R57 small labels in the sans face, not shouting", () => {
+  it("AC-R57 hero .eyebrow, .range-cap and every .rank .rng: not monospace, text-transform none, 13px or more", async () => {
+    const page = await open({ width: 1280 });
+    const els = await page.evaluate(() =>
+      [...document.querySelectorAll(".hero .eyebrow, .range-cap, .rank .rng")].map((el) => {
+        const s = getComputedStyle(el);
+        return { sel: `${el.className}${el.id ? "#" + el.id : ""}`, font: s.fontFamily, transform: s.textTransform, size: parseFloat(s.fontSize) };
+      }));
+    await page.close();
+    for (const cls of ["eyebrow", "range-cap", "rng"]) expect(els.some((e) => e.sel.split(/[ #]/).includes(cls)), `no .${cls} on the page`).toBe(true);
+    for (const e of els) {
+      expect(e.font, `${e.sel} font-family`).not.toMatch(MONO_STACK);
+      expect(e.transform, `${e.sel} text-transform`).toBe("none");
+      expect(e.size, `${e.sel} font-size`).toBeGreaterThanOrEqual(13);
+    }
+  });
+});
+
+withBrowser("VISUAL-REFRESH AC-R58 one rule under the tabs on a phone", () => {
+  it("AC-R58 at 390px the tablist draws the bottom border; unselected tabs (Pace, Share, ...) draw none", async () => {
+    const page = await open({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+      const draws = (el: Element) => {
+        const s = getComputedStyle(el);
+        const alpha = /rgba\([^)]*,\s*([\d.]+)\)/.exec(s.borderBottomColor)?.[1];
+        return parseFloat(s.borderBottomWidth) > 0 && !["none", "hidden"].includes(s.borderBottomStyle) && (alpha === undefined || Number(alpha) > 0);
+      };
+      const list = document.querySelector("[role=tablist]");
+      const tabs = [...document.querySelectorAll<HTMLElement>("[role=tab]")].filter((t) => t.getClientRects().length > 0);
+      return {
+        listDraws: !!list && draws(list),
+        // The selected tab's accent underline is the one allowed exception (it marks the selection, not a row).
+        unselectedWithBorder: tabs.filter((t) => t.getAttribute("aria-selected") !== "true" && draws(t)).map((t) => t.textContent?.trim()),
+      };
+    });
+    const both = await page.evaluate(() => {
+      const draws = (el: Element | undefined) => !!el && parseFloat(getComputedStyle(el).borderBottomWidth) > 0 &&
+        getComputedStyle(el).borderBottomStyle !== "none" && !/rgba\([^)]*,\s*0\)/.test(getComputedStyle(el).borderBottomColor);
+      const byName = (n: string) => [...document.querySelectorAll("[role=tab]")].find((t) => t.textContent?.trim() === n);
+      return draws(byName("Pace")) && draws(byName("Share"));
+    });
+    await page.close();
+    expect(r.listDraws, "the [role=tablist] container draws no bottom border").toBe(true);
+    expect(both, "Pace and Share both draw a bottom border, so each row of tabs looks like its own bar").toBe(false);
+    expect(r.unselectedWithBorder, "unselected tabs that draw their own bottom border").toEqual([]);
+  });
+});
+
 withBrowser("VISUAL-REFRESH constraints still hold", () => {
   it("no network requests or page errors across the pages opened above", () => {
     expect(problems).toEqual([]);
