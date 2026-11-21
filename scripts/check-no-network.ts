@@ -35,6 +35,9 @@ writeFileSync(noUsage, JSON.stringify({ type: "user", timestamp: "2026-10-01T10:
 const MONO = /monospace|Menlo|Consolas|SF Mono|Courier/i;
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+// VISUAL-REFRESH: the page shows one tab panel at a time under the hero. Checks on panel content
+// select its tab first (Breakdown is the default).
+const tab = (page: import("playwright-core").Page, name: string) => page.getByRole("tab", { name, exact: true }).click();
 const problems: string[] = [];
 for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
   const page = await browser.newPage({ viewport });
@@ -54,13 +57,21 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   if (!(await barText()).includes("Sample data")) problems.push(`DEMO-BAR: did not open on sample data (bar says "${await barText()}")`);
 
-  // Keyboard: Tab must reach both file pickers (recruiter-ready RR-5).
+  // Keyboard: Tab reaches "Use your own logs" and the tabs; Enter on it opens Your logs, and Tab then
+  // reaches both file pickers (recruiter-ready RR-5, now through the Your logs tab).
   const reached = new Set<string | undefined>();
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
   }
-  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
+  for (const id of ["jump", "tab-breakdown"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
+  await page.focus("#jump");
+  await page.keyboard.press("Enter");
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press("Tab");
+    reached.add(await page.evaluate(() => document.activeElement?.id));
+  }
+  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} from the Your logs tab at ${viewport.width}px`);
 
   // Tap targets: every button 44px tall or more (RR-9).
   const short = await page.$$eval("button, label.btn", (els) => (els as HTMLElement[]).filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).map((e) => e.id || (e.textContent ?? "").trim()));
@@ -68,14 +79,20 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   const label = await page.$eval("#chart text", (t) => t.getBoundingClientRect().height);
   if (label < 11) problems.push(`chart labels ${label.toFixed(1)}px tall at ${viewport.width}px (want 11+)`);
   // Method table: no sideways scroll inside it on a phone, distinct source links 44px tall (RR-10, RR-11).
+  // Closed <details> content takes no space now, so open the Method tab and the parameter table first.
+  await tab(page, "Method");
+  await page.click("#params-box > summary");
   const table = await page.$eval(".tablewrap", (t) => ({ over: t.scrollWidth - t.clientWidth }));
   if (table.over > 1) problems.push(`method table scrolls sideways by ${table.over}px at ${viewport.width}px`);
   const links = await page.$$eval("#params a", (as) => as.map((a) => ({ t: (a.textContent ?? "").trim(), h: a.getBoundingClientRect().height })));
   if (links.some((l) => l.t === "source")) problems.push("source links don't name their source");
   if (links.some((l) => l.h < 44)) problems.push(`source links under 44px at ${viewport.width}px`);
+  await page.click("#params-box > summary");
   // Phones get a hint that logs live on a computer (RR-13).
+  await tab(page, "Your logs");
   const hint = await page.$eval("#phone-hint", (h) => h.getBoundingClientRect().height > 0).catch(() => null);
   if (hint !== viewport.width < 600) problems.push(`phone hint ${hint ? "shown" : "missing"} at ${viewport.width}px`);
+  await tab(page, "Breakdown");
   // CCW-UX1: the hero's meta line breaks between items, never inside a date or a number.
   const metaParts = await page.$$eval("#hero-meta > span", (ss) => ss.map((s) => ({ t: s.textContent, lines: s.getClientRects().length })));
   if (metaParts.length < 3) problems.push("hero meta line isn't split into items");
@@ -86,20 +103,18 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // Callbacks that run in the page declare no named functions: tsx keeps function names with an
   // esbuild __name() helper that exists in Node but not in the browser.
   const fonts = await page.evaluate(() => {
-    const [body, chartNote, post] = [document.body, document.querySelector("#chart-note"), document.querySelector("#post")]
+    const [body, post] = [document.body, document.querySelector("#post")]
       .map((el) => (el ? getComputedStyle(el).fontFamily : "(missing)"));
     return {
       body: body!,
       paragraphs: [...document.querySelectorAll("main p")].filter((p) => p.textContent?.trim())
         .map((p) => ({ id: p.id || p.className || (p.textContent ?? "").slice(0, 30), f: getComputedStyle(p).fontFamily })),
-      chartNote: chartNote!,
       methodNotes: [...document.querySelectorAll("#params td[data-label='Parameter'] div")].map((d) => getComputedStyle(d).fontFamily),
       post: post!,
     };
   });
   if (MONO.test(fonts.body) || !/Helvetica|Arial|sans-serif/i.test(fonts.body)) problems.push(`UX-R4: body font is ${fonts.body}, want the sans stack`);
   for (const p of fonts.paragraphs) if (MONO.test(p.f)) problems.push(`UX-R4: paragraph ${p.id} is monospace at ${viewport.width}px`);
-  if (MONO.test(fonts.chartNote)) problems.push("UX-R4: chart caption is monospace");
   if (!fonts.methodNotes.length || fonts.methodNotes.some((f) => MONO.test(f))) problems.push("UX-R4: method descriptions are monospace (or missing)");
   if (MONO.test(fonts.post)) problems.push("UX-R4: LinkedIn post preview is monospace");
 
@@ -135,7 +150,9 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   // CCW-M2.6.4 coverage: the 7 days / 30 days / All time toggle marks one button pressed and
   // changes the total; going back to All time gives the same total as before.
-  const total = () => page.evaluate(() => `${document.querySelector("#hero-big")?.textContent}|${document.querySelector("#hero-range")?.textContent}`);
+  const total = () => page.evaluate(() => `${document.querySelector("#hero-big")?.textContent}|${document.querySelector("#hero-range")?.getAttribute("aria-label")}`);
+  // The hero's range is a bar (role=img); its words are in the aria-label.
+  const rangeText = async () => (await page.getAttribute("#hero-range", "aria-label")) ?? "";
   const pressed = () => page.$$eval("[data-window]", (bs) => bs.filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.id));
   await page.click("#w-all");
   const allTime = await total();
@@ -148,6 +165,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   // WI-3, WI-4 (CCW-M2.6.5): the "What if?" cache-read slider recomputes the hero, says it's a
   // what-if, leaves the share card and LinkedIn post on the published estimate, and Reset undoes it.
+  await tab(page, "What if");
   if (!(await page.$("#whatif-cache"))) problems.push(`WI-3: no #whatif-cache slider at ${viewport.width}px`);
   else {
     const share = () => page.evaluate(() => `${document.querySelector("#card")?.getAttribute("src")}|${document.querySelector("#post")?.textContent}`);
@@ -179,12 +197,12 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     // WI-R1: the page pins the moved parameter (low = high = value) instead of scaling its bounds.
     // With scaled bounds the sample's all-time high at 25% is 63.4 kWh; pinned it must be lower.
     const rangeHigh = async () => {
-      const m = /[–-]\s*([\d.,]+)\s*(kWh|Wh)/.exec(await text("#hero-range"));
+      const m = /[–-]\s*([\d.,]+)\s*(kWh|Wh)/.exec(await rangeText());
       return m?.[1] ? Number(m[1].replace(/,/g, "")) / (m[2] === "Wh" ? 1000 : 1) : NaN;
     };
     const highAtMax = await rangeHigh();
     if (!(highAtMax < 63)) problems.push(`WI-R1: hero range high at 25% is ${highAtMax} kWh (want < 63: the cache parameter should be pinned, not scaled)`);
-    if (!(await text("#hero-range")).includes("with cache reads fixed at 25%")) problems.push(`WI-R1: hero range "${await text("#hero-range")}" doesn't say "with cache reads fixed at 25%"`);
+    if (!(await rangeText()).includes("with cache reads fixed at 25%")) problems.push(`WI-R1: hero range "${await rangeText()}" doesn't say "with cache reads fixed at 25%"`);
     // WI-R4: the note is short, leads with the setting, and keeps the published figure and method version.
     const noteText = (await text("#whatif-note")).trim();
     const words = noteText.split(/\s+/).filter(Boolean).length;
@@ -206,7 +224,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       s.value = s.min;
       s.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    const minRange = await text("#hero-range");
+    const minRange = await rangeText();
     if (!(await rangeHigh() > 0)) problems.push(`WI-R1: hero range doesn't render at 1%: "${minRange}"`);
     if (!minRange.includes("with cache reads fixed at 1%")) problems.push(`WI-R1: hero range "${minRange}" doesn't say "with cache reads fixed at 1%"`);
     await page.focus("#whatif-reset");
@@ -223,6 +241,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   // UX-R17 (CCW-M2.6.4): on a phone the 1200px share card shrinks its text under 11px, so an
   // "Open full size" link sits under the card preview.
+  await tab(page, "Share");
   if (viewport.width <= 600) {
     const full = await page.evaluate(() => {
       const card = document.querySelector("#card");
@@ -252,6 +271,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   const wantFilesLong = viewport.width >= 600;
   if ((await barText()).includes("read in this browser only") !== wantFilesLong) problems.push(`DEMO-BAR: "· read in this browser only" ${wantFilesLong ? "missing" : "shown"} at ${viewport.width}px ("${await barText()}")`);
   await page.click("#w-7d");
+  await tab(page, "Your logs");
   await page.click("#use-sample");
   if (!(await barText()).includes("Sample data") || (await barText()).includes("Your files")) problems.push(`DEMO-BAR: bar says "${await barText()}" after Use sample data (want Sample data)`);
   // Claude Code on the web: the copied prompt's counts-only output, pasted inside a code fence, loads.
@@ -411,6 +431,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       await toggle.click();
       if (!(await panel.evaluate((p) => (p as HTMLElement).innerText)).includes(FILES_COPY)) problems.push(`DEMO-BAR-9: drawer copy isn't the own-files copy after loading a file ${at}`);
       await toggle.click();
+      await page.getByRole("tab", { name: "Your logs", exact: true }).click();
       await page.click("#use-sample");
       const back2 = await toggle.evaluate((t) => (t as HTMLElement).innerText);
       if (!back2.includes("Sample data") || back2.includes("Your files")) problems.push(`DEMO-BAR-9: bar says "${back2}" after Use sample data ${at}`);
@@ -500,7 +521,7 @@ for (const p of await showcaseCheck({
   browser,
   viewports: [{ width: 1280, height: 900 }, { width: 390, height: 844 }],
   tapTargets: "button, label.btn", // RR-9
-  keyboardReach: ["pick-folder", "pick-files"], // RR-5
+  keyboardReach: ["jump", "tab-breakdown"], // RR-5: the pickers sit in the Your logs tab, checked above
   tabPresses: 12,
   minTextPx: 11, // the chart-label floor from RR-8
 })) problems.push(`showcase kit: ${p}`);

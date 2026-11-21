@@ -37,6 +37,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - 2026-11-02: 0.2.0 bumped (Pace, bedtime nudge, MCP server); publish waits on the npm Trusted Publisher (issue #38).
 
 ## In progress
+- 2026-11-21 VISUAL-REFRESH (branch claude/project-thread-60gx7n, not committed yet): playground and dashboard become a "utility bill": statement card (big number, log-scale range bar role=img, segmented window picker), then WAI-ARIA tabs (Breakdown, Pace, What if, Share, Method, Your logs in the playground). Pace chart always shown in its tab; so-far week hatched, not half opacity; long notes folded. refresh.test.ts green; pace-web PACE-WEB7/UX-R40 rewritten (QA-R1); CI browser job runs refresh.test.ts (QA-R2); check-no-network selects tabs. #drop markup untouched (PR #101). Next: qa-tdd 3x, ux-reviewer, then PR; portfolio screenshot will be stale once it deploys.
 - Method v0.1.1 PR (this one). Hold lifted Nov 13; restart slowly: one thread, a few pushes a day, no bursts. Stable-demo plan (Nov 13): playground passes check:live; P0 is npm still on 0.1.1 while the page shows Pace and v0.2.0.
 
 ## Exact next step

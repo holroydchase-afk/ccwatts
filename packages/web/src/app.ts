@@ -101,13 +101,35 @@ function renderHero(e: Estimate, label: string) {
   $("hero-eyebrow").innerHTML = `Claude Code electricity · ${esc(label)}${whatIfActive() ? ` · <span class="whatif-flag">what-if: cache reads ${pct(viewParams.params[CACHE_ID]!.value)} · not published</span>` : ""}`;
   $("hero-big").innerHTML = e.responses ? `${esc(value ?? "")}<small>${esc(unit ?? "")}</small>` : "–";
   const fixed = whatIfActive() ? `, with cache reads fixed at ${pct(viewParams.params[CACHE_ID]!.value)} and every other assumption at its bounds.` : ", from the bounds on every assumption.";
-  $("hero-range").textContent = e.responses ? `Plausible range ${t.range} ${t.unit}${fixed}` : "No usage in this window.";
+  renderRangeBar(e, t, fixed);
   $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   // One span per item, kept whole, so a phone wraps between items and never inside a date.
   const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [e.span.from === e.span.to ? e.span.from : `${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
   $("hero-meta").innerHTML = items.map((i) => `<span>${esc(i)}</span>`).join(" · ");
   for (const id of ["7d", "30d", "all"] as WindowId[]) $(`w-${id}`).setAttribute("aria-pressed", String(state.window === id));
+}
+
+/**
+ * The hero's range bar: low and high at the ends of the track, the central estimate as a dot placed on
+ * a log scale (the bounds multiply, so the range is lopsided in linear terms). One image for screen
+ * readers, labelled with all three numbers.
+ */
+function renderRangeBar(e: Estimate, t: ReturnType<typeof formatEnergy>, fixed: string) {
+  const el = $("hero-range");
+  if (!e.responses) {
+    el.setAttribute("aria-label", "No usage in this window.");
+    el.innerHTML = `<span class="range-empty">No usage in this window.</span>`;
+    return;
+  }
+  const [low, high] = t.range.split(" – ");
+  const { low: lo, central: c, high: hi } = e.total;
+  const at = lo > 0 && hi > lo ? Math.min(1, Math.max(0, Math.log(c / lo) / Math.log(hi / lo))) : 0.5;
+  el.setAttribute("aria-label", `Plausible range ${t.range} ${t.unit}, central ${t.central}${fixed}`);
+  el.innerHTML =
+    `<span class="range-cap">Plausible range · log scale</span>` +
+    `<span class="range-track"><span class="range-dot" style="left:${(at * 100).toFixed(1)}%"></span></span>` +
+    `<span class="range-ends"><span class="range-low">${esc(low ?? "")} ${esc(t.unit)}</span><span class="range-high">${esc(high ?? "")} ${esc(t.unit)}</span></span>`;
 }
 
 function renderChart(e: Estimate) {
@@ -121,7 +143,7 @@ function renderChart(e: Estimate) {
   $("legend").innerHTML = (["cacheRead", "cacheWrite", "output", "input"] as TokenType[]).map((t) => `<span><i style="background:var(--t-${t})"></i>${TYPE_LABELS[t]}</span>`).join("");
   if (!days.length) {
     svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">No usage in this window</text>`;
-    $("chart-note").textContent = "";
+    svg.setAttribute("aria-label", "Daily electricity by token type: no usage in this window");
     return;
   }
   const total = formatEnergy(e.total);
@@ -136,7 +158,7 @@ function renderChart(e: Estimate) {
     parts.push(`<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`);
     parts.push(`<text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end">${num(v)}</text>`);
   }
-  parts.push(`<text x="0" y="10">${esc(total.unit)} per day</text>`);
+  parts.push(`<text x="0" y="10">${esc(total.unit)} per day, central estimate</text>`);
   // Each day's energy split by token type, using that day's type shares of the central value.
   days.forEach((d, i) => {
     let acc = 0;
@@ -158,7 +180,7 @@ function renderChart(e: Estimate) {
     parts.push(`<text x="${x}" y="${H - 8}" text-anchor="${anchor}">${esc(days[i]!.key.slice(5))}</text>`);
   }
   svg.innerHTML = parts.join("");
-  $("chart-note").textContent = `Bars show the central estimate per day. The total for this window is ${total.central}, with a range of ${total.range} ${total.unit}.`;
+  svg.setAttribute("aria-label", `Daily electricity by token type. Bars show the central estimate per day. The total for this window is ${total.central}, with a range of ${total.range} ${total.unit}.`);
 }
 
 /** Energy of one token type within a day row, from the day's own breakdown. */
@@ -194,7 +216,7 @@ function renderRank(id: string, rows: Breakdown[], label: (k: string) => string,
         .map((r) => {
           const t = formatEnergy(r.energy);
           const pct = e.total.central ? Math.round((r.energy.central / e.total.central) * 100) : 0;
-          return `<li><span class="name" title="${esc(label(r.key))}">${esc(label(r.key))}</span><span class="val">${esc(t.central)} · ${pct}%</span><span class="bar"><span style="width:${((r.energy.central / max) * 100).toFixed(1)}%"></span></span><span class="val" style="grid-column:1/-1;text-align:left">range ${esc(t.range)} ${esc(t.unit)}</span></li>`;
+          return `<li><span class="name" title="${esc(label(r.key))}">${esc(label(r.key))}</span><span class="val"><b>${esc(t.central)}</b> · ${pct}%</span><span class="bar"><span style="width:${((r.energy.central / max) * 100).toFixed(1)}%"></span></span><span class="rng">range ${esc(t.range)} ${esc(t.unit)}</span></li>`;
         })
         .join("")
     : `<li><span class="name">No usage in this window</span></li>`;
@@ -237,7 +259,7 @@ function renderPace() {
   $("pace-skipped").hidden = !off || pace.off !== "skipped";
   $("pace-unreadable").hidden = !off || pace.off !== "unreadable";
   // toggleAttribute, not .hidden: the chart is an <svg>, which has no hidden property.
-  for (const id of ["pace-body", "pace-more"]) $(id).toggleAttribute("hidden", !any);
+  $("pace-body").toggleAttribute("hidden", !any);
   const empty = $("pace-empty");
   empty.hidden = off || any;
   empty.textContent =
@@ -292,6 +314,9 @@ function renderPaceChart(newestFirst: PaceWeek[]) {
     parts.push(`<text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end">${num(v)}</text>`);
   }
   parts.push(`<text x="0" y="10">hours per week, starting Monday</text>`);
+  // The week in progress is drawn in full colour with a hatch over it, so it reads as "not done yet",
+  // not as a short week (UX-R40, AC-R47).
+  parts.push(`<defs><pattern id="sofar" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--hatch)" stroke-width="3"/></pattern></defs>`);
   const f = (n: number) => n.toFixed(1);
   const whisker = (cx: number, lo: number, hi: number, stroke: string) => {
     if (hi <= lo) return "";
@@ -308,19 +333,21 @@ function renderPaceChart(newestFirst: PaceWeek[]) {
     const base = y(0);
     const a = w.activeHours;
     const late = Math.min(w.lateNightHours, a.central);
-    // UX-R40: a week still in progress is drawn at half fill, so it doesn't read as a short week.
     const partial = w === newestFirst[0]; // QA-R4: in progress until the week ends, not when it has 7 days
-    const op = partial ? ` fill-opacity="0.5"` : "";
+    const hatch = (x: number, width: number, v: number) =>
+      partial && v > 0 ? `<rect x="${f(x)}" y="${f(y(v))}" width="${f(width)}" height="${f(Math.max(0.5, base - y(v)))}" rx="2" fill="url(#sofar)" aria-hidden="true"/>` : "";
     const title = `Week of ${label}: about ${paceHours(a.central)} active hours (range ${paceHoursRange(a)}), ${hm(w.lateNightHours * 60)} past ${LATE}`;
     if (a.central > 0) {
-      parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(0.5, base - y(a.central)))}" rx="2" fill="var(--accent)"${op}><title>${esc(title)}</title></rect>`);
-      if (late > 0) parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(1.5, y(a.central - late) - y(a.central)))}" rx="2" fill="var(--t-cacheWrite)"${op}><title>${esc(`${hm(w.lateNightHours * 60)} past ${LATE}`)}</title></rect>`);
+      parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(0.5, base - y(a.central)))}" rx="2" fill="var(--accent)"><title>${esc(title)}</title></rect>`);
+      if (late > 0) parts.push(`<rect x="${f(x0)}" y="${f(y(a.central))}" width="${f(ba)}" height="${f(Math.max(1.5, y(a.central - late) - y(a.central)))}" rx="2" fill="var(--t-cacheWrite)"><title>${esc(`${hm(w.lateNightHours * 60)} past ${LATE}`)}</title></rect>`);
+      parts.push(hatch(x0, ba, a.central));
     }
     parts.push(whisker(x0 + ba / 2, a.low, a.high, "var(--ink)"));
     if (a.high > 0) parts.push(`<text class="val" x="${f(x0 + ba / 2)}" y="${f(y(a.high) - 7)}" text-anchor="middle">${esc(paceHours(a.central))}h</text>`);
     const g = w.agentHours;
     if (g.central > 0) {
-      parts.push(`<rect x="${f(x1)}" y="${f(y(g.central))}" width="${f(bg)}" height="${f(Math.max(0.5, base - y(g.central)))}" rx="2" class="agent${partial ? " partial" : ""}"><title>${esc(`Agents on their own: about ${paceHours(g.central)} hours (range ${paceHoursRange(g)})`)}</title></rect>`);
+      parts.push(`<rect x="${f(x1)}" y="${f(y(g.central))}" width="${f(bg)}" height="${f(Math.max(0.5, base - y(g.central)))}" rx="2" class="agent"><title>${esc(`Agents on their own: about ${paceHours(g.central)} hours (range ${paceHoursRange(g)})`)}</title></rect>`);
+      parts.push(hatch(x1, bg, g.central));
       parts.push(whisker(x1 + bg / 2, g.low, g.high, "var(--muted)"));
     }
     const cx = pad.l + (i + 0.5) * gw;
@@ -375,9 +402,9 @@ function renderMethod() {
 }
 
 const LEDE: Record<typeof state.source, string> = {
-  sample: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. Try it on your own logs below.",
-  files: "ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. You're looking at the files you loaded.",
-  history: "ccwatts estimates the electricity behind your Claude Code use from the token counts in its local logs, as a range with every assumption sourced.",
+  sample: "Electricity estimates for Claude Code, the AI coding agent, from its local logs. Try it on your own logs below.",
+  files: "Electricity estimates for Claude Code, the AI coding agent, from its local logs. You're looking at the files you loaded.",
+  history: "Electricity estimates for your Claude Code use, from its local logs, with every assumption sourced.",
 };
 
 let lastEstimate: Estimate | null = null;
@@ -523,7 +550,7 @@ function wire() {
 
   if (payload.mode === "playground") {
     const drop = $("drop");
-    drop.hidden = false;
+    $("tab-drop").hidden = false;
     $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
     $("read-paste").addEventListener("click", () => {
       // Pasted from a chat, the lines may sit inside a ``` code fence; the adapter skips those lines.
@@ -556,21 +583,17 @@ function wire() {
     });
   }
 
-  // A folded chart measures 0 wide and draws at full width; redraw at the real width once opened.
-  $("pace-more").addEventListener("toggle", () => {
-    if ($<HTMLDetailsElement>("pace-more").open && paceShown.length) renderPaceChart(paceShown);
-  });
+  wireTabs();
+  // Charts draw at their on-screen width; a hidden tab's chart is redrawn when the tab opens.
   let resizeTimer = 0;
-  let chartWidth = $("chart").getBoundingClientRect().width;
+  let pageWidth = window.innerWidth;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
-      const w = $("chart").getBoundingClientRect().width;
-      if (lastEstimate && Math.round(w) !== Math.round(chartWidth)) {
-        renderChart(lastEstimate);
-        if (paceShown.length) renderPaceChart(paceShown);
-      }
-      chartWidth = w;
+      if (window.innerWidth === pageWidth) return;
+      pageWidth = window.innerWidth;
+      if (lastEstimate && !$("p-breakdown").hidden) renderChart(lastEstimate);
+      if (paceShown.length && !$("pace").hidden) renderPaceChart(paceShown);
     }, 150);
   });
 
@@ -588,11 +611,51 @@ function wire() {
   ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
   if (payload.mode === "playground") {
     wireDemoBar();
-    $("jump").hidden = false;
+    const jump = $("jump");
+    jump.hidden = false;
+    // "Use your own logs" opens the Your logs tab instead of scrolling to a hidden panel.
+    jump.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      selectTab($("tab-drop"), true);
+      $("tabs").scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+    if (location.hash === "#drop") selectTab($("tab-drop"));
   }
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;
   document.title = payload.mode === "dashboard" ? `${APP_NAME} dashboard` : `${APP_NAME} playground`;
+}
+
+/** Tabs under the hero (WAI-ARIA tabs): one panel at a time, roving tabindex, arrows wrap, Home/End. */
+const allTabs = () => [...document.querySelectorAll<HTMLElement>("#tabs [role=tab]")];
+const shownTabs = () => allTabs().filter((t) => !t.hidden);
+
+function selectTab(tab: HTMLElement, focus = false) {
+  for (const t of allTabs()) {
+    const on = t === tab;
+    t.setAttribute("aria-selected", String(on));
+    t.setAttribute("tabindex", on ? "0" : "-1");
+    $(t.getAttribute("aria-controls") ?? "").hidden = !on;
+  }
+  if (focus) tab.focus({ preventScroll: true });
+  // A hidden chart measures 0 wide and draws at full width; redraw at the real width once shown.
+  const panel = tab.getAttribute("aria-controls");
+  if (panel === "p-breakdown" && lastEstimate) renderChart(lastEstimate);
+  if (panel === "pace" && paceShown.length) renderPaceChart(paceShown);
+}
+
+function wireTabs() {
+  const list = $("tabs");
+  for (const t of allTabs()) t.addEventListener("click", () => selectTab(t));
+  list.addEventListener("keydown", (ev) => {
+    const tabs = shownTabs();
+    const i = tabs.indexOf(document.activeElement as HTMLElement);
+    if (i < 0) return;
+    const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[ev.key];
+    if (next === undefined) return;
+    ev.preventDefault();
+    selectTab(tabs[(next + tabs.length) % tabs.length]!, true);
+  });
 }
 
 /** The studio demo bar (DEMO-BAR): a disclosure button over a push-down drawer; Esc closes it. */
@@ -616,8 +679,6 @@ function wireDemoBar() {
   bar.hidden = false;
 }
 
-// The 4-week chart starts open where there's room; phones keep it folded (UX-R5 page budget).
-if (matchMedia("(min-width: 720px)").matches) $<HTMLDetailsElement>("pace-more").open = true;
 wire();
 renderMethod();
 render();
