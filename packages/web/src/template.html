@@ -166,7 +166,9 @@ details>*+*{margin-top:8px}
 @media (prefers-reduced-motion:no-preference){.disclose::before{transition:transform .15s ease}.rank .bar span{transition:width .3s ease}}
 /* "What if?" cache-read slider (M2.6.5): a what-if view, never the published estimate. */
 .whatif{display:flex;flex-direction:column;gap:8px;max-width:65ch}
-.whatif-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.whatif-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
+/* UX-R65: the h2 shares the row with the label and value, so the column stays as short as the token box beside it (AC-T2). */
+.whatif-pick{display:flex;align-items:baseline;gap:12px}
 .whatif-head label{font-weight:600}
 .whatif output{font-weight:600;font-size:22px;line-height:28px}
 .whatif input[type=range]{width:100%;height:48px;accent-color:var(--accent);cursor:pointer;background:transparent}
@@ -186,7 +188,7 @@ details>*+*{margin-top:8px}
 .manual input,.manual select{font:inherit;min-height:48px;min-width:48px;width:100%;border:1px solid var(--tab-line);border-radius:12px;padding:12px;background:var(--surface);color:var(--ink)}
 .manual input::placeholder{color:var(--muted);opacity:1}
 .manual select{cursor:pointer;width:auto;padding-right:32px}
-.manual-result{display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.manual-result{display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere;text-wrap:pretty}
 .manual-result:empty{display:none}
 .manual-kwh{font-size:22px;line-height:28px}
 .manual-kwh b{font-weight:600}
@@ -406,8 +408,8 @@ Leave out everything else, especially message content. Save the lines as ccwatts
       <div class="grid2 drives-tools">
         <div class="whatif" id="whatif">
           <div class="whatif-head">
-            <label for="whatif-cache">What if? Cache-read cost</label>
-            <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
+            <h2>What if?</h2>
+            <span class="whatif-pick"><label for="whatif-cache">Cache-read cost</label> <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output></span>
           </div>
           <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
           <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
@@ -420,6 +422,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
         </div>
         <section class="manual" id="manual" aria-labelledby="manual-h">
           <h2 id="manual-h">Have a token count?</h2>
+          <p class="note" id="manual-hint">For a cloud thread or chat that shows a token total. Local Claude Code logs give a tighter range.</p>
           <div class="manual-fields">
             <div class="manual-field">
               <label for="manual-tokens">Total tokens</label>
@@ -435,7 +438,6 @@ Leave out everything else, especially message content. Save the lines as ccwatts
             </div>
           </div>
           <p class="manual-result" id="manual-result" role="status" aria-live="polite"></p>
-          <p class="note" id="manual-hint">For a cloud thread or chat that shows a token total. Local Claude Code logs give a tighter range.</p>
         </section>
       </div>
     </div>

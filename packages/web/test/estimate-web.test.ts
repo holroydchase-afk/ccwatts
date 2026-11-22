@@ -100,3 +100,35 @@ describe("EST-20 What if and the token box sit in the Electricity tab, not the O
     expect(overview).not.toContain("Have a token count?");
   });
 });
+
+// EST-21..23: ux-reviewer fixes on the Electricity tab's What if + "Have a token count?" pair
+// (Nov 22, at 1280px). The 1280px alignment and computed sizes are checked in a real browser by
+// check:browser EST-24 (scripts/check-no-network.ts).
+describe("EST-21 UX-R65 What if gets its own h2, matching the token box", () => {
+  const whatif = /<div class="whatif" id="whatif">[\s\S]*?<section class="manual"/.exec(html)?.[0] ?? "";
+  it("EST-21 UX-R65 the What if column starts with <h2>What if?</h2>, before the slider", () => {
+    expect(whatif).not.toBe("");
+    const h2 = /<h2[^>]*>\s*What if\?\s*<\/h2>/.exec(whatif);
+    expect(h2, "<h2>What if?</h2> inside #whatif").not.toBeNull();
+    expect(h2!.index, "h2 comes before the slider").toBeLessThan(whatif.indexOf('id="whatif-cache"'));
+    expect(h2!.index, "h2 comes before the slider label").toBeLessThan(whatif.indexOf('<label for="whatif-cache"'));
+  });
+  it("EST-21 UX-R65 the slider label reads \"Cache-read cost\" (the \"What if?\" moved to the h2)", () => {
+    expect(labelFor("whatif-cache")).toBe("Cache-read cost");
+    expect(html).not.toContain("What if? Cache-read cost");
+  });
+});
+
+describe("EST-22 UX-R66 the hint sits right under the box's heading", () => {
+  it("EST-22 UX-R66 #manual-hint comes directly after the \"Have a token count?\" h2, before the inputs", () => {
+    const after = /<h2[^>]*>\s*Have a token count\?\s*<\/h2>\s*(<[^>]+>)/.exec(section)?.[1] ?? "";
+    expect(after, "first element after the h2").toMatch(/id="manual-hint"/);
+    expect(section.indexOf('id="manual-hint"')).toBeLessThan(section.indexOf('id="manual-tokens"'));
+  });
+});
+
+describe("EST-23 UX-R67 the result wraps evenly", () => {
+  it("EST-23 UX-R67 .manual-result has text-wrap: pretty", () => {
+    expect(html).toMatch(/\.manual-result\s*\{[^}]*text-wrap\s*:\s*pretty/);
+  });
+});

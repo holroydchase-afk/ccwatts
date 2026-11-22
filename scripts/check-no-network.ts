@@ -612,6 +612,37 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   }
 }
 
+// EST-24 UX-R65: at 1280px the What if column and the "Have a token count?" box sit side by side,
+// both start with a 22/28 h2, and the two h2 tops line up within 2px. Selected by role and name.
+for (const colorScheme of ["light", "dark"] as const) {
+  const at = `at 1280px ${colorScheme}`;
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme });
+  await page.goto(pathToFileURL(page_).href);
+  await tab(page, "Electricity");
+  const panel = page.locator("#p-electricity");
+  const whatifH = panel.getByRole("heading", { level: 2, name: "What if?", exact: true });
+  const boxH = panel.getByRole("heading", { level: 2, name: "Have a token count?", exact: true });
+  if ((await whatifH.count()) !== 1 || (await boxH.count()) !== 1) {
+    problems.push(`EST-24 UX-R65: want one h2 "What if?" and one h2 "Have a token count?" in Electricity ${at}, got ${await whatifH.count()} and ${await boxH.count()}`);
+  } else {
+    const measure = (l: typeof whatifH) => l.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return { top: r.top, left: r.left, size: cs.fontSize, line: cs.lineHeight, weight: cs.fontWeight };
+    });
+    const [a, b] = [await measure(whatifH), await measure(boxH)];
+    for (const [name, m] of [["What if?", a], ["Have a token count?", b]] as const) {
+      if (m.size !== "22px" || m.line !== "28px") problems.push(`EST-24 UX-R65: h2 "${name}" is ${m.size}/${m.line}, want 22px/28px ${at}`);
+    }
+    if (a.weight !== b.weight) problems.push(`EST-24 UX-R65: h2 weights differ (${a.weight} vs ${b.weight}) ${at}`);
+    if (!(b.left > a.left)) problems.push(`EST-24 UX-R65: the box isn't beside What if (lefts ${a.left}, ${b.left}) ${at}`);
+    if (Math.abs(a.top - b.top) > 2) problems.push(`EST-24 UX-R65: h2 tops differ by ${Math.abs(a.top - b.top).toFixed(1)}px (What if ${a.top}, box ${b.top}), want within 2px ${at}`);
+  }
+  const label = panel.getByText("Cache-read cost", { exact: true });
+  if ((await panel.getByRole("slider", { name: "Cache-read cost", exact: true }).count()) !== 1 || (await label.count()) !== 1) problems.push(`EST-24 UX-R65: the slider isn't labeled exactly "Cache-read cost" ${at}`);
+  await page.close();
+}
+
 // Generic checks from the showcase kit (unfinished text, broken images, tiny text, plus light and
 // dark mode), on the same browser. Everything above is specific to this page.
 for (const p of await showcaseCheck({
