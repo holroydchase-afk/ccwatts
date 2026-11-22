@@ -246,3 +246,253 @@ describe("README (RB-5)", () => {
     expect(top).toMatch(/\[!\[CI\]\([^)]*actions\/workflows\/ci\.yml\/badge\.svg[^)]*\)\]\([^)]*actions\/workflows\/ci\.yml\)/);
   });
 });
+
+// Issue #104 (docs/product/SPEC-STUDIO-WIRING.md): cloud threads run studio agents as general-purpose
+// subagents that log themselves with `log-agent-run.sh --as`, and agents-check refuses "qa-tdd skipped"
+// on a code PR unless the reason is "docs only" or "config only".
+describe("studio-agents wiring (#104)", () => {
+  const TIME = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ/;
+
+  /** A temp git repo on `branch` with the given studio agents (empty files) and extra files. */
+  function agentRepo(branch: string, agents: string[], files: Record<string, string> = {}) {
+    const dir = mkdtempSync(join(tmpdir(), "ccw-agents-"));
+    tmps.push(dir);
+    git(dir, "init", "-q", "-b", branch);
+    git(dir, "config", "core.hooksPath", "/dev/null");
+    mkdirSync(join(dir, ".claude/agents"), { recursive: true });
+    for (const a of agents) writeFileSync(join(dir, `.claude/agents/${a}.md`), `---\nname: ${a}\n---\n${a}\n`);
+    for (const [p, body] of Object.entries(files)) {
+      mkdirSync(join(dir, p, ".."), { recursive: true });
+      writeFileSync(join(dir, p), body);
+    }
+    return dir;
+  }
+
+  /** Env with CLAUDE_PROJECT_DIR pointed at an empty non-repo dir, so nothing can leak into this repo. */
+  function isolatedEnv(extra: Record<string, string> = {}) {
+    const elsewhere = mkdtempSync(join(tmpdir(), "ccw-elsewhere-"));
+    tmps.push(elsewhere);
+    return { ...process.env, CLAUDE_PROJECT_DIR: elsewhere, ...extra };
+  }
+
+  function logAs(cwd: string, ...args: string[]) {
+    const r = spawnSync("bash", [join(root, "scripts/log-agent-run.sh"), ...args], {
+      cwd,
+      input: "",
+      encoding: "utf8",
+      env: isolatedEnv(),
+    });
+    return { status: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
+  }
+
+  function checkRuns(cwd: string, body: string, headRef: string) {
+    const r = spawnSync("bash", [join(root, "scripts/check-agent-runs.sh")], {
+      cwd,
+      encoding: "utf8",
+      env: { ...process.env, BODY: body, HEAD_REF: headRef },
+    });
+    return { status: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
+  }
+
+  it("AC1 log-agent-run.sh --as qa-tdd appends one '<time> qa-tdd via-general-purpose' line to the branch log", () => {
+    const dir = agentRepo("a/b", ["qa-tdd"]);
+    const r = logAs(dir, "--as", "qa-tdd");
+    expect(r.status, r.out).toBe(0);
+    const logPath = join(dir, ".claude/agent-runs/a-b.log");
+    expect(existsSync(logPath), "--as must write .claude/agent-runs/a-b.log").toBe(true);
+    const lines = readFileSync(logPath, "utf8").split("\n").filter(Boolean);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ qa-tdd via-general-purpose$/);
+  });
+
+  it.each([["../x"], [""], ["QA-TDD"]])("AC2 --as rejects bad agent name %j: non-zero exit, no log written", (name) => {
+    const dir = agentRepo("a/b", ["qa-tdd"]);
+    const r = logAs(dir, "--as", name);
+    expect(r.status, `--as ${JSON.stringify(name)} must fail; output: ${r.out}`).not.toBe(0);
+    expect(existsSync(join(dir, ".claude/agent-runs")), "no run log may be written").toBe(false);
+  });
+
+  it("AC3 hook mode (no args) still logs '<time> engineer' from stdin JSON, and exits 0 on bad JSON", () => {
+    const dir = agentRepo("a/b", ["engineer"]);
+    const ok = spawnSync("bash", [join(root, "scripts/log-agent-run.sh")], {
+      input: JSON.stringify({ tool_input: { subagent_type: "engineer", prompt: "PROMPT-TEXT" } }),
+      encoding: "utf8",
+      env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+    });
+    expect(ok.status, ok.stderr).toBe(0);
+    const log = readFileSync(join(dir, ".claude/agent-runs/a-b.log"), "utf8");
+    expect(log).toMatch(new RegExp(TIME.source + " engineer\\n$"));
+    expect(log.split("\n").filter(Boolean)).toHaveLength(1);
+
+    const bad = spawnSync("bash", [join(root, "scripts/log-agent-run.sh")], {
+      input: "{not json",
+      encoding: "utf8",
+      env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+    });
+    expect(bad.status, "the hook never blocks").toBe(0);
+    expect(readFileSync(join(dir, ".claude/agent-runs/a-b.log"), "utf8")).toBe(log);
+  });
+
+  it("AC4 check-agent-runs.sh counts '<time> qa-tdd via-general-purpose' as a qa-tdd run (verify stubbed, run 3x)", () => {
+    const dir = agentRepo("feat/x", ["qa-tdd"], {
+      ".claude/agent-runs/feat-x.log": "2026-11-22T00:00:00Z qa-tdd via-general-purpose\n",
+      "studio-checks.json": JSON.stringify({ agents: { verify: "echo run >> verify-runs.txt", runs: 3 } }),
+    });
+    const r = checkRuns(dir, "Summary\n\nAgents: qa-tdd green 3x\n", "feat/x");
+    expect(r.status, r.out).toBe(0);
+    expect(readFileSync(join(dir, "verify-runs.txt"), "utf8")).toBe("run\nrun\nrun\n");
+  });
+
+  it.each([
+    ["a non-general-purpose suffix", "2026-11-22T00:00:00Z engineer via-something-else\n"],
+    ["no entry", "2026-11-22T00:00:00Z qa-tdd\n"],
+  ])("AC5 check-agent-runs.sh fails a named engineer with %s, and the error points to agent-prompt.sh", (_case, log) => {
+    const dir = agentRepo("feat/x", ["qa-tdd", "engineer"], { ".claude/agent-runs/feat-x.log": log });
+    const r = checkRuns(dir, "Agents: engineer built it\n", "feat/x");
+    expect(r.status, r.out).toBe(1);
+    expect(r.out).toMatch(/::error::.*'engineer'/);
+    expect(r.out).toMatch(/::error::.*agent-prompt\.sh/);
+  });
+
+  it("AC6 agent-prompt.sh prints the qa-tdd prompt with the --as log step and the task; an unknown agent exits 1", () => {
+    const r = spawnSync("bash", ["scripts/agent-prompt.sh", "qa-tdd", "test"], { cwd: root, encoding: "utf8" });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain("studio agent qa-tdd");
+    expect(r.stdout).toContain("log-agent-run.sh --as qa-tdd");
+    const at = r.stdout.lastIndexOf("## Your task");
+    expect(at, "has a '## Your task' heading").toBeGreaterThan(-1);
+    expect(r.stdout.slice(at + "## Your task".length).trim()).toBe("test");
+
+    const bad = spawnSync("bash", ["scripts/agent-prompt.sh", "no-such-agent", "test"], { cwd: root, encoding: "utf8" });
+    expect(bad.status).toBe(1);
+  });
+
+  /** The `run: |` block of the named step in agents-check.yml, dedented (no YAML parser dependency). */
+  function stepRun(stepName: string) {
+    const lines = read(".github/workflows/agents-check.yml").split("\n");
+    const at = lines.findIndex((l) => l.trim() === `- name: ${stepName}`);
+    expect(at, `step '${stepName}' in agents-check.yml`).toBeGreaterThan(-1);
+    const runAt = lines.findIndex((l, i) => i > at && /^\s+run: \|\s*$/.test(l));
+    expect(runAt).toBeGreaterThan(at);
+    const indent = lines[runAt].search(/\S/);
+    const body: string[] = [];
+    for (const l of lines.slice(runAt + 1)) {
+      if (l.trim() !== "" && l.search(/\S/) <= indent) break;
+      body.push(l);
+    }
+    const pad = Math.min(...body.filter((l) => l.trim()).map((l) => l.search(/\S/)));
+    return body.map((l) => l.slice(pad)).join("\n");
+  }
+
+  /** A repo with a base commit and a head commit that changes `changed`; runs the step with BODY. */
+  function runAgentsLineStep(changed: string, body: string) {
+    const dir = agentRepo("main", [], { "README.md": "base\n" });
+    git(dir, "add", "-A");
+    git(dir, "commit", "-qm", "base", "--no-verify");
+    const base = git(dir, "rev-parse", "HEAD").trim();
+    mkdirSync(join(dir, changed, ".."), { recursive: true });
+    writeFileSync(join(dir, changed), "changed\n");
+    git(dir, "add", "-A");
+    git(dir, "commit", "-qm", "head", "--no-verify");
+    const head = git(dir, "rev-parse", "HEAD").trim();
+    const r = spawnSync("bash", ["-e", "-c", stepRun("Agents line in the PR body")], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, BASE: base, HEAD: head, BODY: body },
+    });
+    return { status: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
+  }
+
+  it("AC7a a code PR (scripts/) with 'qa-tdd skipped: no time' fails the Agents-line step", () => {
+    const r = runAgentsLineStep("scripts/x.sh", "Agents: staff-pm scoped it; qa-tdd skipped: no time\n");
+    expect(r.status, `must fail; output: ${r.out}`).not.toBe(0);
+    expect(r.out).toContain("::error::");
+  });
+
+  it.each([["docs only"], ["config only"]])("AC7b a code PR with 'qa-tdd skipped: %s' passes", (reason) => {
+    const r = runAgentsLineStep("scripts/x.sh", `Agents: staff-pm scoped it; qa-tdd skipped: ${reason}\n`);
+    expect(r.status, r.out).toBe(0);
+  });
+
+  it("AC7c a docs-only PR passes with any skip reason", () => {
+    const r = runAgentsLineStep("docs/notes.md", "Agents: staff-pm scoped it; qa-tdd skipped: no time\n");
+    expect(r.status, r.out).toBe(0);
+  });
+
+  it("AC8 agents-check.yml keeps pinned SHAs, cache: npm, and npm ci && npm run build before the run-log step", () => {
+    const wf = read(".github/workflows/agents-check.yml");
+    expect(wf).not.toMatch(/uses:\s*\S+@v\d/);
+    for (const m of wf.matchAll(/uses:\s*(\S+)/g)) expect(m[1]).toMatch(/@[0-9a-f]{40}$/);
+    expect(wf).toMatch(/^\s+cache: npm\s*$/m);
+    const build = wf.indexOf("npm ci && npm run build");
+    const runLog = wf.indexOf("- name: Agents line matches the run log");
+    expect(build, "npm ci && npm run build present").toBeGreaterThan(-1);
+    expect(runLog, "run-log step present").toBeGreaterThan(-1);
+    expect(build).toBeLessThan(runLog);
+  });
+
+  it("AC9 CLAUDE.md's Studio agents section matches the studio template except the allowed ccwatts differences", () => {
+    const claude = read("CLAUDE.md");
+    expect(claude, "CLAUDE.md never says Charlie").not.toMatch(/Charlie/);
+    const section = (md: string) => {
+      const at = md.indexOf("## Studio agents");
+      expect(at).toBeGreaterThan(-1);
+      const end = md.indexOf("\n## ", at + 1);
+      return md.slice(at, end === -1 ? undefined : end);
+    };
+    const norm = (s: string) =>
+      s
+        .split("\n")
+        .map((l) => l.trimEnd())
+        .join("\n")
+        .replace(/\n{2,}/g, "\n\n")
+        .trim();
+
+    let ours = section(claude);
+    expect(ours).toContain("Hi Chase, I'm your CCWatts chief of staff");
+    expect(ours).toMatch(/\| `release-captain` \|/);
+    const checker =
+      " In this repo the checker is `npx tsx scripts/check-qa-report.ts <report>` (the TypeScript port of studio-agents' `check-qa-report.mjs`).";
+    expect(ours, "check-qa-report.ts checker line stays").toContain(checker);
+    ours = ours.replace(checker, "");
+    const notes = ours.split("\n").find((l) => l.startsWith("**Repo notes for agents.**"));
+    expect(notes, "Repo notes for agents paragraph stays").toBeTruthy();
+    expect(notes).toContain("docs/eng/AGENT-NOTES.md");
+    ours = ours.replace(notes!, "");
+
+    const template = section(read("packages/cli/test/fixtures/studio-agents/CLAUDE-agents.md")).replace(
+      "Hi Chase, I'm Charlie's chief of staff",
+      "Hi Chase, I'm your CCWatts chief of staff",
+    );
+    expect(norm(ours)).toBe(norm(template));
+
+    const roster = spawnSync("bash", ["scripts/check-agents.sh"], { cwd: root, encoding: "utf8" });
+    expect(roster.status, roster.stdout + roster.stderr).toBe(0);
+  });
+
+  it("AC10 check-logs.mjs is gone and the TypeScript check-logs.ts is the one in use", () => {
+    expect(existsSync(join(root, "scripts/check-logs.mjs"))).toBe(false);
+    expect(existsSync(join(root, "scripts/check-logs.ts"))).toBe(true);
+  });
+
+  // Diff-scoped half of AC10 and AC11: only meaningful against the PR's base, so it runs when
+  // QA_DIFF_BASE is set (e.g. QA_DIFF_BASE=origin/main npx vitest run packages/cli/test/repo.test.ts).
+  it.runIf(!!process.env.QA_DIFF_BASE)("AC10/AC11 the #104 diff leaves check-logs.ts and the out-of-scope files untouched", () => {
+    const base = process.env.QA_DIFF_BASE!;
+    const changed = [
+      ...git(root, "diff", "--name-only", base).split("\n"),
+      ...git(root, "ls-files", "--others", "--exclude-standard").split("\n"),
+    ].filter(Boolean);
+    const forbidden = changed.filter((f) =>
+      [
+        /^scripts\/check-logs\.ts$/,
+        /^\.claude\/settings\.json$/,
+        /^studio-checks\.json$/,
+        /^\.github\/workflows\/(handoff-check|pages|publish)\.yml$/,
+        /^packages\/web\//,
+        /^plugins\//,
+      ].some((re) => re.test(f)),
+    );
+    expect(forbidden).toEqual([]);
+  });
+});
