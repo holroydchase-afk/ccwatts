@@ -18,146 +18,221 @@
 <meta property="og:image:alt" content="ccwatts: how much electricity does your Claude Code use?">
 <meta name="twitter:card" content="summary_large_image">
 <style>
-/* Layout: one reading column; the headline reads like the top of a utility bill, the share card like a till receipt. */
+/* Studio design system (hearth docs/design/STUDIO-CORE.md, tokens.json, Chase Nov 21): Paper theme,
+   Atkinson Hyperlegible Next, type 17/22 body, 22/28 title, 28/34 display, 34 large title; space
+   4/8/12/16/24/32; corners 4/12/pill; 48px tap targets. The accent marks only what you can tap. */
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url(data:font/woff2;base64,__FONT__) format("woff2");font-weight:200 800;font-style:normal;font-display:swap}
 :root{
-  --bg:#f4f2ea; --surface:#fbfaf6; --ink:#1f2a24; --muted:#5e6b63; --line:#d9ddd3; --accent:#2f6b4f; --accent-ink:#ffffff;
-  --t-cacheRead:#2f6b4f; --t-cacheWrite:#c08a2e; --t-output:#b4553a; --t-input:#4a6fa5;
-  --sample:#8a5a12; --control:#7f8a83; --danger:#a8321f; --agent-op:.38;
-  --sans:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+  --bg:#F7F7F4; --surface:#FFFFFF; --ink:#1E1B17; --muted:#5C564E; --line:#E3DED4; --fill:#EFECE5;
+  --accent:#AD371D; --accent-ink:#FFFFFF; --accent-soft:#F2EAE5; --tab-line:#928E87;
+  --danger:#B3261E; --sample:#8a5a12;
+  /* Data colours: ink family and ochre/brown, never the accent, green or red. */
+  --c1:#3E3830; --c2:#B7862C; --c3:#8A6E55; --c4:#968B7C; --hatch:rgba(255,255,255,.6);
+  --sans:"Atkinson Hyperlegible Next",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#10201a; --surface:#16291f; --ink:#e8eee9; --muted:#9fb3a6; --line:#29402f; --accent:#7cc4a0; --accent-ink:#10201a;
-  --t-cacheRead:#7cc4a0; --t-cacheWrite:#e0b56a; --t-output:#e58a6e; --t-input:#8fb2e8; --sample:#e0b56a; --control:#5d7a68; --danger:#ff9a85; --agent-op:.5; color-scheme:dark}}
+  --bg:#131210; --surface:#1C1A17; --ink:#F1EEE8; --muted:#B2ACA2; --line:#2E2B27; --fill:#24221E;
+  --accent:#FF8A65; --accent-ink:#000000; --accent-soft:#3D281F; --tab-line:#696661;
+  --danger:#FF453A; --sample:#E0B56A;
+  --c1:#E6DFD3; --c2:#D9A441; --c3:#B08F72; --c4:#7D7469; --hatch:rgba(19,18,16,.6); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#10201a; --surface:#16291f; --ink:#e8eee9; --muted:#9fb3a6; --line:#29402f; --accent:#7cc4a0; --accent-ink:#10201a;
-  --t-cacheRead:#7cc4a0; --t-cacheWrite:#e0b56a; --t-output:#e58a6e; --t-input:#8fb2e8; --sample:#e0b56a; --control:#5d7a68; --danger:#ff9a85; --agent-op:.5; color-scheme:dark}
+  --bg:#131210; --surface:#1C1A17; --ink:#F1EEE8; --muted:#B2ACA2; --line:#2E2B27; --fill:#24221E;
+  --accent:#FF8A65; --accent-ink:#000000; --accent-soft:#3D281F; --tab-line:#696661;
+  --danger:#FF453A; --sample:#E0B56A;
+  --c1:#E6DFD3; --c2:#D9A441; --c3:#B08F72; --c4:#7D7469; --hatch:rgba(19,18,16,.6); color-scheme:dark}
+/* High contrast (section 3): muted to 7:1, line to 4.5:1, accent mixed 30% toward ink. */
+@media (prefers-contrast:more){:root{--muted:#534D46; --line:#75716A; --accent:#822F1B; --accent-soft:#EFE9E5}}
+@media (prefers-contrast:more) and (prefers-color-scheme:dark){:root:not([data-theme="light"]){--muted:#B2ACA2; --line:#807D78; --accent:#FBA88C; --accent-soft:#3D2D26}}
+@media (prefers-contrast:more){:root[data-theme="dark"]{--muted:#B2ACA2; --line:#807D78; --accent:#FBA88C; --accent-soft:#3D2D26}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55}
-.wrap{max-width:960px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:40px}
-header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
-a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
-.intro{display:flex;flex-direction:column;gap:8px}
-h1{font-size:clamp(26px,5vw,36px);line-height:1.15;margin:0;letter-spacing:-.01em;text-wrap:balance}
-.lede{margin:0;font-size:17px;color:var(--muted);max-width:60ch}
-.brand{font-family:var(--mono);font-weight:700;font-size:18px;letter-spacing:.02em}
-.brand span{color:var(--accent)}
-.pill{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:22px;font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
+main :where(h1,h2,h3,p,ul,ol,pre,figure,table,caption){margin:0;padding:0}
+main :where(button,input,select,textarea){margin:0}
+b,strong,th{font-weight:600}
+.wrap{max-width:960px;margin:0 auto;padding-top:24px;padding-bottom:32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:24px;position:relative}
+a{color:var(--accent);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;min-height:32px}
+.brand{font-weight:600;font-size:17px}
+.pill{font-size:17px;line-height:22px;border:1px solid var(--tab-line);border-radius:999px;padding:4px 12px;color:var(--ink)}
 .pill.sample{border-color:var(--sample);color:var(--sample)}
-.privacy{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px}
-.privacy b{color:var(--accent)}
-.hero{display:flex;flex-direction:column;gap:6px}
-.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.big{font-weight:700;font-size:clamp(56px,13vw,112px);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.big small{font-size:.42em;font-weight:500;margin-left:.2em;letter-spacing:0}
-.range{font-size:clamp(18px,3vw,22px);font-variant-numeric:tabular-nums}
-.compare{color:var(--muted);font-size:17px}
-.meta{font-family:var(--mono);font-size:13px;color:var(--muted)}
-/* Reading text (captions, method notes, the post preview) stays in the sans stack; mono is for numbers and code. */
-.note{font-family:var(--sans);font-size:15px;line-height:1.5;color:var(--muted);margin:0}
-.hero-foot{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
-.jump{display:inline-flex;align-items:center;min-height:44px;font-size:15px}
-.jump::after{content:"\00a0↓"}
+.intro{display:flex;flex-direction:column;gap:8px}
+h1{font-size:22px;line-height:28px;font-weight:600;text-wrap:balance}
+.lede{max-width:60ch;color:var(--ink)}
+.privacy{display:flex;gap:8px;align-items:flex-start}
+.privacy svg{flex:none;width:16px;height:16px;margin-top:4px;color:var(--ink)}
+.privacy b{font-weight:600}
+h2{font-size:22px;line-height:28px;font-weight:600;text-wrap:balance}
+h3{font-size:17px;line-height:22px;font-weight:600}
+code,kbd,pre{font-family:var(--mono);font-size:1em}
+kbd{border:1px solid var(--tab-line);border-radius:4px;padding:0 4px}
+.muted{color:var(--muted)}
+/* Tabs: at the top of the page, not the bottom (see the template note). One rule under the row. */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--tab-line);position:sticky;top:0;z-index:2;background:var(--bg);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs [role=tab]{flex:none;font:inherit;font-weight:500;min-height:48px;min-width:48px;padding:0 12px;border:0;border-radius:0;background:transparent;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.tabs [role=tab]:hover{color:var(--accent)}
+.tabs [role=tab][aria-selected="true"]{color:var(--accent);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
+.tabs [role=tab]:focus-visible{outline-offset:-2px}
+@media (max-width:599px){.tabs{gap:0;justify-content:space-between}.tabs [role=tab]{padding:0 4px}.thumb{width:72px}}
+/* Under 375px the five tabs can overflow: fade the right edge so the row reads as scrollable (UX-R62). */
+@media (max-width:374px){.tabs{padding-right:24px;scroll-padding-right:24px;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent)}.tabs [role=tab]{padding:0 4px}}
+/* An unselected panel stays laid out (charts keep their size) but is invisible, unfocusable and takes no space. */
+[role=tabpanel]{display:flex;flex-direction:column;gap:24px;min-width:0}
+[role=tabpanel][hidden]{display:flex!important;visibility:hidden;position:absolute;top:0;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));height:0;overflow:hidden;padding:0;border:0}
+section,.block{display:flex;flex-direction:column;gap:16px;min-width:0}
+.block>p,.explain{max-width:65ch}
+/* Controls (section 6): secondary ink on fill, tinted accent on accentSoft, primary filled accent. 48px. */
+main button,.btn{font:inherit;font-weight:600;min-height:48px;min-width:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;padding:12px 16px;background:var(--fill);color:var(--ink);cursor:pointer;text-align:center}
+main button:hover,.btn:hover{box-shadow:inset 0 0 0 2px var(--tab-line)}
+.vh:focus-visible+.btn{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink)}
+main button.primary:hover,.btn.primary:hover{box-shadow:none;text-decoration:underline;text-underline-offset:3px}
+.tinted{background:var(--accent-soft);color:var(--accent)}
 .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-button,.btn{font:inherit;font-size:15px;min-height:44px;display:inline-flex;align-items:center;border:1px solid var(--control);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;cursor:pointer}
-button:hover,.btn:hover{border-color:var(--accent)}
-button:focus-visible,.btn:focus-visible,input:focus-visible,.vh:focus-visible+.btn{outline:2px solid var(--accent);outline-offset:2px}
 /* Visually hidden but still focusable, so the styled label stays reachable by keyboard. */
+.vh{position:absolute;width:1px;height:1px;margin:0;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Segmented choices (time window, appearance): picked = accent outline and word, never colour alone. */
+.seg{align-self:flex-start;display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--fill);border-radius:999px}
+.seg button{background:transparent;padding:12px 16px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);font-weight:600;box-shadow:inset 0 0 0 2px var(--accent)}
+/* Overview: a settings-style grouped list. Each row is one whole tap target into its detail. */
+.ov{display:flex;flex-direction:column;gap:24px}
+.group{display:flex;flex-direction:column;gap:8px}
+.group-title{color:var(--muted);padding:0 16px}
+.list{background:var(--surface);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+.row{display:flex;align-items:center;gap:16px;min-height:48px;padding:16px;color:var(--ink);text-decoration:none;position:relative}
+.row+.row{box-shadow:inset 0 1px 0 var(--line)}
+.row:hover{background:var(--accent-soft)}
+.row:hover .row-title{color:var(--accent)}
+.row:focus-visible{outline-offset:-2px;border-radius:12px}
+.row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.row-title{font-weight:600}
+.row-value{font-size:34px;line-height:40px;font-weight:600}
+.row-value small{font-size:17px;font-weight:500}
+.row-text{color:var(--ink)}
+.row-detail{color:var(--muted)}
+.row .range-track{margin:8px 0 4px;max-width:360px}
+.chev{flex:none;width:12px;height:12px;color:var(--accent)}
+.thumb{flex:none;width:96px;height:auto;border-radius:4px;box-shadow:0 0 0 1px var(--line)}
+.back{display:inline-flex;align-items:center;gap:8px;min-height:48px;min-width:48px;align-self:flex-start;font-weight:600;text-decoration:none}
+.back svg{width:12px;height:12px}
+/* The statement in the Electricity tab: amount, plausible range, window. On the page, not in a box. */
+.hero{display:flex;flex-direction:column;gap:16px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.eyebrow{color:var(--muted)}
+.bill-main{display:flex;flex-direction:column;gap:16px}
+.big{font-weight:600;font-size:34px;line-height:40px}
+.big small{font-size:22px;font-weight:500;margin-left:8px}
+.range{display:flex;flex-direction:column;gap:8px;min-width:0;max-width:480px}
+.range-track{position:relative;display:block;height:8px;border-radius:999px;background:var(--line);margin:8px 0}
+.range-track::before,.range-track::after{content:"";position:absolute;top:-4px;width:2px;height:16px;background:var(--ink)}
+.range-track::before{left:0}
+.range-track::after{right:0}
+.range-dot{position:absolute;top:50%;width:16px;height:16px;border-radius:999px;background:var(--ink);box-shadow:0 0 0 4px var(--bg);transform:translate(-50%,-50%)}
+.row .range-dot{box-shadow:0 0 0 4px var(--surface)}
+.range-ends{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+@media (min-width:720px){.bill-main{display:grid;grid-template-columns:auto minmax(0,1fr);gap:32px;align-items:end}.range{padding-bottom:4px}}
+.meta{color:var(--muted)}
 #hero-meta span{white-space:nowrap}
-.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.drop{border:1.5px dashed var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
-.drop.over{border-color:var(--accent)}
-.drop p{margin:0;color:var(--muted);font-size:14px}
-code{font-family:var(--mono);font-size:.92em}
-section{display:flex;flex-direction:column;gap:14px;min-width:0}
-h2{font-size:20px;margin:0;text-wrap:balance}
+.whatif-flag{color:var(--sample)}
+/* Charts draw at their real width, so every label is 17px on screen. */
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px}
-.chart{width:100%;height:auto;display:block}
-.chart text{fill:var(--muted);font-family:var(--mono);font-size:11px}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
-.rank{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
-.rank li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;font-size:14px}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart text{fill:var(--muted);font-family:var(--sans);font-size:17px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:8px}
+/* Line items, like a bill: name and amount, a bar, then the range. Rules between, no boxes. */
+.rank{display:flex;flex-direction:column;gap:12px;list-style:none}
+.rank li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.rank li:last-child{border-bottom:0;padding-bottom:0}
 .rank .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rank .val{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
-.rank .bar{grid-column:1/-1;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
-.rank .bar span{display:block;height:100%;background:var(--accent)}
-.explain{max-width:65ch;margin:0}
-.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
-table{border-collapse:collapse;width:100%;font-size:14px;min-width:620px}
-th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
-td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rank .val{text-align:right}
+.rank .val b{font-weight:600}
+.rank .bar{align-self:center;height:8px;background:var(--line);border-radius:999px;overflow:hidden}
+.rank .bar span{display:block;height:100%;background:var(--c1)}
+.rank .rng{text-align:right;white-space:nowrap}
+.drives{display:flex;flex-direction:column;gap:16px;padding-top:24px;border-top:1px solid var(--line);scroll-margin-top:64px}
+/* Disclosures: a 48px row with a chevron that turns when open. Closed content takes no space. */
+.disclose{cursor:pointer;min-height:48px;display:flex;align-items:center;gap:8px;color:var(--ink);list-style:none;border-radius:12px}
+.disclose::-webkit-details-marker{display:none}
+.disclose::before{content:"";width:8px;height:8px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg);flex:none;margin-right:4px}
+details[open]>.disclose::before{transform:rotate(45deg)}
+details:not([open])>:not(summary){display:none}
+.disclose:hover{color:var(--accent)}
+details>*+*{margin-top:8px}
+@media (prefers-reduced-motion:no-preference){.disclose::before{transition:transform .15s ease}.rank .bar span{transition:width .3s ease}}
+/* "What if?" cache-read slider (M2.6.5): a what-if view, never the published estimate. */
+.whatif{display:flex;flex-direction:column;gap:8px;max-width:65ch}
+.whatif-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.whatif-head label{font-weight:600}
+.whatif output{font-weight:600;font-size:22px;line-height:28px}
+.whatif input[type=range]{width:100%;height:48px;accent-color:var(--accent);cursor:pointer;background:transparent}
+.whatif-scale{display:flex;justify-content:space-between;font-size:17px;color:var(--muted);margin-top:-8px;position:relative}
+/* The "published" tick sits where the published value is on the track (thumb is about 16px wide). */
+.whatif-scale .mark{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.whatif-scale .mark::before{content:"";position:absolute;left:50%;top:-8px;height:4px;border-left:1px solid var(--muted)}
+.whatif-note{border-left:4px solid var(--sample);padding-left:12px}
+.whatif button{align-self:flex-start}
+.note{max-width:65ch}
+/* Share */
+.card{max-width:min(100%,720px);height:auto;border-radius:12px;box-shadow:0 0 0 1px var(--line);display:block}
+/* On a phone the 1200px card's text shrinks, so it links to the card at full size (UX-R17). */
+.full-size{display:inline-flex;align-items:center;min-height:48px;align-self:flex-start}
+.sharetext{background:var(--fill);border-radius:12px;padding:12px;white-space:pre-wrap;font-family:var(--mono);font-size:17px}
+#post{font-family:var(--sans)}
+.status{min-height:22px}
+.status:empty{display:none}
+.status.error{color:var(--danger);border-left:4px solid;padding-left:12px}
+/* Your logs (#drop): opened from the Overview row; a drop zone on the plain page. */
+.drop{border:2px dashed var(--tab-line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.drop.over{border-color:var(--accent)}
+.export label{display:block;font-weight:600}
+.export textarea{display:block;font-family:var(--mono);font-size:17px;width:100%;border:1px solid var(--tab-line);border-radius:12px;padding:12px;background:var(--fill);color:var(--ink)}
+/* Method table */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:620px}
+th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+th:first-child,td:first-child{padding-left:0}
+td.num{white-space:nowrap}
 tr:last-child td{border-bottom:0}
-.label{font-family:var(--mono);font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid currentColor}
-a{color:var(--accent)}
-a.src{display:inline-flex;align-items:center;min-height:44px}
+td .note{color:var(--muted);margin-top:4px}
+.label{border:1px solid var(--tab-line);border-radius:999px;padding:0 8px;white-space:nowrap}
+a.src{display:inline-flex;align-items:center;min-height:48px;min-width:48px}
 .phone-only{display:none}
 @media (max-width:600px){
   .phone-only{display:block}
-  /* Method table: one card per parameter instead of a sideways scroll. */
+  /* Method table: one block per parameter instead of a sideways scroll. */
   table{min-width:0}
   thead{display:none}
   table,tbody,tr,td{display:block}
-  tr{padding:10px 12px;border-bottom:1px solid var(--line)}
+  tr{padding:12px 0;border-bottom:1px solid var(--line)}
   tr:last-child{border-bottom:0}
-  td{border:0;padding:2px 0;white-space:normal}
-  td[data-label]:not([data-label="Parameter"])::before{content:attr(data-label) " ";font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-right:8px}
+  td{border:0;padding:4px 0;white-space:normal}
+  td[data-label]:not([data-label="Parameter"])::before{content:attr(data-label) " ";color:var(--muted);margin-right:8px}
   td.num{white-space:normal}
 }
-.card{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line);display:block}
-/* On a phone the 1200px card's text shrinks under 11px, so it links to the card at full size (UX-R17). */
-.full-size{min-height:44px;line-height:44px;font-size:15px;align-self:flex-start}
-.sharetext{font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre-wrap;margin:0}
-#post{font-family:var(--sans);font-size:15px;line-height:1.5}
-.status{font-size:14px;color:var(--muted);min-height:1.4em}
-.status:empty{display:none}
-.status.error{color:var(--danger);border-left:3px solid;padding-left:10px}
-/* Disclosures: a 44px tap target with a chevron that turns when open. */
-.disclose{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ink);list-style:none;border-radius:6px}
-.disclose::-webkit-details-marker{display:none}
-.disclose::before{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);flex:none;margin-right:2px}
-details[open]>.disclose::before{transform:rotate(45deg)}
-.disclose:hover{color:var(--accent)}
-.disclose:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-details>*+*{margin-top:10px}
-@media (prefers-reduced-motion:no-preference){.disclose::before{transition:transform .15s ease}}
-.export label{display:block;font-size:14px;color:var(--muted)}
-.export textarea{display:block;font-family:var(--mono);font-size:13px;width:100%;box-sizing:border-box;border:1px solid var(--control);border-radius:8px;padding:10px;background:var(--surface);color:var(--ink)}
-kbd{font-family:var(--mono);font-size:.9em;border:1px solid var(--line);border-radius:4px;padding:0 4px}
-/* "What if?" cache-read slider (M2.6.5): a what-if view, never the published estimate. */
-.whatif{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:65ch}
-.whatif-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.whatif-head label{font-weight:700;font-size:16px}
-.whatif output{font-family:var(--mono);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums;color:var(--accent)}
-.whatif input[type=range]{width:100%;height:48px;margin:0;accent-color:var(--accent);cursor:pointer;background:transparent}
-.whatif-scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:-8px}
-/* The "published" tick sits where the published value is on the track (thumb is about 16px wide). */
-.whatif-scale{position:relative}
-.whatif-scale .mark{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
-.whatif-scale .mark::before{content:"";position:absolute;left:50%;top:-6px;height:5px;border-left:1px solid var(--muted)}
-.whatif-note{margin:0;font-size:15px;line-height:1.5;border-left:3px solid var(--sample);padding-left:10px}
-.whatif button{align-self:flex-start}
-#hero-eyebrow .whatif-flag{color:var(--sample)}
 /* Pace (M4.5): work rhythm by week, same visual language as the energy chart. Numbers, never a verdict. */
 .pace-title{display:flex;flex-direction:column;gap:4px}
-@media (max-width:719px){.pace-title .eyebrow{display:none}}
 .pace-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
-.pace .agent{fill:var(--accent);fill-opacity:var(--agent-op)}
-.legend i.agent{background:var(--accent);opacity:var(--agent-op)}
-.pace-lead{margin:0;font-size:clamp(18px,3vw,22px);line-height:1.4;font-variant-numeric:tabular-nums;max-width:60ch;text-wrap:pretty}
-.pace-lead b{font-weight:700}
-.pace-sofar,.pace-agents{margin:0;font-size:16px;color:var(--muted);font-variant-numeric:tabular-nums}
-.pace .agent.partial{fill-opacity:calc(var(--agent-op) * 0.5)}
-.legend .whisker{width:2px;height:12px;border-radius:0;background:var(--ink);margin-left:4px;margin-right:9px;vertical-align:-2px}
-#pace-chart text.val{fill:var(--ink);font-weight:700}
-.pace-foot{font-size:13px;border-left:3px solid var(--line);padding-left:10px;max-width:72ch}
+#pace-body{display:flex;flex-direction:column;gap:16px}
+.pace .agent{fill:var(--c4)}
+.legend i.agent{background:var(--c4)}
+.legend i.sofar{background-color:var(--c1);background-image:repeating-linear-gradient(-45deg,transparent 0 2px,var(--hatch) 2px 4px)}
+.pace-lead{max-width:60ch;text-wrap:pretty}
+.pace-lead b{font-weight:600}
+.pace-sofar{color:var(--muted)}
+.legend .whisker{width:2px;height:12px;border-radius:0;background:var(--ink);margin-left:4px;margin-right:8px}
+#pace-chart text.val{fill:var(--ink);font-weight:600}
 table.vh{min-width:0}
-footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:6px}
+/* Footer: version, links, and the Light / Dark / System choice (principle 10). */
+footer{border-top:1px solid var(--line);padding-top:24px;display:flex;flex-direction:column;gap:12px}
+#footer-version{color:var(--muted)}
+footer .appearance{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--ink)}
+footer p{max-width:65ch}
 /* Studio demo bar (DEMO-BAR, pm-tools docs/DEMO-BANNER.md): playground only, in the page's own tokens. */
 .demo-bar{--demo-bg:var(--surface);--demo-fg:var(--ink);--demo-muted:var(--muted);--demo-line:var(--line);--demo-badge-bg:transparent;--demo-badge-fg:var(--ink);--demo-font:var(--sans);
   background:var(--demo-bg);color:var(--demo-fg);border-bottom:1px solid var(--demo-line);font-family:var(--demo-font);font-size:14px;line-height:1.4}
@@ -166,7 +241,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 .demo-bar__home:hover{text-decoration:underline;text-underline-offset:3px}
 .demo-bar__toggle{display:flex;align-items:center;gap:10px;flex:1;min-width:0;min-height:44px;margin:0;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 12px;border:0;border-radius:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .demo-bar__toggle:hover .demo-bar__more{text-decoration:underline;text-underline-offset:3px}
-.demo-bar a:focus-visible,.demo-bar .demo-bar__toggle:focus-visible{outline:2px solid var(--demo-fg);outline-offset:-4px;border-radius:4px}
+.demo-bar a:focus-visible,.demo-bar .demo-bar__toggle:focus-visible{outline:2px solid var(--demo-fg);outline-offset:-4px;border-radius:2px}
 .demo-bar__badge{flex:none;padding:2px 8px;border-radius:999px;border:1px solid var(--demo-fg);background:var(--demo-badge-bg);color:var(--demo-badge-fg);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.3}
 .demo-bar__sum{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--demo-muted)}
 .demo-bar__long{display:none}
@@ -180,7 +255,12 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 .demo-bar__panel p{margin:0 0 8px;max-width:70ch;font-size:16px;line-height:1.5;text-wrap:pretty}
 .demo-bar__actions{display:flex;flex-wrap:wrap;gap:0 20px;align-items:center}
 .demo-bar__actions a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-weight:600;text-underline-offset:3px}
-@media (prefers-reduced-motion:no-preference){.rank .bar span{transition:width .3s ease}}
+@media (max-width:719px){.range-scale{display:none}}
+@media (max-width:599px){
+  /* On a phone the lede and the privacy detail step aside so the tabs start above the fold. */
+  .lede,.privacy-more{display:none}
+  .wrap{gap:16px;padding-top:16px}
+}
 </style>
 </head>
 <body>
@@ -201,46 +281,45 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 </section>
 <main class="wrap">
   <header class="top">
-    <div class="brand">cc<span>watts</span></div>
+    <div class="brand">ccwatts</div>
     <span class="pill" id="source-pill">Loading</span>
   </header>
 
   <div class="intro">
     <h1>How much electricity does your AI coding use?</h1>
-    <p class="lede" id="lede">ccwatts estimates the electricity behind Claude Code, an AI coding agent, from the token counts in its local logs. Try it on your own logs below.</p>
+    <p class="lede" id="lede">Electricity estimates for Claude Code, the AI coding agent, from its local logs. Try it on your own logs below.</p>
   </div>
 
-  <div class="privacy" id="privacy"><span aria-hidden="true">🔒</span><div><b>Your logs never leave this browser.</b> This page makes no network requests. It reads token counts only, never your prompts or code.</div></div>
+  <div class="privacy" id="privacy"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><div><b>Your logs never leave this browser.</b><span class="privacy-more"> No network requests; it reads token counts only.</span></div></div>
 
-  <section class="hero">
-    <span class="eyebrow" id="hero-eyebrow">Claude Code electricity</span>
-    <div class="big" id="hero-big">–</div>
-    <div class="range" id="hero-range"></div>
-    <div class="compare" id="hero-compare"></div>
-    <div class="meta" id="hero-meta"></div>
-    <div class="hero-foot">
-      <div class="controls" role="group" aria-label="Time window">
-        <button type="button" data-window="7d" id="w-7d">7 days</button>
-        <button type="button" data-window="30d" id="w-30d">30 days</button>
-        <button type="button" data-window="all" id="w-all">All time</button>
+  <!-- Tabs sit at the top of the page, not the bottom: a deliberate deviation from STUDIO-CORE section 6 (tab bar) because this is a scrolling web page, not a phone app (Chase, Nov 21). -->
+  <div class="tabs" id="tabs" role="tablist" aria-label="Views">
+    <button type="button" role="tab" id="tab-overview" aria-controls="p-overview" aria-selected="true" tabindex="0" data-hash="">Overview</button>
+    <button type="button" role="tab" id="tab-electricity" aria-controls="p-electricity" aria-selected="false" tabindex="-1" data-hash="#electricity">Electricity</button>
+    <button type="button" role="tab" id="tab-pace" aria-controls="pace" aria-selected="false" tabindex="-1" data-hash="#pace">Pace</button>
+    <button type="button" role="tab" id="tab-share" aria-controls="p-share" aria-selected="false" tabindex="-1" data-hash="#share">Share</button>
+    <button type="button" role="tab" id="tab-method" aria-controls="p-method" aria-selected="false" tabindex="-1" data-hash="#method">Method</button>
+  </div>
+
+  <section id="p-overview" role="tabpanel" aria-labelledby="tab-overview">
+    <div class="ov" id="ov-list">
+      <div class="group">
+        <h2 class="vh">At a glance</h2>
+        <div class="list">
+          <a class="row" id="ov-energy" href="#electricity"><span class="row-main"><span class="row-title" id="ov-energy-title">Electricity</span><span class="row-value" id="ov-energy-value">–</span><span class="range-track" id="ov-energy-bar" aria-hidden="true"></span><span class="row-detail" id="ov-energy-detail"></span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+          <a class="row" id="ov-pace" href="#pace"><span class="row-main"><span class="row-title" id="ov-pace-title">Pace</span><span class="row-text" id="ov-pace-text"></span><span class="row-detail" id="ov-pace-detail"></span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+          <a class="row" id="ov-drives" href="#electricity"><span class="row-main"><span class="row-title">What drives it</span><span class="row-text" id="ov-drives-text"></span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+        </div>
       </div>
-      <a class="jump" id="jump" href="#drop" hidden>Use your own logs</a>
+      <div class="group">
+        <div class="list">
+          <a class="row" id="ov-share" href="#share"><img class="thumb" id="ov-share-thumb" alt="" width="1200" height="627"><span class="row-main"><span class="row-title">Share card</span><span class="row-detail">Save a PNG or copy a LinkedIn post</span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+          <a class="row" id="ov-logs" href="#drop" hidden><span class="row-main"><span class="row-title">Use your own logs</span><span class="row-detail">Drop in a log folder or .jsonl files</span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+        </div>
+      </div>
     </div>
-  </section>
-
-  <section>
-    <h2>Over time</h2>
-    <div class="legend" id="legend"></div>
-    <svg class="chart" id="chart" viewBox="0 0 720 240" role="img" aria-label="Daily electricity by token type"></svg>
-    <p class="note" id="chart-note"></p>
-  </section>
-
-  <div class="grid2">
-    <section><h2>By model</h2><ul class="rank" id="by-model"></ul></section>
-    <section><h2>By project</h2><ul class="rank" id="by-project"></ul></section>
-  </div>
-
-  <section class="drop" id="drop" hidden>
+    <a class="back" id="drop-back" href="#" hidden><svg viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M8 1.5 3.5 6 8 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>Overview</a>
+  <section class="drop" id="drop" aria-label="Your logs" hidden>
     <h2>Try it on your own logs</h2>
     <p>Claude Code saves logs in <code>~/.claude/projects</code>. Pick that folder, or drop any <code>.jsonl</code> files here. Files are read by this page on your device and never uploaded. On a Mac the folder is hidden: in the picker, press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>.</kbd> to show it.</p>
     <div class="controls">
@@ -275,41 +354,59 @@ Leave out everything else, especially message content. Save the lines as ccwatts
     </details>
     <div class="status" id="drop-status" role="status" aria-live="polite"></div>
   </section>
+  </section>
 
-  <section>
-    <h2>What drives your number</h2>
-    <p class="explain" id="explain"></p>
-    <div class="whatif" id="whatif">
-      <div class="whatif-head">
-        <label for="whatif-cache">What if? Cache-read cost</label>
-        <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
+  <section id="p-electricity" role="tabpanel" aria-labelledby="tab-electricity" hidden>
+    <section class="hero" id="hero">
+      <span class="eyebrow" id="hero-eyebrow">Claude Code electricity</span>
+      <div class="bill-main">
+        <div class="big" id="hero-big">–</div>
+        <div class="range" id="hero-range" role="img" aria-label="Loading"></div>
       </div>
-      <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
-      <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
-      <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
-      <p class="whatif-note" id="whatif-note" role="status" hidden></p>
-      <button type="button" id="whatif-reset" hidden>Reset</button>
+      <div class="compare" id="hero-compare"></div>
+      <div class="meta" id="hero-meta"></div>
+      <div class="seg" role="group" aria-label="Time window">
+        <button type="button" data-window="7d" id="w-7d">7 days</button>
+        <button type="button" data-window="30d" id="w-30d">30 days</button>
+        <button type="button" data-window="all" id="w-all">All time</button>
+      </div>
+    </section>
+    <div class="block">
+      <h2>Over time</h2>
+      <div class="legend" id="legend"></div>
+      <svg class="chart" id="chart" viewBox="0 0 720 240" role="img" aria-label="Daily electricity by token type"></svg>
+    </div>
+    <div class="grid2">
+      <div class="block"><h2>By model</h2><ul class="rank" id="by-model"></ul></div>
+      <div class="block"><h2>By project</h2><ul class="rank" id="by-project"></ul></div>
+    </div>
+    <div class="drives" id="drives">
+      <div class="block">
+        <h2>What drives your number</h2>
+        <p class="explain" id="explain"></p>
+        <details class="fine" id="explain-box">
+          <summary class="disclose">Why this happens</summary>
+          <p class="explain" id="explain-more"></p>
+        </details>
+      </div>
+      <div class="whatif" id="whatif">
+        <div class="whatif-head">
+          <label for="whatif-cache">What if? Cache-read cost</label>
+          <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
+        </div>
+        <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
+        <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
+        <p class="whatif-note" id="whatif-note" role="status" hidden></p>
+        <details class="fine" id="whatif-why">
+          <summary class="disclose">Why this assumption?</summary>
+          <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
+        </details>
+        <button type="button" id="whatif-reset" hidden>Reset</button>
+      </div>
     </div>
   </section>
 
-  <section>
-    <h2>Share it</h2>
-    <img class="card" id="card" alt="Electricity receipt card" width="1200" height="627">
-    <a class="phone-only full-size" id="card-full" href="#" target="_blank" rel="noopener noreferrer">Open full size</a>
-    <div class="controls">
-      <button type="button" class="primary" id="save-png">Save PNG for LinkedIn</button>
-      <button type="button" id="save-svg">Save SVG</button>
-      <button type="button" id="copy-line">Copy share line</button>
-      <button type="button" id="copy-post">Copy LinkedIn post</button>
-    </div>
-    <div class="status" id="share-status"></div>
-    <details id="post-box">
-      <summary class="disclose">Show the LinkedIn post</summary>
-      <pre class="sharetext" id="post"></pre>
-    </details>
-  </section>
-
-  <section id="pace" class="pace" aria-labelledby="pace-h">
+  <section id="pace" class="pace" role="tabpanel" aria-labelledby="tab-pace" hidden>
     <div class="pace-title">
       <span class="eyebrow">Your work rhythm · opt-in · stays local</span>
       <div class="pace-head">
@@ -317,38 +414,66 @@ Leave out everything else, especially message content. Save the lines as ccwatts
         <span class="pill sample" id="pace-pill">Sample data</span>
       </div>
     </div>
-    <!-- UX-R5: on phones the section folds to one line so the page stays short; wide screens open it (app.ts). -->
-    <details id="pace-more">
-      <summary class="disclose">Show your work rhythm and 4-week chart</summary>
-      <div id="pace-body">
-        <p class="pace-lead" id="pace-lead"></p>
-      </div>
+    <div id="pace-body">
+      <p class="pace-lead" id="pace-lead"></p>
       <p class="pace-sofar" id="pace-sofar" hidden></p>
       <p class="pace-agents" id="pace-agents"></p>
-      <div class="legend" id="pace-legend" aria-hidden="true"><span><i style="background:var(--accent)"></i>Active hours</span><span><i style="background:var(--t-cacheWrite)"></i>Past __PACE_LATE__ (part of active)</span><span><i class="agent"></i>Agent-only</span><span><i class="whisker"></i>Low – high range</span></div>
-      <svg class="chart" id="pace-chart" viewBox="0 0 720 230" role="img" aria-label="Active and agent-only hours per week, last 4 weeks"></svg>
+      <div class="legend" id="pace-legend" aria-hidden="true"><span><i style="background:var(--c1)"></i>Active hours</span><span><i style="background:var(--c2)"></i>Past __PACE_LATE__ (part of active)</span><span><i class="agent"></i>Agent-only</span><span><i class="sofar"></i>This week, so far</span><span><i class="whisker"></i>Low – high range</span></div>
+      <svg class="chart" id="pace-chart" viewBox="0 0 720 260" role="img" aria-label="Active and agent-only hours per week, last 4 weeks"></svg>
       <table class="vh" id="pace-table"></table>
-      <p class="note pace-foot" id="pace-foot">__PACE_NOTES__</p>
-    </details>
+      <details class="fine" id="pace-how">
+        <summary class="disclose">How Pace is counted</summary>
+        <p class="note pace-foot" id="pace-foot">__PACE_NOTES__</p>
+      </details>
+    </div>
     <p class="note" id="pace-empty" hidden></p>
     <p class="note" id="pace-skipped" hidden>Pace is skipped with --path or --no-history, which leave pace.jsonl alone. Run <code>ccwatts dashboard</code> without them to see it.</p>
     <p class="note" id="pace-unreadable" hidden>Couldn't read pace.jsonl, so Pace is left out this time. The file is left as it is.</p>
     <p class="note" id="pace-optin" hidden>Pace is off. Run <code>ccwatts pace</code> once to turn it on: it keeps daily minutes and whole hours in <code>~/.ccwatts/pace.jsonl</code> on this computer, and this page shows it next time.</p>
   </section>
 
-  <section>
-    <h2>How this is estimated</h2>
-    <p class="explain" id="method-intro"></p>
-    <details id="params-box">
-      <summary class="disclose">Show all parameters and sources</summary>
-      <div class="tablewrap"><table id="params"></table></div>
-    </details>
+  <section id="p-share" role="tabpanel" aria-labelledby="tab-share" hidden>
+    <div class="block">
+      <h2>Share it</h2>
+      <img class="card" id="card" alt="Electricity receipt card" width="1200" height="627">
+      <a class="phone-only full-size" id="card-full" href="#" target="_blank" rel="noopener noreferrer">Open full size</a>
+      <div class="controls">
+        <button type="button" class="primary" id="save-png">Save PNG for LinkedIn</button>
+        <button type="button" id="save-svg">Save SVG</button>
+        <button type="button" id="copy-line">Copy share line</button>
+        <button type="button" id="copy-post">Copy LinkedIn post</button>
+      </div>
+      <div class="status" id="share-status"></div>
+      <details id="post-box">
+        <summary class="disclose">Show the LinkedIn post</summary>
+        <pre class="sharetext" id="post"></pre>
+      </details>
+    </div>
+  </section>
+
+  <section id="p-method" role="tabpanel" aria-labelledby="tab-method" hidden>
+    <div class="block">
+      <h2>How this is estimated</h2>
+      <p class="explain" id="method-intro"></p>
+      <details class="fine" id="method-box">
+        <summary class="disclose">More on the method</summary>
+        <p class="explain" id="method-more"></p>
+      </details>
+      <details id="params-box">
+        <summary class="disclose">Show all parameters and sources</summary>
+        <div class="tablewrap"><table id="params"></table></div>
+      </details>
+    </div>
   </section>
 
   <footer>
     <div id="footer-version"></div>
-    <div>Open source. Read the code and the full methodology on <a id="repo-link" href="#" rel="noopener noreferrer">GitHub</a>.</div>
-    <div>Built by <a id="built-by" href="#" rel="noopener noreferrer">Chase Holroyd</a>.</div>
+    <p>Open source. Read the code and the full methodology on <a id="repo-link" href="#" rel="noopener noreferrer">GitHub</a>. Built by <a id="built-by" href="#" rel="noopener noreferrer">Chase Holroyd</a>.</p>
+    <div class="appearance"><span id="appearance-label">Appearance</span><div class="seg" role="group" aria-labelledby="appearance-label">
+      <button type="button" data-theme-pick="light" aria-pressed="false">Light</button>
+      <button type="button" data-theme-pick="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-theme-pick="system" aria-pressed="true">System</button>
+    </div></div>
   </footer>
 </main>
 <script id="ccwatts-data" type="application/json">{"mode":"playground","generatedAt":null,"rows":[]}</script>

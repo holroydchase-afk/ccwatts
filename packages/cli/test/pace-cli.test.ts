@@ -38,10 +38,11 @@ function home() {
   return dir;
 }
 
-// Local time of the run: UTC, unless now is in the first hour of a Monday (then UTC+2), so the
-// fixture's 40 minutes always sit inside this local week.
+// Local time of the run: UTC, unless now is in the first hour of a UTC day (then UTC+2), so the
+// fixture's 40 minutes always sit inside one local day and one local week. (Was Mondays only;
+// PACE-C4 split into two days when CI ran at 00:18 UTC on Nov 22, 2026.)
 const now = new Date();
-const TZ = now.getUTCDay() === 1 && now.getUTCHours() < 1 ? "Etc/GMT-2" : "UTC";
+const TZ = now.getUTCHours() < 1 ? "Etc/GMT-2" : "UTC";
 
 function cli(args: string[], env: Record<string, string>) {
   const r = spawnSync(process.execPath, [bin, ...args], { encoding: "utf8", cwd: work, env: { PATH: process.env.PATH ?? "", TZ, ...env } });

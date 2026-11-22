@@ -78,8 +78,8 @@ describe("accessibility (recruiter-ready RR-5, RR-6, RR-9, RR-12)", () => {
     }
   });
 
-  it("gives buttons a 44px minimum height and the sample pill readable amber", () => {
-    expect(html).toMatch(/button,\.btn\{[^}]*min-height:44px/);
+  it("gives buttons a 48px minimum height (STUDIO-DS target) and the sample pill readable amber", () => {
+    expect(html).toMatch(/main button,\.btn\{[^}]*min-height:48px/);
     expect(html).toContain(".pill.sample{border-color:var(--sample);color:var(--sample)}");
     expect(html).toContain("--sample:#8a5a12");
   });
@@ -167,16 +167,16 @@ describe("UX-R2 error styling", () => {
   });
 });
 
-describe("UX-R3 the result stays with its chart", () => {
-  it("UX-R3: 'Try it on your own logs' comes after the chart and the By model / By project lists", () => {
-    const drop = at('id="drop"');
-    expect(drop).toBeGreaterThan(0);
-    for (const id of ['id="chart"', 'id="by-model"', 'id="by-project"']) expect(drop, id).toBeGreaterThan(at(id));
+describe("UX-R3 the result stays with its chart; your own logs are one row away (STUDIO-DS)", () => {
+  it("UX-R3: 'Try it on your own logs' (#drop) sits in the Overview panel, apart from the chart and the By model / By project lists", () => {
+    const overview = /<section[^>]*id="p-overview"[^>]*>([\s\S]*?)<section[^>]*id="p-electricity"/.exec(html)?.[1] ?? "";
+    expect(overview, "no Overview panel before the Electricity panel").not.toBe("");
+    expect(overview).toContain('id="drop"');
+    for (const id of ['id="chart"', 'id="by-model"', 'id="by-project"']) expect(overview, id).not.toContain(id);
   });
 
-  it("UX-R3: the hero links to it with 'Use your own logs'", () => {
-    const hero = /<section[^>]*class="hero"[^>]*>([\s\S]*?)<\/section>/.exec(html)?.[1] ?? "";
-    expect(hero).toMatch(/<a[^>]*href="#drop"[^>]*>\s*Use your own logs\s*<\/a>/);
+  it("UX-R3: the Overview row #ov-logs links to it with 'Use your own logs'", () => {
+    expect(html).toMatch(/<a[^>]*id="ov-logs"[^>]*href="#drop"[^>]*>[\s\S]*?Use your own logs[\s\S]*?<\/a>/);
   });
 
   it("UX-R3: the 7 days / 30 days / All time toggle is one labeled group", () => {
@@ -208,10 +208,10 @@ describe("UX-R11 one version everywhere", () => {
 });
 
 describe("UX-R13 the Claude Code on the web summary is styled", () => {
-  it("UX-R13: its <summary> has a class with a 44px minimum height", () => {
+  it("UX-R13: its <summary> has a class with a 48px minimum height (STUDIO-DS target)", () => {
     const m = /<summary class="([\w-]+)[^"]*"[^>]*>\s*Use Claude Code on the web/.exec(html);
     expect(m, "summary has a class").not.toBeNull();
-    expect(html).toMatch(new RegExp(`\\.${m![1]}\\{[^}]*min-height:44px`));
+    expect(html).toMatch(new RegExp(`\\.${m![1]}\\{[^}]*min-height:48px`));
   });
 });
 
@@ -280,10 +280,10 @@ describe("WI-R3 what-if explainer wording", () => {
 });
 
 describe("WI-R6 what-if scale is readable", () => {
-  it("WI-R6: .whatif-scale font-size is 13px or more in every rule that sets it", () => {
+  it("WI-R6: .whatif-scale font-size is 17px or more in every rule that sets it (STUDIO-DS body floor)", () => {
     const sizes = [...html.matchAll(/\.whatif-scale\{[^}]*font-size:(\d+)px/g)].map((m) => Number(m[1]));
     expect(sizes.length).toBeGreaterThan(0);
-    for (const s of sizes) expect(s).toBeGreaterThanOrEqual(13);
+    for (const s of sizes) expect(s).toBeGreaterThanOrEqual(17);
   });
 });
 
