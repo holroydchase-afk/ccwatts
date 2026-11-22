@@ -93,12 +93,20 @@ describe("CCW-M4.5 playground build (PACE-WEB2)", () => {
     expect(section).toMatch(/id="pace-chart"[^>]*role="img"|role="img"[^>]*id="pace-chart"/);
     expect(section).toMatch(/<table[^>]*class="vh"[^>]*id="pace-table"|<table[^>]*id="pace-table"[^>]*class="vh"/);
   });
-  it("PACE-WEB7 (UX-R5 budget) the Pace body folds into a <details> on phones and opens on wide screens", () => {
+  it("PACE-WEB7 (VISUAL-REFRESH AC-R48) Pace is its own tab panel: lead, legend and chart always shown, only the footnote folds", () => {
+    // Was UX-R5: the whole body folded into <details id="pace-more"> on phones, opened by a 720px media
+    // gate in app.ts. The tabbed page keeps Pace short instead, so only the method footnote folds.
     const section = paceSection(html);
-    const more = /<details[^>]*id="pace-more"[^>]*>([\s\S]*?)<\/details>/.exec(section)?.[1] ?? "";
-    expect(more).toMatch(/<summary[^>]*>[^<]*chart/i);
-    for (const id of ["pace-lead", "pace-legend", "pace-chart", "pace-table", "pace-foot"]) expect(more).toContain(`id="${id}"`);
-    expect(app).toMatch(/matchMedia\("\(min-width: 720px\)"\)\.matches\)[^;]*pace-more"\)\.open = true/);
+    expect(section).toMatch(/<section[^>]*role="tabpanel"/);
+    const details = [...section.matchAll(/<details[^>]*>([\s\S]*?)<\/details>/g)].map((m) => m[1]!);
+    expect(details).toHaveLength(1);
+    expect(details[0]).toMatch(/<summary[^>]*>\s*How Pace is counted\s*<\/summary>/);
+    expect(details[0]).toContain('id="pace-foot"');
+    for (const id of ["pace-lead", "pace-legend", "pace-chart", "pace-table"]) {
+      expect(section, id).toContain(`id="${id}"`);
+      expect(details[0], `${id} must not be folded`).not.toContain(`id="${id}"`);
+    }
+    expect(app).not.toMatch(/matchMedia\("\(min-width: 720px\)"\)/);
   });
 });
 
@@ -239,12 +247,19 @@ describe("CCW-M4.5 lead and second line (UX-R40, UX-R41)", () => {
     expect(html).toContain(" hours in ");
   });
 
-  it("UX-R40 the partial week's bars are drawn at 0.5 fill opacity", () => {
+  it("UX-R40 (VISUAL-REFRESH AC-R47) the in-progress week is drawn in its full data colour (--c1, never the accent) with the #sofar hatch over it", () => {
     // QA-R4: the newest week is the in-progress one, even on a Sunday when it already has 7 days.
     expect(app).toMatch(/const partial = w === newestFirst\[0\]/);
     expect(app).not.toMatch(/daysCounted < 7/);
-    expect(app).toMatch(/fill-opacity="0\.5"/);
-    expect(template).toMatch(/\.pace \.agent\.partial\{[^}]*fill-opacity:calc\(var\(--agent-op\) \* 0\.5\)/);
+    // Was: half fill opacity (fill-opacity="0.5" and a .agent.partial rule). Now a hatch overlay and a legend item.
+    expect(app).not.toMatch(/fill-opacity="0\.5"/);
+    expect(template).not.toMatch(/\.agent\.partial/);
+    expect(app).toMatch(/<pattern[^>]*id="sofar"/);
+    // STUDIO-DS (DS-6): the active-hours bar uses the --c1 data colour; the accent only marks what you can tap.
+    expect(app).toMatch(/fill="var\(--c1\)"><title>\$\{esc\(title\)\}/);
+    expect(app).not.toMatch(/fill="var\(--accent\)"/);
+    expect(app).toMatch(/partial && v > 0 \? `<rect[^`]*fill="url\(#sofar\)"/);
+    expect(paceSection(template)).toMatch(/id="pace-legend"[\s\S]*This week, so far/);
   });
 });
 

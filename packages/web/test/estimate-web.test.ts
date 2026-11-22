@@ -67,16 +67,36 @@ describe("EST-16 no network, nothing stored, nothing in the URL", () => {
     }
   });
 
+  // The STUDIO-DS tabs (PR #102) write the tab's hash, so this looks only at the box's own code;
+  // check:browser EST-17 also asserts the URL doesn't change while typing a count.
   it("EST-16 the box doesn't write the count into the URL", () => {
-    expect(app).not.toMatch(/history\.(push|replace)State|location\.(hash|search)\s*=/);
+    const start = app.indexOf("function renderManual(");
+    expect(start).toBeGreaterThan(-1);
+    const body = app.slice(start, app.indexOf("\n}\n", start));
+    expect(body).not.toMatch(/history\.|location\.|\.hash\b|selectTab\(/);
+    const wiring = app.split("\n").filter((l) => l.includes("manual-")).join("\n");
+    expect(wiring).not.toMatch(/history\.|location\./);
   });
 });
 
-describe("EST-20 UX-R30 the What if box folds away on phones", () => {
-  it("EST-20 UX-R30 the cache-read slider sits in a <details> summarised \"What if cache reads cost more or less?\"", () => {
-    const details = [...html.matchAll(/<details[^>]*>[\s\S]*?<\/details>/g)].map((m) => m[0]).find((d) => d.includes('id="whatif-cache"')) ?? "";
-    expect(details).not.toBe("");
-    expect(/<summary[^>]*>([\s\S]*?)<\/summary>/.exec(details)?.[1]?.replace(/<[^>]+>/g, "").trim()).toBe("What if cache reads cost more or less?");
-    expect(details).not.toMatch(/<details[^>]*\sopen[\s>=]/); // closed in the HTML; the script opens it on wide screens
+// EST-20 (UX-R30) was a phone <details> fold for What if, to keep the one long page short. The
+// STUDIO-DS tabs (PR #102) retired that: What if and the token box live in the Electricity tab, so
+// neither adds to the Overview, and UX-R5 in check:browser still caps the phone page height.
+describe("EST-20 What if and the token box sit in the Electricity tab, not the Overview", () => {
+  const panel = (id: string) => {
+    const start = html.indexOf(`<section id="${id}" role="tabpanel"`);
+    const next = html.indexOf('role="tabpanel"', start + 30);
+    return start < 0 ? "" : html.slice(start, next < 0 ? undefined : html.lastIndexOf("<section", next));
+  };
+  it("EST-20 the cache-read slider and the \"Have a token count?\" section are in #p-electricity", () => {
+    const electricity = panel("p-electricity");
+    expect(electricity).toContain('id="whatif-cache"');
+    expect(electricity).toMatch(/<h2[^>]*>\s*Have a token count\?\s*<\/h2>/);
+  });
+  it("EST-20 neither is in the Overview panel", () => {
+    const overview = panel("p-overview");
+    expect(overview).not.toBe("");
+    expect(overview).not.toContain('id="whatif-cache"');
+    expect(overview).not.toContain("Have a token count?");
   });
 });
