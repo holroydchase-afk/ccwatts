@@ -8,6 +8,9 @@ Problem: Chase can see a thread's token total (88.8M on an Opus 5 thread) but cc
 ## 2026-11-19: a silent hook is an invisible one
 Problem: the counts-only save hook built Nov 1 stopped around Nov 2; project threads start above the repo, so repo hooks never load. Chase's call: "Ok add it." Decision: a setup script on the ccwatts environment installs the hooks at user level. Result: ccwatts runs in a cloud session (this thread: 26.5 Wh). Lesson: a hook that fails silently by design also fails invisibly; check its output exists. Angle: fail-safe design needs a check that the safe path still works.
 
+## 2026-11-18: the eval that caught its own product
+Problem: a three-seat portfolio review asked for an eval harness; the sanity checks were three unit tests with inputs we chose. Chase's call: review it as Anthropic or Stripe would and build the top item. Result: a generated scorecard. Its model-coverage check failed first on the newest models, which were priced at half. Its sensitivity table showed the Opus output energy, not the cache-read factor, drives most of the range. Angle: an honest eval finds things the author did not expect.
+
 ## 2026-11-01: one studio standard
 Problem: every project had drifted its own rules. Chase's call: "standardize ... I don't want to deal with it." Decision: adopt the merged Product Studio + Hearth standard, with ccwatts' TypeScript tool names kept in repo notes so syncs stop overwriting them. Angle: a solo builder runs a studio by writing the rules down once.
 

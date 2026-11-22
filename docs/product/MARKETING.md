@@ -11,6 +11,7 @@ What we can truthfully say about ccwatts today, each with its proof. Owned by th
 | `npx ccwatts` works. | ccwatts@0.1.1 on npm, `npx ccwatts@0.1.1 --demo` with an empty HOME | 2026-10-26 |
 | History survives Claude Code's log cleanup. | `~/.ccwatts/history.jsonl` daily counts; history tests | 2026-10-21 |
 | Sanity-checked against Google's 0.24 Wh prompt, Microsoft's 0.34 Wh query and Hausfather's 170 kWh. | unit tests in `packages/core` | 2026-10-21 |
+| A generated eval scorecard shows every reference check, with assumed inputs labeled. | `docs/EVALS.md`, `npm run evals`, `packages/core/test/evals.test.ts` | 2026-11-18 |
 | Claude Code plugin with `/ccwatts`, a status line and a local MCP server. | `plugins/ccwatts`, `claude plugin validate`, MCP tests | 2026-10-28 |
 
 **Not claimable yet:** carbon or water figures (ANCHORS D13: kWh only); "measured" (it's an estimate; say "I estimated"); any user count or friend-beta result (the beta hasn't run); `npx ccwatts pace` or `npx -y ccwatts mcp` from npm until 0.1.2 is published.

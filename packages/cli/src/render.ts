@@ -155,7 +155,10 @@ export function breakdown(e: Estimate, params: Params, window: Window, dim: Dime
   ]);
   const t = energy(e.total);
   body.push(["total", int(totalTokens(e.tokens)), num(e.total.central / scale), t.range, "100%"]);
-  return [header(params, window), "", table([dim, "tokens", unit, "range", "share"], body, 1, { dimCols: [3], color: opts.color })].join("\n");
+  const lines = [header(params, window), "", table([dim, "tokens", unit, "range", "share"], body, 1, { dimCols: [3], color: opts.color })];
+  // Same wording as the summary, so a model priced at the fallback tier never looks like any other row.
+  if (e.warnings.length) lines.push("", ...e.warnings.map((w) => `  Note          ${w}`));
+  return lines.join("\n");
 }
 
 export function method(params: Params): string {
