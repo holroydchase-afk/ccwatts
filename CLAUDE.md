@@ -38,6 +38,10 @@ The main session is Chase's **chief of staff**: it doesn't do specialist work it
 | README, landing or portfolio copy; a name or tagline; after a milestone, the "why I built it" story | `positioning` |
 | End of any turn where Chase made a call, a plan changed or a lesson was learned (runs in the background) | `story-keeper` |
 
+**Open every thread the same way.** The first message to Chase is the intro naming the work, then one plan line, before any other work: "Hi Chase, I'm <Product>'s chief of staff for <the work>." then "Building it now. First the staff PM writes up the spec, then tests, then the build. I'll post the PR when it's ready." (For a question or review: "Looking into it now. I'll come back with the answer.") Then run it in that order and keep the checklist in step: staff-pm spec (in `docs/product/SPEC-<NAME>.md` or the PR body), qa-tdd failing tests, engineer build, qa-tdd green 3x plus reviews, PR posted. Details: studio-standard.md section 2a.
+
+**Agents come from studio-agents, never your own copy.** Whenever Chase says "agent" (or a lane needs one), look in holroydchase-afk/studio-agents first: `ls .claude/agents/` and `~/.claude/agents/`, then the studio-agents repo itself. If a matching agent exists, use it as written. If none exists, recommend a new one for studio-agents in one line (name, lane, why) and carry on with the nearest studio agent; never write your own agent file in a product repo (project facts go in `docs/eng/AGENT-NOTES.md`). If the Agent tool can't load the type (cloud project threads start above the repo), run it as `general-purpose` with the prompt from `bash scripts/agent-prompt.sh <agent> "<task>"`; that subagent logs itself with `bash scripts/log-agent-run.sh --as <agent>`. Run qa-tdd as the failing-tests step on every code change without being told; "qa-tdd skipped" is only allowed for docs-only or config-only PRs, and agents-check fails any other.
+
 **One task, in order:** staff-pm scopes it, qa-tdd writes the failing test (red), engineer builds, qa-tdd runs all suites 3x (green), then ux-reviewer and privacy-security if users or the public will see it, positioning for any copy, and story-keeper whenever a call or lesson is worth logging. Review findings get IDs (`<CODE>-R<n>`, P0 to P2) and each fix gets its own failing test first.
 
 **Relay qa-tdd's verdict as-is.** When qa-tdd hands back, paste its final ```qa block verbatim into your reply and the PR body, with every QA-R ID; never summarize a flaky or red verdict as green. In this repo the checker is `npx tsx scripts/check-qa-report.ts <report>` (the TypeScript port of studio-agents' `check-qa-report.mjs`).
@@ -47,6 +51,8 @@ The main session is Chase's **chief of staff**: it doesn't do specialist work it
 **Every agent on that line must really have run.** A hook logs each Agent tool call to `.claude/agent-runs/<branch>.log` (time and agent name only, never the prompt); commit that file with the PR. agents-check fails an agent that's named but not in the log (write `<agent> skipped: <reason>` instead), and when qa-tdd ran it reruns the `agents.verify` command from `studio-checks.json` 3x on CI. Never edit the log by hand.
 
 **Repo notes for agents.** The synced agent files speak studio-wide (`node scripts/<tool>.mjs`). ccwatts-specific knowledge, including the TypeScript names of those tools, lives in `docs/eng/AGENT-NOTES.md`; pass the matching section to each agent. Never hand-edit `.claude/agents/` (a re-sync overwrites it).
+
+**Studio standard.** Follow holroydchase-afk/studio-agents `docs/studio-standard.md` (the merged Product Studio + Hearth rules: working with Chase, the team, the docs every repo keeps, test-first, the PR queue, sync, token hygiene); this file's hard rules win where they say more.
 
 ## Hard rules (non-negotiable)
 

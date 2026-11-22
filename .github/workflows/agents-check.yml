@@ -34,6 +34,13 @@ jobs:
             echo "::error::This PR changes code or config, so the Agents: line must name qa-tdd (failing test first, all suites 3x) or say 'qa-tdd skipped: <reason>'. Changed: $(echo $code | head -c 300)"
             exit 1
           fi
+          # qa-tdd runs as the failing-tests step on every code PR; "skipped" is only for docs-only or config-only changes.
+          # Every "qa-tdd skipped" clause must be exactly "qa-tdd skipped: docs only" or "config only" (nothing around it).
+          bad=$(printf '%s' "$line" | grep -oiE 'qa-tdd skipped[^;.]*' | grep -viE '^qa-tdd skipped: *(docs|config) only *$' || true)
+          if [ -n "$code" ] && [ -n "$bad" ]; then
+            echo "::error::qa-tdd cannot be skipped on a code PR. Run it (in a cloud thread: bash scripts/agent-prompt.sh qa-tdd \"<task>\" as general-purpose, which logs itself), or write 'qa-tdd skipped: docs only' / 'config only' if that is true."
+            exit 1
+          fi
           echo "ok: $line"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
