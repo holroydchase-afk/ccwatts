@@ -41,7 +41,7 @@ In the playground, a **"What if?" slider** moves the least certain assumption, w
 energy = Σ tokens × energy per token[model family, token type]
 ```
 
-Output tokens cost the most. Fresh input costs less, and **cache reads** (the agent re-reading context it has already seen) cost less still per token. Cache reads are usually 90%+ of an agent's tokens, though, so they often end up driving the total. Each parameter has a low and high bound, and they combine on a log scale into the range you see. Sanity checks against Google's measured 0.24 Wh median prompt, Microsoft's 0.34 Wh median query and Hausfather's 170 kWh run as unit tests. The full write-up is in [METHODOLOGY.md](METHODOLOGY.md), and the numbers are in [methodology/params.json](methodology/params.json).
+Output tokens cost the most. Fresh input costs less, and **cache reads** (the agent re-reading context it has already seen) cost less still per token. Cache reads are usually 90%+ of an agent's tokens, though, so they often end up driving the total. Each parameter has a low and high bound, and they combine on a log scale into the range you see. Sanity checks against Google's measured 0.24 Wh median prompt, Microsoft's 0.34 Wh median query and Hausfather's 170 kWh run as unit tests. A generated scorecard, checked in CI, shows every reference check, which inputs were assumed, and which parameter drives the range: [docs/EVALS.md](docs/EVALS.md). The full write-up is in [METHODOLOGY.md](METHODOLOGY.md), and the numbers are in [methodology/params.json](methodology/params.json).
 
 ## Privacy
 
@@ -69,7 +69,7 @@ npx ccwatts pace          # your own logs
 Working late? Turn on the bedtime nudge and, from 11pm to 5am, the status line gets a second line suggesting bed, in a persona you pick: serious (`coach`, `researcher`, `stoic`) or funny (`grandma`, `narrator`, `pirate`, `haiku`, `sergeant`), or `random` for a new one each hour.
 
 ```
-⚡ ~9.1 Wh this session (range 2.3 – 27.5) · method v0.1.0
+⚡ ~9.1 Wh this session (range 2.3 – 27.5) · method v0.1.2
 🌙 Sweetheart, it's 1:14am. The computer will still be there in the morning.
 ```
 

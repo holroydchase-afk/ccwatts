@@ -2,6 +2,9 @@
 
 Public mirror of the ccwatts build story (the private log is Chase's "Atlas Story: CCWatts"). The `story-keeper` agent appends entries, newest first: date, title, problem, Chase's call, decision and why, result, one-line angle. No personal data, secrets or links to private tools.
 
+## 2026-11-18: the eval that caught its own product
+Problem: a three-seat portfolio review asked for an eval harness; the sanity checks were three unit tests with inputs we chose. Chase's call: review it as Anthropic or Stripe would and build the top item. Result: a generated scorecard. Its model-coverage check failed first on the newest models, which were priced at half. Its sensitivity table showed the Opus output energy, not the cache-read factor, drives most of the range. Angle: an honest eval finds things the author did not expect.
+
 ## 2026-11-01: one studio standard
 Problem: every project had drifted its own rules. Chase's call: "standardize ... I don't want to deal with it." Decision: adopt the merged Product Studio + Hearth standard, with ccwatts' TypeScript tool names kept in repo notes so syncs stop overwriting them. Angle: a solo builder runs a studio by writing the rules down once.
 
