@@ -26,6 +26,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-23: QA-R1 decided (Chase, "root for Windows too"): projectRef names a Windows drive root (`C:\`, `C:/`, `D:`) "(root)", like `/`. Ids unchanged (still the hash of the trimmed path), so old history rows keep their id; a row saved earlier may still show "C:". Tests COV-3b to COV-3b3; plugin bundles rebuilt.
 - 2026-11-23: DARK (intake #108, spec docs/product/SPEC-DARK-ELEVATION.md): dark --surface #24221E, --fill #33302B, --line #383530, --tab-line #77736D; high-contrast dark --muted #C6C0B6 (QA-R1). Tests DARK-1 to DARK-7 in packages/web/test/design-system.test.ts; plugin bundles rebuilt. Forks the dark tokens from hearth themes.paper (UX-R66); a hearth intake should follow if Chase agrees. UX-R67: check on a phone at low brightness once live; fallback surface #282622.
 - 2026-11-23: Intake #107: CLAUDE.md gains the "Self-check before any ask" rule (Chase never updates settings, environments or repos by hand; do it yourself, use a tool or card, else one copy box). Docs only.
 - 2026-11-22: EVAL merged (PR #98, built Nov 18 from the three-seat portfolio review). `npm run evals` writes `docs/EVALS.md` from `evals/models.json` and `evals/cases.json`: model coverage (8 ids), 4 reference checks with assumed inputs labeled, and a sensitivity table; `packages/core/test/evals.test.ts` fails on a stale file or a failed check. It found that Fable and Mythos ids were priced as Sonnet, half of Opus (now the Opus tier, method v0.1.2, no values changed), and that Opus output energy drives about 37% of a heavy day's range against 24% for the cache-read factor. `--by` tables print the unknown-model note. Review backlog next: docs/DESIGN.md, README refocus and release hygiene (tags, CHANGELOG, GitHub Release v0.2.0, close #38), friend beta kit.
@@ -47,7 +48,6 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - The playground's What-if copy calls cache-read cost "the least certain assumption"; the scorecard shows Opus output energy drives more of the range. Copy left unchanged pending Chase.
 - Pace on the public playground (Oct 31): ANCHORS D10 says no public pieces before the friend beta; Chase's recruiter-ready ask overrode it for the sample-only Pace section. Say "hold M4.5" to take it off the live page.
 - Proposed ANCHORS D15 (architect, Oct 31; not in ANCHORS until Chase says yes): Pace keeps daily counts in a separate local `~/.ccwatts/pace.jsonl`, counts only, never shared without `--share-pace`.
-- QA-R1 (P2, Nov 19): should a Windows drive root like `C:\` show as "(root)" the way `/` does? It shows "C:" today (no path leak). Say "root for Windows too" to change it.
 
 - Repo settings only Chase can change: secret scanning and push protection on; an `npm-publish` environment (required reviewer: Chase, branch main), then `environment: npm-publish` in `publish.yml`.
 
