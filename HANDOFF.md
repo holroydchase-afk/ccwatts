@@ -6,6 +6,7 @@ milestone: CCW-M4
 now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me"). Method v0.1.1 PR open; working the stable-demo plan (/mnt/project-files/ccwatts-reviews/2026-11-13-stable-demo-plan.md), a few pushes a day
 next: 0.2.0 is on npm (Nov 16); post the v0.2.0 GitHub Release and send the portfolio INTAKE; later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
+  - Go to merge the dark elevation PR (changes the live playground); OK to fork dark tokens from hearth (UX-R66)
   - Go on M4.7 Leverage (proposed in IDEAS.md)
   - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
 blockers: []
@@ -14,6 +15,7 @@ blockers: []
 Live status for whoever picks up the build next (human or Claude). Updated every push. Keep this file under 8 KB: dated history goes to `docs/history/HANDOFF-archive.md` (Done log, old decisions, planning-ID map), and `git log` has the rest.
 
 ## Portfolio / public presence
+- 2026-11-23: Dark mode cards now step lighter than the page (surface 1.08:1 to 1.18:1, intake #108). Light mode pixel-identical. Live once Chase gives the go and Pages deploys. Screenshots: /mnt/project-files/ccwatts-demo-2026-11-23/dark-elevation/.
 - 2026-11-22: EVAL (PR #98) merged on Chase's go ("go on green"); after Pages deploys, the playground footer reads method v0.1.2. The portfolio page's "Status" line is stale (it says 0.2.0 waits on npm); an INTAKE for Product Studio is in the Nov 18 review doc.
 - 2026-11-20: the playground gains a "Have a token count?" box (type a total like 88.8M, pick a model, get a kWh range with the mix assumed), in the Electricity tab under What if (merged onto main's tabbed design; the earlier phone fold for What if is dropped because tabs replaced the long page). Live once Chase gives the go and Pages deploys. Portfolio copy unaffected.
 - **Portfolio page:** https://chaseholroyd.com/ccwatts.html (source: `tools/build.py` in `holroydchase-afk.github.io`). It links the playground and this repo.
@@ -24,6 +26,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-23: DARK (intake #108, spec docs/product/SPEC-DARK-ELEVATION.md): dark --surface #24221E, --fill #33302B, --line #383530, --tab-line #77736D; high-contrast dark --muted #C6C0B6 (QA-R1). Tests DARK-1 to DARK-7 in packages/web/test/design-system.test.ts; plugin bundles rebuilt. Forks the dark tokens from hearth themes.paper (UX-R66); a hearth intake should follow if Chase agrees. UX-R67: check on a phone at low brightness once live; fallback surface #282622.
 - 2026-11-23: Intake #107: CLAUDE.md gains the "Self-check before any ask" rule (Chase never updates settings, environments or repos by hand; do it yourself, use a tool or card, else one copy box). Docs only.
 - 2026-11-22: EVAL merged (PR #98, built Nov 18 from the three-seat portfolio review). `npm run evals` writes `docs/EVALS.md` from `evals/models.json` and `evals/cases.json`: model coverage (8 ids), 4 reference checks with assumed inputs labeled, and a sensitivity table; `packages/core/test/evals.test.ts` fails on a stale file or a failed check. It found that Fable and Mythos ids were priced as Sonnet, half of Opus (now the Opus tier, method v0.1.2, no values changed), and that Opus output energy drives about 37% of a heavy day's range against 24% for the cache-read factor. `--by` tables print the unknown-model note. Review backlog next: docs/DESIGN.md, README refocus and release hygiene (tags, CHANGELOG, GitHub Release v0.2.0, close #38), friend beta kit.
 - 2026-11-22: STUDIO-WIRING (#104, spec docs/product/SPEC-STUDIO-WIRING.md): cloud threads can now run studio agents as general-purpose via `scripts/agent-prompt.sh` and log them with `log-agent-run.sh --as <agent>` ("<time> <agent> via-general-purpose", accepted by check-agent-runs.sh); agents-check.yml gains the "qa-tdd cannot be skipped" rule on code PRs (only "docs only" / "config only" skips pass), pinned SHAs and npm build kept; CLAUDE.md's Studio agents section now matches templates/CLAUDE-agents.md (CCWatts greeting, release-captain row, check-qa-report.ts line and AGENT-NOTES pointer kept). Next: qa-tdd green 3x, then the PR with qa-tdd really run.
