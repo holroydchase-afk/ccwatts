@@ -11,6 +11,8 @@ import {
   REPO_URL,
   defaultParams,
   estimate,
+  estimateFromTotal,
+  parseTokenCount,
   parseSince,
   linkedInPost,
   receiptSvg,
@@ -24,7 +26,7 @@ import {
 } from "@ccwatts/core";
 import { openFile, writeDashboard } from "./dashboard.js";
 import { errorLine, reason } from "./errors.js";
-import { breakdown, history, historyCsv, json, jsonError, method, pace, paceCsv, paceJson, paceShareLine, statusLine, styles, summary } from "./render.js";
+import { breakdown, history, historyCsv, json, jsonError, manual, manualJson, method, pace, paceCsv, paceJson, paceShareLine, statusLine, styles, summary } from "./render.js";
 import { nudgeNow, runNudge, statusNudge } from "./nudge.js";
 import { estimateWindow, loadUsage, rowsIn, type UsageOptions } from "./usage.js";
 
@@ -44,6 +46,7 @@ Reads local logs only. Nothing leaves your machine.
 
 Commands:
   (none)            Summary for the time window
+  estimate          Estimate from a token count you enter (e.g. 88.8M)
   history           Weekly trend, all-time total, best and worst weeks
   dashboard         Write an offline HTML dashboard of your history and open it
   pace              Work rhythm: active hours, time past 10pm, days off (opt-in)
@@ -70,8 +73,18 @@ Options:
   --after <hour>    With nudge on: start hour, 24-hour clock (default 23 = 11pm)
   --until <hour>    With nudge on: end hour, 24-hour clock (default 5 = 5am)
   --preview         With nudge: show a line from each persona, change nothing
+  --model <name>    With estimate: opus, sonnet or haiku (default opus)
+  --input <n>       With estimate: input tokens, if you know the split
+  --cache-write <n> With estimate: cache write tokens
+  --cache-read <n>  With estimate: cache read tokens
+  --output <n>      With estimate: output tokens
   -v, --version     Show the version
   -h, --help        Show this help
+
+estimate reads no logs and saves nothing. Use it for a cloud thread or chat
+that shows a token total. Without a split it assumes a typical Claude Code mix,
+so the range is wider. A split you give is used as-is; the rest of the total
+counts as cache read.
 
 Logs elsewhere? Set CLAUDE_CONFIG_DIR, as Claude Code does, to keep history.
 
@@ -96,8 +109,11 @@ Reads local logs only. No port, no network.`;
 const PLAYGROUND = PLAYGROUND_URL;
 
 const NUDGE_FLAGS = ["persona", "after", "until", "preview", "help"];
+const SPLIT_FLAGS = { input: "input", "cache-write": "cacheWrite", "cache-read": "cacheRead", output: "output" } as const;
+const ESTIMATE_FLAGS = ["model", "json", "help", ...Object.keys(SPLIT_FLAGS)];
+const ESTIMATE_EXAMPLE = `${APP_NAME} estimate 88.8M --model opus`;
 const DIMS: Dimension[] = ["model", "day", "project", "type"];
-const COMMANDS = ["summary", "history", "pace", "receipt", "dashboard", "statusline", "nudge", "mcp", "help"];
+const COMMANDS = ["summary", "estimate", "history", "pace", "receipt", "dashboard", "statusline", "nudge", "mcp", "help"];
 
 /** parseArgs errors are written for developers; say the same thing in plain words. */
 function plainArgError(error: unknown): Error | undefined {
@@ -105,6 +121,10 @@ function plainArgError(error: unknown): Error | undefined {
   const message = error instanceof Error ? error.message : "";
   const option = message.match(/'(-{1,2}[\w-]+)/)?.[1];
   const help = `Run ${APP_NAME} --help to see the options.`;
+  // `ccwatts estimate -5` reaches parseArgs as an option; answer as a bad count, not a bad flag.
+  const negative = process.argv.slice(2).find((a) => /^-[\d.]/.test(a));
+  if (code === "ERR_PARSE_ARGS_UNKNOWN_OPTION" && negative && process.argv[2] === "estimate")
+    return new Error(`Couldn't read "${negative}" as a token count. Try 88.8M, 1.2k or 88800000.`);
   if (code === "ERR_PARSE_ARGS_UNKNOWN_OPTION") return new Error(`Unknown option "${option}". ${help}`);
   if (code === "ERR_PARSE_ARGS_INVALID_OPTION_VALUE") return new Error(`${option} needs a value. ${help}`);
   return undefined;
@@ -129,6 +149,11 @@ async function main(): Promise<void> {
       after: { type: "string" },
       until: { type: "string" },
       preview: { type: "boolean" },
+      model: { type: "string" },
+      input: { type: "string" },
+      "cache-write": { type: "string" },
+      "cache-read": { type: "string" },
+      output: { type: "string" },
       version: { type: "boolean", short: "v" },
       help: { type: "boolean", short: "h" },
     },
@@ -145,6 +170,32 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  if (command === "estimate") {
+    // Reads no logs and writes no files: just the count typed in.
+    const other = Object.keys(values).filter((k) => values[k as keyof typeof values] !== undefined && !ESTIMATE_FLAGS.includes(k));
+    if (other.length > 0) throw new Error(`${APP_NAME} estimate takes only --model, --json and the split options, not --${other[0]}. Try: ${ESTIMATE_EXAMPLE}`);
+    if (positionals[1] === undefined) throw new Error(`Give a token count, e.g. ${ESTIMATE_EXAMPLE}`);
+    if (positionals.length > 2) throw new Error(`${APP_NAME} estimate takes one token count. Try: ${ESTIMATE_EXAMPLE}`);
+    const count = (text: string) => {
+      const n = parseTokenCount(text);
+      if (n === null) throw new Error(`Couldn't read "${text}" as a token count. Try 88.8M, 1.2k or 88800000.`);
+      return n;
+    };
+    const tokens = count(positionals[1]);
+    const mix: Record<string, number> = {};
+    for (const [flag, type] of Object.entries(SPLIT_FLAGS)) {
+      const text = values[flag as keyof typeof SPLIT_FLAGS];
+      if (text !== undefined) mix[type] = count(text);
+    }
+    const r = estimateFromTotal({ tokens, model: values.model ?? "opus", ...(Object.keys(mix).length ? { mix } : {}) }, params);
+    if (values.json) {
+      for (const w of r.warnings) console.error(`Note: ${w}`);
+      return void console.log(manualJson(r, params));
+    }
+    return void console.log(manual(r, params, { color: useColor() }));
+  }
+  const estimateOnly = [values.model, values.input, values["cache-write"], values["cache-read"], values.output].some((v) => v !== undefined);
+  if (estimateOnly) throw new Error(`--model and the split options work with ${APP_NAME} estimate. Try: ${ESTIMATE_EXAMPLE}`);
   if (command === "statusline") {
     const [energy, moon] = await Promise.all([sessionLine(values.path), statusNudge()]);
     // Energy line first and unchanged; Claude Code shows each printed line as a status line row.

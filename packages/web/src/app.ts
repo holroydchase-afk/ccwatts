@@ -9,6 +9,8 @@ import {
   dedupe,
   defaultParams as params,
   estimate,
+  estimateFromTotal,
+  MIX_GUESSED,
   everyday,
   formatEnergy,
   hm,
@@ -21,6 +23,7 @@ import {
   clockHour,
   linkedInPost,
   num,
+  parseTokenCount,
   projectName,
   receiptSvg,
   rollup,
@@ -509,6 +512,28 @@ function setWhatIf(value: number) {
   render(false);
 }
 
+/**
+ * "Have a token count?": a total typed in (a cloud thread or chat), estimated with the published
+ * method and the typical Claude Code mix. Nothing is stored or put in the URL.
+ */
+function renderManual() {
+  const out = $("manual-result");
+  const text = $<HTMLInputElement>("manual-tokens").value;
+  const tokens = parseTokenCount(text);
+  out.classList.toggle("error", text.trim() !== "" && tokens === null);
+  if (text.trim() === "") return void (out.textContent = "");
+  if (tokens === null) return void (out.textContent = "Couldn't read that as a token count. Try 88.8M, 1.2k or 88800000.");
+  const r = estimateFromTotal({ tokens, model: $<HTMLSelectElement>("manual-model").value }, params);
+  const t = formatEnergy(r.total);
+  // Same comparison line as `ccwatts estimate` prints (UX-R29), and the same note on the guessed mix (UX-R28).
+  out.innerHTML = [
+    `<span class="manual-kwh">≈ <b>${esc(t.central)}</b> (range ${esc(t.range)})</span>`,
+    `<span class="manual-compare">≈ ${esc(everyday(r.total.central / 1000, params))}</span>`,
+    `<span class="meta">Method v${esc(r.methodVersion)} · typical Claude Code mix assumed</span>`,
+    `<span class="meta">${esc(MIX_GUESSED)}</span>`,
+  ].join("");
+}
+
 /** Shows a line under the "Try it" box; errors are styled as errors and scrolled into view. */
 function setStatus(text: string, error = false) {
   const status = $("drop-status");
@@ -647,6 +672,10 @@ function wire() {
       if (paceShown.length) renderPaceChart(paceShown);
     }, 150);
   });
+
+  for (const id of ["manual-tokens", "manual-model"]) $(id).addEventListener("input", renderManual);
+  $("manual-model").addEventListener("change", renderManual);
+  renderManual();
 
   const slider = $<HTMLInputElement>("whatif-cache");
   slider.addEventListener("input", () => setWhatIf(Number(slider.value)));

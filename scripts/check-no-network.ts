@@ -5,6 +5,7 @@
 // Needs Playwright, which is not a project dependency:  npx playwright@1 install chromium
 // Run after `npm run build`:                            tsx scripts/check-no-network.ts
 // Set PLAYWRIGHT_MODULE to a Playwright path and CHROMIUM_PATH to a browser binary if needed.
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -168,6 +169,10 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if ((await total()) === allTime) problems.push("window toggle: 7 days shows the same total as All time");
   await page.click("#w-all");
   if ((await total()) !== allTime) problems.push("window toggle: All time total changed after a round trip");
+
+  // EST-20 (was UX-R30, a phone <details> fold for What if): retired by the STUDIO-DS tabs. What if now
+  // sits in the Electricity tab, so it no longer adds to the Overview's height; UX-R5 above still
+  // caps the phone page. estimate-web.test.ts EST-20 checks the slider stays in that tab.
 
   // WI-3, WI-4 (CCW-M2.6.5): the "What if?" cache-read slider recomputes the hero, says it's a
   // what-if, leaves the share card and LinkedIn post on the published estimate, and Reset undoes it.
@@ -519,6 +524,122 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.getByRole("tab", { name: "Electricity", exact: true }).click();
   await page.click("#w-all");
   if (await page.$("#xss")) problems.push("PS-R2: a row's date was rendered as markup (found <i id=xss> in the page)");
+  await page.close();
+}
+
+// EST-17 "Have a token count?" box: typing a count shows a kWh range with the method version, bad
+// input shows the hint, the model select changes the answer, and nothing is stored or put in the URL.
+// Selected by role and label. Phone and desktop, light and dark.
+{
+  const methodVersion = JSON.parse(readFileSync(new URL("../methodology/params.json", import.meta.url), "utf8")).version as string;
+  // The kWh line and the meta line may be separate lines (UX-R32); all four parts must be there.
+  const RESULT = /≈ ([\d.]+) kWh \(range ([\d.]+) – ([\d.]+)\)/;
+  const META = `Method v${methodVersion} · typical Claude Code mix assumed`; // UX-R32
+  const WIDE = "Wide range: the mix of token types is guessed."; // UX-R28
+  const BAD = "Couldn't read that as a token count. Try 88.8M, 1.2k or 88800000."; // UX-R33
+  // UX-R29: the comparison line the CLI prints for the same input (built CLI, npm run build first).
+  const cliCompare = (model: string) => (spawnSync(process.execPath, [fileURLToPath(new URL("../packages/cli/dist/index.js", import.meta.url)), "estimate", "88.8M", "--model", model], { encoding: "utf8", env: { PATH: process.env.PATH ?? "", HOME: scratch } }).stdout
+    .split("\n").map((l) => l.trim()).find((l) => l.startsWith("≈ ")) ?? "(CLI printed no ≈ line)");
+  const compare = { Opus: cliCompare("opus"), Sonnet: cliCompare("sonnet") };
+  for (const colorScheme of ["light", "dark"] as const) {
+    for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+      const at = `at ${viewport.width}px ${colorScheme}`;
+      const page = await browser.newPage({ viewport, colorScheme });
+      page.on("request", (r) => {
+        if (!/^(file|data|blob):/.test(r.url())) problems.push(`EST-17: network request ${r.url()} ${at}`);
+      });
+      page.on("pageerror", (e) => problems.push(`EST-17: page error ${e} ${at}`));
+      await page.goto(pathToFileURL(page_).href);
+      // STUDIO-DS: the box lives in the Electricity tab, near What if. Open it the way a person would.
+      await tab(page, "Electricity");
+      const startUrl = page.url();
+      // The tab panel is a <section> too, so take the innermost one: the region named by the heading.
+      const box = page.getByRole("region", { name: "Have a token count?" });
+      const input = box.getByRole("textbox", { name: /token/i });
+      const model = box.getByRole("combobox", { name: /model/i });
+      if ((await box.count()) !== 1 || (await input.count()) !== 1 || (await model.count()) !== 1) {
+        problems.push(`EST-17: no "Have a token count?" section with a labeled token textbox and model select ${at}`);
+        await page.close();
+        continue;
+      }
+      const boxText = async () => (await box.innerText()).replace(/\s+/g, " ");
+      const result = box.getByRole("status");
+      /** The result's visible lines, trimmed, empty ones dropped. */
+      const resultLines = async () => (await result.innerText()).split("\n").map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+      const resultChecks = async (label: "Opus" | "Sonnet") => {
+        const lines = await resultLines();
+        const shown = JSON.stringify(lines);
+        if (!lines.includes(META)) problems.push(`EST-17 UX-R32: ${label} result has no line "${META}" ${at}: ${shown}`);
+        if (!lines.includes(WIDE)) problems.push(`EST-17 UX-R28: ${label} result has no line "${WIDE}" ${at}: ${shown}`);
+        const cmp = lines.filter((l) => l.startsWith("≈ ") && !RESULT.test(l));
+        if (cmp.length !== 1 || cmp[0] !== compare[label]) problems.push(`EST-17 UX-R29: ${label} result's comparison line is ${JSON.stringify(cmp)}, want the CLI's "${compare[label]}" ${at}`);
+      };
+      await input.fill("88.8M");
+      const opus = RESULT.exec(await boxText());
+      if (!opus) problems.push(`EST-17: 88.8M shows no "≈ N kWh (range L – H)" ${at}: "${(await boxText()).slice(0, 200)}"`);
+      else {
+        await resultChecks("Opus");
+        // UX-R32: the meta line is in the reading font, not monospace.
+        const metaFont = await result.evaluate((el, want) => {
+          const hit = [el, ...el.querySelectorAll("*")].filter((n) => (n.textContent ?? "").replace(/\s+/g, " ").trim() === want);
+          const last = hit.at(-1);
+          return last ? getComputedStyle(last).fontFamily : null;
+        }, META);
+        if (metaFont === null) problems.push(`EST-17 UX-R32: no element holds exactly "${META}" ${at}`);
+        else if (MONO.test(metaFont)) problems.push(`EST-17 UX-R32: meta line is monospace (${metaFont}) ${at}`);
+        const [c, l, h] = [Number(opus[1]), Number(opus[2]), Number(opus[3])];
+        if (!(l < c && c < h)) problems.push(`EST-17: range not low < central < high (${l}, ${c}, ${h}) ${at}`);
+        if (!(c >= 4 && c <= 5.5)) problems.push(`EST-17: 88.8M on Opus is ${c} kWh, want 4-5.5 ${at}`);
+        await model.selectOption({ label: "Sonnet" });
+        const sonnet = RESULT.exec(await boxText());
+        if (!sonnet || Number(sonnet[1]) >= c) problems.push(`EST-17: choosing Sonnet didn't lower the estimate ${at}`);
+        else await resultChecks("Sonnet");
+        await model.selectOption({ label: "Opus" });
+      }
+      await input.fill("abc");
+      if (!(await resultLines()).includes(BAD)) problems.push(`EST-17 UX-R33: invalid input doesn't show "${BAD}" ${at}: ${JSON.stringify(await resultLines())}`);
+      if (RESULT.test(await boxText())) problems.push(`EST-17: invalid input still shows a number ${at}`);
+      await input.fill("");
+      if (/NaN|undefined|Infinity/.test(await boxText())) problems.push(`EST-17: empty input shows NaN/undefined ${at}`);
+      await input.fill("1234567890123");
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (over > 0) problems.push(`EST-17: page scrolls sideways by ${over}px with a long count ${at}`);
+      if (page.url() !== startUrl) problems.push(`EST-17: the count changed the URL (${page.url()}) ${at}`);
+      const stored = await page.evaluate(() => { try { return localStorage.length + sessionStorage.length + document.cookie.length; } catch { return 0; } });
+      if (stored) problems.push(`EST-17: something was stored (${stored}) ${at}`);
+      await page.close();
+    }
+  }
+}
+
+// EST-24 UX-R65: at 1280px the What if column and the "Have a token count?" box sit side by side,
+// both start with a 22/28 h2, and the two h2 tops line up within 2px. Selected by role and name.
+for (const colorScheme of ["light", "dark"] as const) {
+  const at = `at 1280px ${colorScheme}`;
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme });
+  await page.goto(pathToFileURL(page_).href);
+  await tab(page, "Electricity");
+  const panel = page.locator("#p-electricity");
+  const whatifH = panel.getByRole("heading", { level: 2, name: "What if?", exact: true });
+  const boxH = panel.getByRole("heading", { level: 2, name: "Have a token count?", exact: true });
+  if ((await whatifH.count()) !== 1 || (await boxH.count()) !== 1) {
+    problems.push(`EST-24 UX-R65: want one h2 "What if?" and one h2 "Have a token count?" in Electricity ${at}, got ${await whatifH.count()} and ${await boxH.count()}`);
+  } else {
+    const measure = (l: typeof whatifH) => l.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return { top: r.top, left: r.left, size: cs.fontSize, line: cs.lineHeight, weight: cs.fontWeight };
+    });
+    const [a, b] = [await measure(whatifH), await measure(boxH)];
+    for (const [name, m] of [["What if?", a], ["Have a token count?", b]] as const) {
+      if (m.size !== "22px" || m.line !== "28px") problems.push(`EST-24 UX-R65: h2 "${name}" is ${m.size}/${m.line}, want 22px/28px ${at}`);
+    }
+    if (a.weight !== b.weight) problems.push(`EST-24 UX-R65: h2 weights differ (${a.weight} vs ${b.weight}) ${at}`);
+    if (!(b.left > a.left)) problems.push(`EST-24 UX-R65: the box isn't beside What if (lefts ${a.left}, ${b.left}) ${at}`);
+    if (Math.abs(a.top - b.top) > 2) problems.push(`EST-24 UX-R65: h2 tops differ by ${Math.abs(a.top - b.top).toFixed(1)}px (What if ${a.top}, box ${b.top}), want within 2px ${at}`);
+  }
+  const label = panel.getByText("Cache-read cost", { exact: true });
+  if ((await panel.getByRole("slider", { name: "Cache-read cost", exact: true }).count()) !== 1 || (await label.count()) !== 1) problems.push(`EST-24 UX-R65: the slider isn't labeled exactly "Cache-read cost" ${at}`);
   await page.close();
 }
 

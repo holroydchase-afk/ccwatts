@@ -24,6 +24,8 @@ import {
   type TokenCounts,
   type TokenType,
   type Window,
+  type ManualEstimate,
+  MIX_GUESSED,
   paceHours,
   hm,
   monthDay,
@@ -203,6 +205,64 @@ export function json(e: Estimate, params: Params, window: Window, sample = false
       byDay: rows(e.byDay, "day"),
       byProject: rows(e.byProject, "project"),
       warnings: e.warnings,
+    },
+    null,
+    2,
+  );
+}
+
+/** "95.5% cache read, 4% cache write, 0.4% output": the three largest shares of the assumed mix. */
+function mixLine(params: Params): string {
+  const central = params.token_mix.typical_claude_code.central;
+  return [...TOKEN_TYPES]
+    .sort((a, b) => central[b] - central[a])
+    .slice(0, 3)
+    .map((k) => `${Math.round(central[k] * 1000) / 10}% ${TYPE_LABELS[k]}`)
+    .join(", ");
+}
+
+/** `ccwatts estimate`: the summary's look for a token count someone typed in. */
+export function manual(r: ManualEstimate, params: Params, opts: RenderOptions = {}): string {
+  const { bold, dim } = styles(opts.color);
+  const total = energy(r.total);
+  const given = TOKEN_TYPES.filter((k) => r.tokens[k] > 0)
+    .sort((a, b) => r.tokens[b] - r.tokens[a])
+    .map((k) => `${int(r.tokens[k])} ${TYPE_LABELS[k]}`)
+    .join(", ");
+  const lines = [
+    `${APP_NAME} v${APP_VERSION} · method v${params.version} · a token count you entered`,
+    "",
+    `  Electricity   ${bold(total.central)}   ${dim(`(range ${total.range})`)}`,
+    `  ≈ ${everyday(r.total.central / 1000, params)}`,
+    "",
+    `  Model         ${clip(r.model)}${r.knownModel ? "" : ` (counted as ${r.tier})`}`,
+    `  Tokens        ${int(totalTokens(r.tokens))} · ${r.mixAssumed ? `mix assumed: ${mixLine(params)}` : given}`,
+  ];
+  for (const w of r.warnings) lines.push(`  Note          ${w}`);
+  lines.push("");
+  if (r.mixAssumed) {
+    lines.push(dim(`  ${MIX_GUESSED}`));
+    lines.push(dim(`  Know the split? Add --output, --cache-read, --cache-write or --input to narrow it.`));
+  }
+  lines.push(dim(`  How this is estimated: ${APP_NAME} --method`));
+  return lines.join("\n");
+}
+
+/** `ccwatts estimate --json`: same numbers, in Wh, for scripts. */
+export function manualJson(r: ManualEstimate, params: Params): string {
+  return JSON.stringify(
+    {
+      app: APP_NAME,
+      version: APP_VERSION,
+      methodVersion: r.methodVersion,
+      unit: "Wh",
+      source: "manual",
+      model: r.model,
+      tier: r.tier,
+      tokens: r.tokens,
+      mixAssumed: r.mixAssumed,
+      wh: r.total,
+      comparisons: comparisons(r.total.central / 1000, params).map(({ id, amount }) => ({ id, amount })),
     },
     null,
     2,

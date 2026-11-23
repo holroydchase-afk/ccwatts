@@ -8,6 +8,17 @@ A running log. Add to the top of each section. Every entry starts with the probl
 
 ## Ideas
 
+### Enter a token count (cloud threads and chats) · ✅ adopted (Chase, Nov 19, 2026)
+- **Problem:** Some Claude usage leaves no local log: cloud Claude Code threads, claude.ai chats, any app that only shows a token total. An 88.8M-token Opus thread had no way into ccwatts.
+- **Idea:** `ccwatts estimate 88.8M --model opus` and a "Have a token count?" box on the playground. A total hides the token-type mix, so ccwatts assumes a measured typical Claude Code mix and widens the range with a light and a heavy mix. Pass the split if you know it for a tighter range. Reads no logs, saves nothing.
+- **Fits:** VISION problems 1 and 5 (and new problem 6). Pure `packages/core/src/manual.ts`; the mix is sourced in `params.json` (`token_mix`) and explained in METHODOLOGY.md, "Estimating from a total".
+- **Source:** Chase, Nov 19, 2026: "we should have an 'enter token #' ... I could look at my Opus 5 thread and see it has 88.8M tokens."
+
+### Measure cloud threads automatically · 🧪 proposed
+- **Problem:** Project threads start above the repo, so the repo's Stop hook stopped saving counts-only copies after Nov 2. Cloud usage since then is missing unless someone types the total in.
+- **Idea:** A user-level hook, installed by the ccwatts environment's setup script, that saves a counts-only copy at the end of every cloud session, wherever it starts.
+- **Status:** Waits on Chase.
+
 ### Leverage: your hours vs. your agents' hours · 💡 idea
 - **Problem:** Other tools count tokens or dollars. Nobody shows how much machine work an hour of your attention buys, or what it costs the grid, so AI energy reads as guilt with no lever to pull.
 - **Idea:** Under the weekly Pace line, add one more line, for example "You worked 11 to 14 hours. Your agents ran 31 to 40 hours and used 2.1 to 4.8 kWh. Method 0.1.0, gaps 10/20/30." It's a delegation ratio people want to improve and post.

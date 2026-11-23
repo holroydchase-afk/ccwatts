@@ -13,7 +13,7 @@ export { paceWeeks, paceVersusUsual, samplePaceDays, REST_DAY_MINUTES, type Pace
 export { paceHours, hm, monthDay, clockHour, paceHoursRange, paceActiveLead, paceLead, paceFocus, PACE_EARLY_WEEK_DAYS, paceAgentsLine, paceNotes, type PaceLead } from "./pace-copy.js";
 export { PACE_SCHEMA, paceMethod, serializePaceHistory, parsePaceHistory, mergePaceHistory, type PaceMethod } from "./pace-history.js";
 export { addCounts, dedupe, totalTokens, totalsByModel, type ModelTotals } from "./rollup.js";
-export { defaultParams, withOverrides, type Param, type Params, type PaceParams, type Comparison, type ConfidenceLabel } from "./params.js";
+export { defaultParams, withOverrides, type Param, type Params, type PaceParams, type TokenMix, type TokenShares, type Comparison, type ConfidenceLabel } from "./params.js";
 export {
   estimate,
   energyForCounts,
@@ -31,6 +31,7 @@ export {
   type Tier,
   type ComparisonLine,
 } from "./energy.js";
+export { parseTokenCount, estimateFromTotal, MAX_TOKEN_COUNT, MIX_GUESSED, type ManualInput, type ManualEstimate } from "./manual.js";
 export {
   HISTORY_SCHEMA,
   rollup,

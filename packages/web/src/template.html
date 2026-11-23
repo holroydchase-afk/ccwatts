@@ -166,7 +166,9 @@ details>*+*{margin-top:8px}
 @media (prefers-reduced-motion:no-preference){.disclose::before{transition:transform .15s ease}.rank .bar span{transition:width .3s ease}}
 /* "What if?" cache-read slider (M2.6.5): a what-if view, never the published estimate. */
 .whatif{display:flex;flex-direction:column;gap:8px;max-width:65ch}
-.whatif-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.whatif-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
+/* UX-R65: the h2 shares the row with the label and value, so the column stays as short as the token box beside it (AC-T2). */
+.whatif-pick{display:flex;align-items:baseline;gap:12px}
 .whatif-head label{font-weight:600}
 .whatif output{font-weight:600;font-size:22px;line-height:28px}
 .whatif input[type=range]{width:100%;height:48px;accent-color:var(--accent);cursor:pointer;background:transparent}
@@ -177,6 +179,20 @@ details>*+*{margin-top:8px}
 .whatif-note{border-left:4px solid var(--sample);padding-left:12px}
 .whatif button{align-self:flex-start}
 .note{max-width:65ch}
+/* "Have a token count?" (EST): a total typed in, for usage with no local log. Electricity tab, beside What if on wide screens, under it on phones. */
+.manual{display:flex;flex-direction:column;gap:16px;max-width:65ch}
+.manual-fields{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.manual-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.manual-field:first-child{flex:1 1 160px}
+.manual-field label{font-weight:600}
+.manual input,.manual select{font:inherit;min-height:48px;min-width:48px;width:100%;border:1px solid var(--tab-line);border-radius:12px;padding:12px;background:var(--surface);color:var(--ink)}
+.manual input::placeholder{color:var(--muted);opacity:1}
+.manual select{cursor:pointer;width:auto;padding-right:32px}
+.manual-result{display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere;text-wrap:pretty}
+.manual-result:empty{display:none}
+.manual-kwh{font-size:22px;line-height:28px}
+.manual-kwh b{font-weight:600}
+.manual-result.error{color:var(--danger);border-left:4px solid;padding-left:12px}
 /* Share */
 .card{max-width:min(100%,720px);height:auto;border-radius:12px;box-shadow:0 0 0 1px var(--line);display:block}
 /* On a phone the 1200px card's text shrinks, so it links to the card at full size (UX-R17). */
@@ -389,19 +405,40 @@ Leave out everything else, especially message content. Save the lines as ccwatts
           <p class="explain" id="explain-more"></p>
         </details>
       </div>
-      <div class="whatif" id="whatif">
-        <div class="whatif-head">
-          <label for="whatif-cache">What if? Cache-read cost</label>
-          <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output>
+      <div class="grid2 drives-tools">
+        <div class="whatif" id="whatif">
+          <div class="whatif-head">
+            <h2>What if?</h2>
+            <span class="whatif-pick"><label for="whatif-cache">Cache-read cost</label> <output id="whatif-value" for="whatif-cache">__WHATIF_PCT__</output></span>
+          </div>
+          <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
+          <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
+          <p class="whatif-note" id="whatif-note" role="status" hidden></p>
+          <details class="fine" id="whatif-why">
+            <summary class="disclose">Why this assumption?</summary>
+            <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
+          </details>
+          <button type="button" id="whatif-reset" hidden>Reset</button>
         </div>
-        <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
-        <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
-        <p class="whatif-note" id="whatif-note" role="status" hidden></p>
-        <details class="fine" id="whatif-why">
-          <summary class="disclose">Why this assumption?</summary>
-          <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
-        </details>
-        <button type="button" id="whatif-reset" hidden>Reset</button>
+        <section class="manual" id="manual" aria-labelledby="manual-h">
+          <h2 id="manual-h">Have a token count?</h2>
+          <p class="note" id="manual-hint">For a cloud thread or chat that shows a token total. Local Claude Code logs give a tighter range.</p>
+          <div class="manual-fields">
+            <div class="manual-field">
+              <label for="manual-tokens">Total tokens</label>
+              <input type="text" id="manual-tokens" placeholder="88.8M" autocomplete="off" spellcheck="false" autocapitalize="off" enterkeyhint="done" aria-describedby="manual-hint">
+            </div>
+            <div class="manual-field">
+              <label for="manual-model">Model</label>
+              <select id="manual-model">
+                <option value="opus" selected>Opus</option>
+                <option value="sonnet">Sonnet</option>
+                <option value="haiku">Haiku</option>
+              </select>
+            </div>
+          </div>
+          <p class="manual-result" id="manual-result" role="status" aria-live="polite"></p>
+        </section>
       </div>
     </div>
   </section>
