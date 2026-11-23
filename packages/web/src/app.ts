@@ -126,6 +126,8 @@ function renderHero(e: Estimate, label: string) {
   const fixed = whatIfActive() ? `, with cache reads fixed at ${pct(viewParams.params[CACHE_ID]!.value)} and every other assumption at its bounds.` : ", from the bounds on every assumption.";
   renderRangeBar(e, t, fixed);
   $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
+  // FOCUS-3: the same line under the Overview number.
+  $("ov-compare").textContent = $("hero-compare").textContent;
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   // One span per item, kept whole, so a phone wraps between items and never inside a date.
   const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [e.span.from === e.span.to ? e.span.from : `${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
@@ -302,7 +304,6 @@ function renderPace() {
   if (!any) {
     $("pace-chart").innerHTML = "";
     $("pace-table").innerHTML = "";
-    renderPaceOverview(null, off ? $("pace-optin").textContent ?? "" : empty.textContent);
     return;
   }
   // UX-R40/R41: same lead as the CLI. Early in a week it describes the last full week, and this week
@@ -314,7 +315,6 @@ function renderPace() {
   $("pace-agents").textContent = line.agents ? keep(line.agents) : "";
   $("pace-agents").hidden = !line.agents;
   renderPaceChart(weeks);
-  renderPaceOverview({ week: weeks[line.focus]!, current: line.focus === 0 }, "");
   const rows = weeks
     .map(
       (w, i) =>
@@ -324,19 +324,6 @@ function renderPace() {
   $("pace-table").innerHTML = `<caption>Pace by week, newest first</caption><thead><tr><th>Week of</th><th>Active (h)</th><th>Past ${esc(LATE)}</th><th>Longest</th><th>Days off</th><th>Agent-only (h)</th></tr></thead><tbody>${rows}</tbody>`;
 }
 
-/** The Overview's Pace row: the same week and numbers as the Pace lead, or why there is none. */
-function renderPaceOverview(shown: { week: PaceWeek; current: boolean } | null, why: string) {
-  if (!shown) {
-    $("ov-pace-title").textContent = "Pace";
-    $("ov-pace-text").textContent = pace.days === null ? "Pace is off. Open to see how to turn it on." : why;
-    $("ov-pace-detail").textContent = "";
-    return;
-  }
-  const { week, current } = shown;
-  $("ov-pace-title").textContent = `Pace · ${current ? "this week so far" : `week of ${monthDay(week.start)}`}`;
-  $("ov-pace-text").textContent = `About ${paceHours(week.activeHours.central)} active hours`;
-  $("ov-pace-detail").textContent = keep(`range ${paceHoursRange(week.activeHours)} hours`);
-}
 
 /** Never break inside "2h 51m" or "12 – 14" when the line wraps. */
 const keep = (text: string) => text.replace(/(\d+h) (\d+m)/g, "$1\u00a0$2").replace(/(\d) – (\d)/g, "$1\u00a0–\u00a0$2");
@@ -423,7 +410,6 @@ function renderShare(e: Estimate, label: string) {
   currentPost = linkedInPost(input);
   const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(currentSvg)}`;
   ($("card") as HTMLImageElement).src = src;
-  ($("ov-share-thumb") as HTMLImageElement).src = src;
   // "Open full size" opens the same card from memory (a blob: URL): nothing is fetched.
   if (fullSizeUrl) URL.revokeObjectURL(fullSizeUrl);
   fullSizeUrl = URL.createObjectURL(new Blob([currentSvg], { type: "image/svg+xml" }));
@@ -625,7 +611,7 @@ function wire() {
 
   if (payload.mode === "playground") {
     const drop = $("drop");
-    $("ov-logs").hidden = false;
+    $("ov-cta-wrap").hidden = false; // the one CTA; the dashboard already shows the person's own logs
     $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
     $("read-paste").addEventListener("click", () => {
       // Pasted from a chat, the lines may sit inside a ``` code fence; the adapter skips those lines.
@@ -769,14 +755,14 @@ function wireTabs() {
     tab.focus({ preventScroll: true });
   });
   // Overview rows: each is one link into its detail.
-  for (const id of ["ov-energy", "ov-pace", "ov-share", "ov-logs", "drop-back"]) {
+  for (const id of ["ov-energy", "ov-cta", "drop-back"]) {
     const a = $<HTMLAnchorElement>(id);
     a.addEventListener("click", (ev) => {
       ev.preventDefault();
       go(id === "drop-back" ? "" : (a.getAttribute("href") ?? ""));
       toViewTop();
       // The row just hid with its list, so keep keyboard focus nearby: the way back, the row, or the tab.
-      const next = id === "ov-logs" ? $("drop-back") : id === "drop-back" ? $("ov-logs") : allTabs().find((t) => t.getAttribute("aria-selected") === "true");
+      const next = id === "ov-cta" ? $("drop-back") : id === "drop-back" ? $("ov-cta") : allTabs().find((t) => t.getAttribute("aria-selected") === "true");
       next?.focus({ preventScroll: true });
     });
   }
@@ -787,7 +773,11 @@ function wireTabs() {
     $("tab-electricity").focus({ preventScroll: true });
   });
   window.addEventListener("popstate", route);
-  window.addEventListener("hashchange", route);
+  // A link followed in the page (#share from a scrolled Overview): start the view below the sticky tabs (FOCUS-4).
+  window.addEventListener("hashchange", () => {
+    route();
+    toViewTop();
+  });
 }
 
 /** Light / Dark / System (studio principle 10). Kept in memory for this visit only (PS-R1): a reload goes back to System. */

@@ -6,6 +6,7 @@ New calls get the next `CCW-DEC-n`, added in the same PR as the call: date, the 
 
 | ID | Date | The call | Why / what it beat | Where |
 |---|---|---|---|---|
+| CCW-DEC-17 | 2026-11-23 | "Go with recommendations" on the demo focus review: Overview cut to the number, EV comparison, one "Try it on your logs" button and What drives it; one CTA on every device; Pace stays a tab (last), off Overview; What if moves to Method; kWh leads, comparison under it. | The page had no visible CTA and five equal rows; beat a redesign and a phone-only "Save the card" CTA. | PLAN M4.8, review doc 2026-11-22 |
 | CCW-DEC-16 | 2026-11-01 | Adopt the studio standard ("I want all projects to be standardized ... I don't want to deal with it"). | One rule set across projects instead of each repo drifting. | Intake #86 |
 | CCW-DEC-15 | 2026-10-31 | Blocks of agent work with no human turn are agent time, not pace hours. | Keeps Pace about the person; agent time shows separately and feeds Leverage. | PLAN M4, HANDOFF |
 | CCW-DEC-14 | 2026-10-31 | Build Pace (M4) under the name "pace"; the morning digest shows no finish times. | Work-rhythm signal without a timesheet feel. | Intake #71, IDEAS.md |

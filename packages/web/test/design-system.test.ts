@@ -22,9 +22,10 @@ import { launch } from "../../../tools/showcase-check/check.ts";
 //  - DS-3..DS-5: the studio demo bar (#demo-bar, pm-tools DEMO-BANNER standard) is exempt.
 //  - DS-6: data marks = shapes in svg.chart / [role=tabpanel] svg[role=img], plus the HTML swatches
 //    and bars that stand for data (.legend i, .rank .bar span, .range-dot).
-//  - DS-7: tabs are exactly Overview, Electricity, Pace, Share, Method. Overview rows #ov-energy,
-//    #ov-pace, #ov-drives, #ov-share, #ov-logs are each themselves an <a> or <button>.
-//    #ov-drives shows "What drives your number" (#explain); #ov-logs shows the Your logs panel #drop.
+//  - DS-7: tabs are exactly Overview, Electricity, Share, Method, Pace (M4.8.1, FOCUS-5). Overview
+//    controls #ov-energy, #ov-drives and the "Try it on your logs" CTA #ov-cta are each themselves an
+//    <a> or <button>. #ov-drives shows "What drives your number" (#explain); #ov-cta shows the Your
+//    logs panel #drop. The Pace and Share rows left Overview in M4.8.1 (CCW-DEC-17).
 //  - DS-8: hashes are #electricity, #pace, #share, #method; each tab push-navigates (Back works).
 //  - DS-9: a Light / Dark / System control (radios, toggle buttons or a <select>), saved in localStorage.
 //
@@ -364,7 +365,7 @@ async function ready(page: Page) {
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
 }
 
-const TABS = ["Overview", "Electricity", "Pace", "Share", "Method"] as const;
+const TABS = ["Overview", "Electricity", "Share", "Method", "Pace"] as const;
 /** Names of the tabs a person can see, in order. */
 const tabNames = (page: Page) => page.getByRole("tab").evaluateAll((ts) => ts.map((t) => (t.textContent ?? "").replace(/\s+/g, " ").trim()));
 async function selectTab(page: Page, name: string): Promise<boolean> {
@@ -530,7 +531,7 @@ async function helpers(page: Page) {
   await page.evaluate(HELPERS);
 }
 
-/** Visit every visible tab (and the Your logs panel via #ov-logs when there is one), run `fn` there. */
+/** Visit every visible tab (and the Your logs panel via the #ov-cta button when there is one), run `fn` there. */
 async function eachView<T>(page: Page, fn: (view: string) => Promise<T>): Promise<Record<string, T>> {
   await helpers(page);
   const out: Record<string, T> = {};
@@ -539,11 +540,11 @@ async function eachView<T>(page: Page, fn: (view: string) => Promise<T>): Promis
     await page.evaluate("window.__ds.openDetails()");
     out[name] = await fn(name);
   }
-  if ((await page.locator("#ov-logs").count()) === 1 && (await selectTab(page, "Overview"))) {
-    await page.locator("#ov-logs").click();
+  if ((await page.locator("#ov-cta").count()) === 1 && (await selectTab(page, "Overview"))) {
+    await page.locator("#ov-cta").click();
     await page.waitForTimeout(50);
     await page.evaluate("window.__ds.openDetails()");
-    out["Your logs (#ov-logs)"] = await fn("Your logs");
+    out["Your logs (#ov-cta)"] = await fn("Your logs");
   }
   return out;
 }
@@ -661,7 +662,7 @@ function sampleWindow(rows: RollupRow[], days: number): RollupRow[] {
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 withBrowser("DS-7 Overview roll-up", () => {
-  it("DS-7 one tablist with exactly 5 tabs: Overview, Electricity, Pace, Share, Method", async () => {
+  it("DS-7 one tablist with exactly 5 tabs: Overview, Electricity, Share, Method, Pace", async () => {
     const page = await open({ width: 1280 });
     const lists = await page.getByRole("tablist").count();
     const names = await tabNames(page);
@@ -670,11 +671,11 @@ withBrowser("DS-7 Overview roll-up", () => {
     expect(names).toEqual([...TABS]);
   });
 
-  it("DS-7 Overview is selected by default and its panel holds #ov-energy, #ov-pace, #ov-drives, #ov-share, #ov-logs", async () => {
+  it("DS-7 Overview is selected by default and its panel holds #ov-energy, #ov-drives and the #ov-cta button", async () => {
     const page = await open({ width: 1280 });
     const selected = await isSelected(page, "Overview");
     const panel = await panelOf(page, "Overview");
-    const inside = panel ? await panel.evaluate((p) => ["ov-energy", "ov-pace", "ov-drives", "ov-share", "ov-logs"].filter((id) => !p.querySelector(`#${id}`))) : "no Overview panel";
+    const inside = panel ? await panel.evaluate((p) => ["ov-energy", "ov-drives", "ov-cta"].filter((id) => !p.querySelector(`#${id}`))) : "no Overview panel";
     const shown = panel ? await panel.isVisible() : false;
     await page.close();
     expect(selected, "Overview aria-selected").toBe("true");
@@ -683,10 +684,10 @@ withBrowser("DS-7 Overview roll-up", () => {
   });
 
   for (const width of [390, 1280]) {
-    it(`DS-7 at ${width}px each Overview row is one link or button, at least 48px tall`, async () => {
+    it(`DS-7 at ${width}px each Overview row (and the CTA) is one link or button, at least 48px tall`, async () => {
       const page = await open({ width });
       const rows = await page.evaluate(() =>
-        ["ov-energy", "ov-pace", "ov-drives", "ov-share", "ov-logs"].map((id) => {
+        ["ov-energy", "ov-drives", "ov-cta"].map((id) => {
           const el = document.getElementById(id);
           return { id, tag: el?.tagName ?? "(missing)", h: el ? Math.round(el.getBoundingClientRect().height) : 0, nested: el ? el.querySelectorAll("a, button").length : 0 };
         }));
@@ -698,10 +699,8 @@ withBrowser("DS-7 Overview roll-up", () => {
 
   const ROWS = [
     { id: "ov-energy", tab: "Electricity", shows: "#chart" },
-    { id: "ov-pace", tab: "Pace", shows: "#pace-chart" },
     { id: "ov-drives", tab: null, shows: "#explain" },
-    { id: "ov-share", tab: "Share", shows: "#save-png" },
-    { id: "ov-logs", tab: null, shows: "#drop" },
+    { id: "ov-cta", tab: null, shows: "#drop" },
   ] as const;
   for (const row of ROWS) {
     it(`DS-7 clicking #${row.id} ${row.tab ? `selects the ${row.tab} tab and ` : ""}shows ${row.shows}`, async () => {
@@ -719,7 +718,7 @@ withBrowser("DS-7 Overview roll-up", () => {
       expect(found, `no #${row.id}`).toBe(true);
       if (row.tab) expect(selected, `${row.tab} aria-selected`).toBe("true");
       expect(shown, `${row.shows} visible`).toBe(true);
-      if (row.id !== "ov-logs") expect(overviewSelected, "Overview no longer selected").toBe("false");
+      if (row.id !== "ov-cta") expect(overviewSelected, "Overview no longer selected").toBe("false");
     });
   }
 
@@ -736,17 +735,18 @@ withBrowser("DS-7 Overview roll-up", () => {
     expect(text).toMatch(new RegExp(`method v${esc(defaultParams.version)}`, "i"));
   });
 
-  it("DS-7 #ov-pace shows the headline week's hours with a range (the same numbers as the Pace lead)", async () => {
+  // M4.8.1 took the Pace row off Overview (CCW-DEC-17); its hours and range now show only in the Pace tab.
+  it("DS-7 the Pace tab's lead shows the headline week's hours with a range, and Overview has no Pace row", async () => {
     const page = await open({ width: 1280 });
+    await selectTab(page, "Pace");
     const lead = await textOf(page, "pace-lead");
-    const text = await textOf(page, "ov-pace");
+    const paceRow = await page.locator("#ov-pace").count();
     await page.close();
     const m = /about (\d+(?:\.\d+)?) active hours \(range (\d+(?:\.\d+)?) – (\d+(?:\.\d+)?)\)/.exec(lead);
     expect(m, `Pace lead "${lead}" has no hours and range`).not.toBeNull();
     const [, central, low, high] = m!;
-    expect(text).toMatch(new RegExp(`(^|[^\\d.])${esc(central!)}(?![\\d.])`));
-    expect(text).toMatch(new RegExp(`${esc(low!)}\\s*[–-]\\s*${esc(high!)}`));
-    expect(text).toMatch(/\bh(ours?)?\b/);
+    expect(Number(low) <= Number(central) && Number(central) <= Number(high), `range ${low} – ${high} around ${central}`).toBe(true);
+    expect(paceRow, "#ov-pace still on the page").toBe(0);
   });
 
   it("DS-7 at 1280x800 the Overview page is at most 1100px tall (scrollHeight)", async () => {
@@ -942,9 +942,10 @@ withBrowser("UX-R61 the Overview number outranks the heading", () => {
 });
 
 withBrowser("UX-R62 tabs on a 320px screen", () => {
-  it("UX-R62 at 320px the selected Method tab is fully inside the viewport, and the tablist fades at the right edge (mask-image) or doesn't overflow", async () => {
+  // Method was the last tab; since M4.8.1 Pace is, so both are checked.
+  for (const name of ["Method", "Pace"] as const) it(`UX-R62 at 320px the selected ${name} tab is fully inside the viewport, and the tablist fades at the right edge (mask-image) or doesn't overflow`, async () => {
     const page = await open({ width: 320, height: 640 });
-    const selected = await selectTab(page, "Method");
+    const selected = await selectTab(page, name);
     await page.waitForTimeout(300);
     const got = await page.evaluate(() => {
       const tab = [...document.querySelectorAll<HTMLElement>("[role=tab]")].find((t) => t.getAttribute("aria-selected") === "true");
@@ -961,17 +962,17 @@ withBrowser("UX-R62 tabs on a 320px screen", () => {
       };
     });
     await page.close();
-    expect(selected, "no Method tab").toBe(true);
-    expect(got.name).toBe("Method");
+    expect(selected, `no ${name} tab`).toBe(true);
+    expect(got.name).toBe(name);
     expect(got.inside, `selected tab spans ${got.tab}`).toBe(true);
     expect(!got.overflows || got.mask !== "", `tablist overflows with no fade (mask-image: "${got.mask || "none"}")`).toBe(true);
   });
 });
 
-describe("UX-R64 the Your logs row doesn't repeat the privacy line", () => {
-  it("UX-R64 #ov-logs text says neither \"never leaves\" nor \"never uploaded\"", () => {
-    const row = /<a[^>]*id="ov-logs"[\s\S]*?<\/a>/.exec(html)?.[0];
-    expect(row, "no #ov-logs in the built page").toBeDefined();
+describe("UX-R64 the Your logs CTA doesn't repeat the privacy line", () => {
+  it("UX-R64 the #ov-cta block (button and phone note) says neither \"never leaves\" nor \"never uploaded\"", () => {
+    const row = /<div[^>]*id="ov-cta-wrap"[\s\S]*?<\/div>/.exec(html)?.[0];
+    expect(row, "no #ov-cta-wrap in the built page").toBeDefined();
     const text = row!.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     expect(text).not.toMatch(/never leaves|never uploaded/i);
   });

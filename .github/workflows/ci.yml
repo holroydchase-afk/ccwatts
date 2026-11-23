@@ -61,3 +61,5 @@ jobs:
         run: PLAYWRIGHT_MODULE="$RUNNER_TEMP/pw/node_modules/playwright/index.mjs" npm run check:browser
       - name: Visual refresh holds in a real browser (tabs, range bar, type scale)
         run: PLAYWRIGHT_MODULE="$RUNNER_TEMP/pw/node_modules/playwright/index.mjs" npx vitest run packages/web/test/refresh.test.ts
+      - name: Overview hero, one CTA, deep links and tab order hold in a real browser (M4.8.1, FOCUS-1 to FOCUS-5)
+        run: PLAYWRIGHT_MODULE="$RUNNER_TEMP/pw/node_modules/playwright/index.mjs" npx vitest run packages/web/test/focus.test.ts
