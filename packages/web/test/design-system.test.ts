@@ -38,9 +38,18 @@ const template = readFileSync(new URL("../src/template.html", import.meta.url), 
 const fontBytes = readFileSync(new URL("../src/fonts/AtkinsonHyperlegibleNext-latin.woff2", import.meta.url));
 
 // Copied as-is from holroydchase-afk/hearth main docs/design/tokens.json, themes.paper (Nov 21, 2026).
-const PAPER = {
+const HEARTH_PAPER = {
   light: { bg: "#F7F7F4", surface: "#FFFFFF", ink: "#1E1B17", muted: "#5C564E", line: "#E3DED4", fill: "#EFECE5", accent: "#AD371D", accentInk: "#FFFFFF", accentSoft: "#F2EAE5", tabLine: "#928E87" },
   dark: { bg: "#131210", surface: "#1C1A17", ink: "#F1EEE8", muted: "#B2ACA2", line: "#2E2B27", fill: "#24221E", accent: "#FF8A65", accentInk: "#000000", accentSoft: "#3D281F", tabLine: "#696661" },
+} as const;
+// DARK-7 (intake #108, docs/product/SPEC-DARK-ELEVATION.md): ccwatts forks hearth Paper dark in four tokens
+// so cards step lighter than the page (Material 3 tonal surfaces; hearth surface #1C1A17 on bg is 1.08:1).
+// Source: SPEC-DARK-ELEVATION "What changes". Upstream fix: a hearth intake to adopt the same values
+// (Decision 1). If the engineer tunes these in template.html, update them here too.
+const DARK_108 = { surface: "#24221E", fill: "#33302B", line: "#383530", tabLine: "#77736D" } as const;
+const PAPER = {
+  light: HEARTH_PAPER.light,
+  dark: { ...HEARTH_PAPER.dark, ...DARK_108 },
 } as const;
 type Token = keyof typeof PAPER.light;
 const CSS_VAR: Record<Token, string> = {
@@ -208,6 +217,102 @@ describe("DS-1 Paper theme contrast (WCAG 2, no browser)", () => {
       expect(fails).toEqual([]);
     });
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// DARK-1..DARK-7 (intake #108): in dark mode cards step lighter than the page; elevation by tone, not shadow.
+// ---------------------------------------------------------------------------------------------
+const distCss = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n");
+const DIST_RULES = parseCss(distCss);
+const DARK_SCENES = { dark: SCENES.dark, "high contrast dark": SCENES["high contrast dark"] } as const;
+const ratioLine = (label: string, fg: string, bg: string, min: number) => {
+  const r = contrast(fg, bg);
+  return r >= min ? null : `${label}: ${fg} on ${bg} is ${r.toFixed(2)}:1 (want ${min}:1)`;
+};
+// Light tokens as shipped before #108 (template.html lines 26-27 and 46), pinned so this PR can't move them.
+const LIGHT_BEFORE = {
+  light: { ...HEARTH_PAPER.light },
+  "high contrast light": { ...HEARTH_PAPER.light, muted: "#534D46", line: "#75716A", accent: "#822F1B", accentSoft: "#EFE9E5" },
+} as const;
+
+describe("DARK dark-mode elevation by tone (intake #108, no browser)", () => {
+  it("DARK-1 in the built page's dark scene, --surface on --bg is 1.15:1 or more (cards read one step lighter)", () => {
+    const t = themeFor(SCENES.dark, DIST_RULES);
+    expect(ratioLine("surface on bg", t.surface, t.bg, 1.15)).toBeNull();
+  });
+
+  for (const [name, env] of Object.entries(DARK_SCENES)) {
+    it(`DARK-2 ${name}: --fill differs from --surface and fill on surface is 1.1:1 or more (buttons, .seg track, pressed segment)`, () => {
+      const t = themeFor(env);
+      expect(t.fill.toUpperCase(), "--fill equals --surface").not.toBe(t.surface.toUpperCase());
+      expect(ratioLine("fill on surface", t.fill, t.surface, 1.1)).toBeNull();
+    });
+
+    it(`DARK-3 ${name}: text, accent and tab-line still pass on the surface and fill tones`, () => {
+      const t = themeFor(env);
+      const hc = env.contrast === "more";
+      const fails = [
+        ratioLine("ink on surface", t.ink, t.surface, 7),
+        ratioLine("muted on surface", t.muted, t.surface, hc ? 7 : 4.5),
+        ratioLine("muted on fill", t.muted, t.fill, hc ? 7 : 4.5),
+        ratioLine("accent on surface", t.accent, t.surface, 4.5),
+        ratioLine("accent on fill", t.accent, t.fill, 4.5),
+        ratioLine("tabLine on surface", t.tabLine, t.surface, 3),
+        ratioLine("tabLine on bg", t.tabLine, t.bg, 3),
+      ].filter(Boolean);
+      expect(fails).toEqual([]);
+    });
+  }
+
+  it("DARK-4 the prefers-color-scheme dark block and the :root[data-theme=\"dark\"] block hold identical tokens", () => {
+    const pick = (r: Rule | undefined) => Object.fromEntries(TOKENS.map((t) => [t, r?.decls[CSS_VAR[t]]?.toUpperCase() ?? "(missing)"]));
+    const media = RULES.find((r) => r.media.length === 1 && /^\(prefers-color-scheme:\s*dark\)$/.test(r.media[0]!) && /^:root:not\(\[data-theme=["']?light["']?\]\)$/.test(r.selector));
+    const attr = RULES.find((r) => r.media.length === 0 && /^:root\[data-theme=["']?dark["']?\]$/.test(r.selector));
+    expect(media, "no @media (prefers-color-scheme:dark){:root:not([data-theme=\"light\"])} block").toBeDefined();
+    expect(attr, "no :root[data-theme=\"dark\"] block").toBeDefined();
+    expect(pick(attr)).toEqual(pick(media));
+    expect(themeFor({ scheme: "light", contrast: "no-preference", theme: "dark" })).toEqual(themeFor(SCENES.dark));
+  });
+
+  for (const [name, want] of Object.entries(LIGHT_BEFORE)) {
+    it(`DARK-5 ${name}: every token equals its value before #108`, () => {
+      const env = SCENES[name as keyof typeof LIGHT_BEFORE];
+      const got = themeFor(env);
+      expect(Object.fromEntries(TOKENS.map((t) => [t, got[t].toUpperCase()]))).toEqual(want);
+    });
+  }
+  it("DARK-5 picking Light with the OS in dark shows the same light tokens as before #108", () => {
+    const got = themeFor({ scheme: "dark", contrast: "no-preference", theme: "light" });
+    expect(Object.fromEntries(TOKENS.map((t) => [t, got[t].toUpperCase()]))).toEqual(LIGHT_BEFORE.light);
+  });
+
+  it("DARK-6 no box-shadow in template.html has a blur radius above 0 (rings and zero-blur insets only)", () => {
+    const blurOf = (shadow: string): number => {
+      const lengths = shadow.replace(/var\([^)]*\)|rgba?\([^)]*\)|hsla?\([^)]*\)|#[0-9a-f]+/gi, " ").replace(/\binset\b/g, " ")
+        .trim().split(/\s+/).filter((x) => /^-?[\d.]+(px|rem|em)?$/.test(x)).map(parseFloat);
+      return lengths[2] ?? 0;
+    };
+    const splitTop = (v: string) => {
+      const out: string[] = []; let depth = 0, cur = "";
+      for (const ch of v) {
+        if (ch === "(") depth++; else if (ch === ")") depth--;
+        if (ch === "," && depth === 0) { out.push(cur); cur = ""; } else cur += ch;
+      }
+      return [...out, cur];
+    };
+    const shadows = RULES.flatMap((r) => Object.entries(r.decls).filter(([k]) => k === "box-shadow").map(([, v]) => ({ sel: r.selector, v })));
+    expect(shadows.length, "self-check: the reader found box-shadows").toBeGreaterThan(0);
+    // Self-check of the blur reader on known values.
+    expect([blurOf("0 0 0 1px var(--line)"), blurOf("inset 0 -2px 0 var(--accent)"), blurOf("0 2px 8px rgba(0,0,0,.3)")]).toEqual([0, 0, 8]);
+    const bad = shadows.flatMap(({ sel, v }) => v === "none" ? [] : splitTop(v).filter((s) => blurOf(s) > 0).map((s) => `${sel}: ${s.trim()}`));
+    expect(bad).toEqual([]);
+  });
+
+  it("DARK-7 PAPER.dark forks hearth themes.paper.dark in exactly surface, fill, line and tab-line (#108)", () => {
+    const diff = TOKENS.filter((t) => PAPER.dark[t] !== HEARTH_PAPER.dark[t]);
+    expect(diff).toEqual(["surface", "line", "fill", "tabLine"]);
+    // The DS-1 "dark tokens ... equal" check above then pins template.html to these values.
+  });
 });
 
 describe("DS-2 Atkinson Hyperlegible Next is bundled (static)", () => {
