@@ -44,6 +44,7 @@ const url = pathToFileURL(htmlPath).href;
 const html = readFileSync(htmlPath, "utf8");
 const template = readFileSync(new URL("../src/template.html", import.meta.url), "utf8");
 const css = /<style[^>]*>([\s\S]*?)<\/style>/.exec(template)?.[1] ?? "";
+const app = readFileSync(new URL("../src/app.ts", import.meta.url), "utf8");
 
 let browser: Browser | null = null;
 let noBrowser = "";
@@ -147,7 +148,8 @@ withBrowser("EF-CC-1 What-if result beside the slider (EF-1..EF-4)", () => {
     await page.close();
     expect(before?.shown, "the line must be shown on load (EF-1) so it is the same line here").toBe(true);
     expect(after!.text).toMatch(/what-if/i);
-    expect(after!.text).toContain(`The share card keeps ${pct(publishedCache)}`);
+    // UX-R71 rewords this to "· share card keeps 10% ·" (was "The share card keeps 10%.").
+    expect(after!.text).toMatch(new RegExp(`share card keeps ${pct(publishedCache)}`, "i"));
     expect(cardAfter).toBe(cardBefore);
   });
 
@@ -390,5 +392,227 @@ describe("EF manual cases outside this file's range", () => {
 describe("EF no network and no page errors", () => {
   it("EF browser runs made no network request and threw no page error", () => {
     expect(problems).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Review round for intake #112: ux-reviewer findings UX-R68..UX-R73 (390px first).
+// API choices pinned here (for the engineer):
+//  - UX-R68: the sample label stays the sibling of #card (EF-5) and reads
+//    "Sample data · <central> <unit> (range <low> – <high> <unit>) · method v<version>", built from the
+//    published estimate the card shows (not hard-coded in template.html). In sample mode no other visible
+//    text in #p-share says "sample data" (the "This card shows sample data…" status line goes).
+//  - UX-R69: no `.eyebrow` in #pace; "opt-in" and "stays local" move into #pace-how. #pace-lead is
+//    22px, weight 600 or more, and at least as large as h2#pace-h ("Pace", unchanged).
+//  - UX-R70: on the stacked 390px layout, each row's "About this value" summary sits below its Source.
+//  - UX-R71: the What-if line (#whatif-note) reads as two lines (innerText split on "\n", e.g. two
+//    block children or a <br>) during a what-if, one at rest; see the exact wording in the tests.
+//  - UX-R72: an "a – b" range in the Pace panel never breaks across lines. Note: U+00A0 after an en dash
+//    still allows a break (UAX #14, BA × GL is not forbidden), so use e.g. a white-space:nowrap span.
+//  - UX-R73: #params-box summary reads "Parameters and sources".
+// ---------------------------------------------------------------------------------------------
+const num = "[\\d.,]+";
+const ver = defaultParams.version.replace(/\./g, "\\.");
+/** Central and low/high of the hero (published while no what-if is active). */
+async function heroFigures(page: Page) {
+  return page.evaluate(() => {
+    const big = (document.getElementById("hero-big")?.textContent ?? "").replace(/\s+/g, " ").trim();
+    const range = (document.getElementById("hero-range")?.textContent ?? "").replace(/\s+/g, " ");
+    const c = /([\d.,]+)\s*(k?Wh)/.exec(big);
+    const r = /([\d.,]+)\s*k?Wh[\s\S]*?([\d.,]+)\s*k?Wh/.exec(range);
+    return { central: c?.[1] ?? "?", unit: c?.[2] ?? "?", low: r?.[1] ?? "?", high: r?.[2] ?? "?" };
+  });
+}
+const reEsc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+describe("UXR-68..73 review round (static)", () => {
+  it("UXR-68 the sample label is not hard-coded with figures in template.html (filled from the live estimate)", () => {
+    const tag = /<p[^>]*id="card-sample"[^>]*>[\s\S]*?<\/p>/.exec(template)?.[0] ?? "";
+    expect(tag, "#card-sample still in template.html").not.toBe("");
+    expect(tag).not.toMatch(/\d\s*k?Wh/);
+    expect(app, "the duplicate status line under the buttons is gone").not.toContain("This card shows sample data");
+  });
+
+  it("UXR-69 no eyebrow in the Pace panel; 'opt-in · stays local' lives in the 'How Pace is counted' details; h2 stays Pace", () => {
+    expect(paceSection).not.toMatch(/class="[^"]*\beyebrow\b/);
+    expect(paceSection).toMatch(/<h2[^>]*id="pace-h"[^>]*>Pace<\/h2>/);
+    const how = /<details[^>]*id="pace-how"[^>]*>[\s\S]*?<\/details>/.exec(paceSection)?.[0] ?? "";
+    expect(how, "#pace-how details").not.toBe("");
+    expect(how).toMatch(/opt-in/);
+    expect(how).toMatch(/stays local/);
+  });
+
+  it("UXR-70 in the parameter row, 'About this value' comes after the Source cell in source order", () => {
+    const row = /<tr><td data-label="Parameter">[\s\S]*?<\/tr>/.exec(app)?.[0] ?? "";
+    expect(row, "row template in app.ts").not.toBe("");
+    expect(row.indexOf("About this value"), "About this value after Source").toBeGreaterThan(row.indexOf('data-label="Source"'));
+  });
+
+  it("UXR-73 the parameters summary reads 'Parameters and sources'", () => {
+    const summary = /<details[^>]*id="params-box"[^>]*>\s*<summary[^>]*>([^<]*)<\/summary>/.exec(html)?.[1]?.trim();
+    expect(summary).toBe("Parameters and sources");
+  });
+});
+
+withBrowser("UXR-68..73 review round (in a browser)", () => {
+  it("UXR-68 at 390px the sample label reads 'Sample data · <total> (range …) · method v' at 17px+, matching the published hero", async () => {
+    const page = await open();
+    const hero = await heroFigures(page);
+    await selectTab(page, "Share");
+    const r = await page.evaluate(() => {
+      const el = document.getElementById("card-sample")!;
+      return { text: (el.textContent ?? "").replace(/\s+/g, " ").trim(), size: parseFloat(getComputedStyle(el).fontSize), shown: el.offsetHeight > 0 };
+    });
+    await page.close();
+    expect(r.shown).toBe(true);
+    expect(r.size).toBeGreaterThanOrEqual(17);
+    expect(r.text).toMatch(
+      new RegExp(`^Sample data · ${reEsc(hero.central)} ${hero.unit} \\(range ${reEsc(hero.low)} – ${reEsc(hero.high)} k?Wh\\) · method v${ver}$`),
+    );
+  });
+
+  it("UXR-68 the sample label keeps the published total while a what-if is active (it describes the card)", async () => {
+    const page = await open();
+    await selectTab(page, "Share");
+    const before = await page.textContent("#card-sample");
+    await selectTab(page, "Electricity");
+    await moveSlider(page, sliderMax);
+    await selectTab(page, "Share");
+    const after = await page.textContent("#card-sample");
+    await page.close();
+    expect(before).toMatch(/\d/);
+    expect(after).toBe(before);
+  });
+
+  it("UXR-68 in sample mode only one visible line in #p-share says 'sample data' (no repeat under the buttons)", async () => {
+    const page = await open();
+    await selectTab(page, "Share");
+    const lines = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("#p-share *")]
+        .filter((e) => e.offsetHeight > 0 && [...e.childNodes].some((n) => n.nodeType === 3 && /sample data/i.test(n.textContent ?? "")))
+        .map((e) => `#${e.id || e.className}: ${(e.textContent ?? "").trim()}`),
+    );
+    await page.close();
+    expect(lines, lines.join(" | ")).toHaveLength(1);
+  });
+
+  for (const [width, height] of [[390, 844], [1280, 800]] as const) {
+    it(`UXR-69 at ${width}px #pace-lead is 22px and 600+ weight, at least the size of h2 Pace, and no eyebrow shows`, async () => {
+      const page = await open(width, height);
+      await selectTab(page, "Pace");
+      const r = await page.evaluate(() => {
+        const lead = document.getElementById("pace-lead")!;
+        const textEl = ([lead, ...lead.querySelectorAll<HTMLElement>("*")].find((e) => [...e.childNodes].some((n) => n.nodeType === 3 && /\d/.test(n.textContent ?? ""))) ?? lead) as HTMLElement;
+        const h2 = document.getElementById("pace-h")!;
+        const eyebrows = [...document.querySelectorAll<HTMLElement>("#pace .eyebrow")].filter((e) => e.offsetHeight > 0).length;
+        return {
+          size: parseFloat(getComputedStyle(textEl).fontSize),
+          weight: Number(getComputedStyle(textEl).fontWeight),
+          h2: parseFloat(getComputedStyle(h2).fontSize),
+          h2Text: (h2.textContent ?? "").trim(),
+          eyebrows,
+        };
+      });
+      await page.close();
+      expect(r.size, "#pace-lead font-size").toBe(22);
+      expect(r.weight, "#pace-lead weight").toBeGreaterThanOrEqual(600);
+      expect(r.size, "answer at least as large as the label").toBeGreaterThanOrEqual(r.h2);
+      expect(r.h2Text).toBe("Pace");
+      expect(r.eyebrows, "visible eyebrow lines in #pace").toBe(0);
+    });
+  }
+
+  it("UXR-70 at 390px each stacked parameter row shows name, Value, Range, Unit, Label, Source, then 'About this value' last", async () => {
+    const page = await open();
+    await selectTab(page, "Method");
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLTableRowElement>("#params tbody tr")].map((tr) => {
+        const top = (e: Element | null) => (e ? e.getBoundingClientRect().top : NaN);
+        const about = [...tr.querySelectorAll("summary")].find((s) => /About this value/.test(s.textContent ?? "")) ?? null;
+        const cells = ["Parameter", "Value", "Range", "Unit", "Label", "Source"].map((l) => top(tr.querySelector(`[data-label="${l}"]`)));
+        const name = top(tr.querySelector("code"));
+        return { id: tr.querySelector("code")?.textContent ?? "?", name, cells, about: top(about) };
+      }),
+    );
+    await page.close();
+    expect(rows.length).toBe(Object.keys(defaultParams.params).length);
+    for (const r of rows) {
+      const order = [r.name, ...r.cells.slice(1), r.about];
+      expect(order.every((v) => Number.isFinite(v)), `${r.id}: missing a cell or the About summary`).toBe(true);
+      for (let i = 1; i < order.length; i++) expect(order[i]!, `${r.id}: item ${i} of name, Value, Range, Unit, Label, Source, About`).toBeGreaterThan(order[i - 1]!);
+    }
+  });
+
+  it("UXR-71 at rest the What-if line is one line: 'Published 10%: <total> (range … kWh) · Method v'", async () => {
+    const page = await open();
+    const hero = await heroFigures(page);
+    await selectTab(page, "Electricity");
+    const t = await page.evaluate(() => (document.getElementById("whatif-note") as HTMLElement).innerText.replace(/[ \t ]+/g, " ").trim());
+    await page.close();
+    expect(t).toMatch(
+      new RegExp(`^Published ${pct(publishedCache)}: ${reEsc(hero.central)} ${hero.unit} \\(range ${reEsc(hero.low)} – ${reEsc(hero.high)} k?Wh\\) · Method v${ver}$`),
+    );
+  });
+
+  it("UXR-71 at 390px after moving to 15% the line is two lines: What-if total, then Published total · share card keeps 10% · Method v; at most 4 rendered rows", async () => {
+    const page = await open();
+    await selectTab(page, "Electricity");
+    const published = await heroFigures(page);
+    await moveSlider(page, 0.15);
+    const whatIf = await heroFigures(page);
+    const r = await page.evaluate(() => {
+      const el = document.getElementById("whatif-note") as HTMLElement;
+      const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3;
+      return { lines: el.innerText.split("\n").map((l) => l.replace(/[ \t ]+/g, " ").trim()).filter(Boolean), rows: Math.round(el.getBoundingClientRect().height / lh) };
+    });
+    await page.close();
+    expect(r.lines, r.lines.join(" / ")).toHaveLength(2);
+    expect(r.lines[0]).toMatch(new RegExp(`^What-if at 15%: ${reEsc(whatIf.central)} ${whatIf.unit} \\(range ${num} – ${num}( k?Wh)?\\)$`));
+    expect(r.lines[1]).toMatch(
+      new RegExp(`^Published ${pct(publishedCache)}: ${reEsc(published.central)} ${published.unit} \\(range ${reEsc(published.low)} – ${reEsc(published.high)}( k?Wh)?\\) · share card keeps ${pct(publishedCache)} · Method v${ver}$`),
+    );
+    expect(r.rows, "rendered rows at 390px").toBeLessThanOrEqual(4);
+  });
+
+  it("UXR-72 no 'a – b' range in the Pace panel breaks across lines at widths 320 to 480px", async () => {
+    const page = await open();
+    await selectTab(page, "Pace");
+    const broken: string[] = [];
+    for (let w = 320; w <= 480; w += 4) {
+      await page.setViewportSize({ width: w, height: 844 });
+      const b = await page.evaluate(() => {
+        const out: string[] = [];
+        const panel = document.getElementById("pace")!;
+        const tw = document.createTreeWalker(panel, NodeFilter.SHOW_TEXT);
+        let n: Node | null;
+        while ((n = tw.nextNode())) {
+          const p = n.parentElement!;
+          if (p.closest("svg, .vh, [hidden], details:not([open])") || p.offsetHeight === 0) continue;
+          for (const m of (n.textContent ?? "").matchAll(/\d+(?:\.\d+)?[\s ⁠ ]*–[\s ⁠ ]*\d+(?:\.\d+)?/g)) {
+            const rg = document.createRange();
+            rg.setStart(n, m.index!);
+            rg.setEnd(n, m.index! + m[0].length);
+            const tops = new Set([...rg.getClientRects()].filter((x) => x.width > 0).map((x) => Math.round(x.top)));
+            if (tops.size > 1) out.push(`#${p.closest("[id]")?.id}: "${m[0]}"`);
+          }
+        }
+        return out;
+      });
+      for (const x of b) broken.push(`${w}px ${x}`);
+    }
+    await page.close();
+    expect(broken).toEqual([]);
+  });
+
+  it("UXR-73 with the table open the summary says 'Parameters and sources', not 'Show …'", async () => {
+    const page = await open();
+    await selectTab(page, "Method");
+    const r = await page.evaluate(() => {
+      const d = document.getElementById("params-box") as HTMLDetailsElement;
+      return { open: d.open, summary: (d.querySelector("summary")?.textContent ?? "").trim() };
+    });
+    await page.close();
+    expect(r.open).toBe(true);
+    expect(r.summary).toBe("Parameters and sources");
   });
 });

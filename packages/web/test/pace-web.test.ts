@@ -63,7 +63,9 @@ describe("CCW-M4.5 playground build (PACE-WEB2)", () => {
     const section = paceSection(html);
     expect(section, "no <section id=\"pace\">").not.toBe("");
     expect(section).toMatch(/<h2[^>]*>Pace<\/h2>/);
-    expect(section).toContain("Your work rhythm · opt-in · stays local"); // UX-R44
+    // UX-R69 (intake #112 review) supersedes the UX-R44 eyebrow pin: no eyebrow; "opt-in" and "stays local" sit in "How Pace is counted".
+    expect(section).not.toMatch(/class="[^"]*\beyebrow\b/);
+    expect(/<details[^>]*id="pace-how"[\s\S]*?<\/details>/.exec(section)?.[0] ?? "").toMatch(/opt-in[\s\S]*stays local|stays local[\s\S]*opt-in/);
     expect(section).not.toContain("stays on your device");
     expect(section).not.toContain('id="pace-pill"');
   });

@@ -118,7 +118,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       body: body!,
       paragraphs: [...document.querySelectorAll("main p")].filter((p) => p.textContent?.trim())
         .map((p) => ({ id: p.id || p.className || (p.textContent ?? "").slice(0, 30), f: getComputedStyle(p).fontFamily })),
-      methodNotes: [...document.querySelectorAll("#params td[data-label='Parameter'] div")].map((d) => getComputedStyle(d).fontFamily),
+      methodNotes: [...document.querySelectorAll("#params details .note")].map((d) => getComputedStyle(d).fontFamily),
       post: post!,
     };
   });
@@ -228,7 +228,8 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     const words = noteText.split(/\s+/).filter(Boolean).length;
     if (words > 30) problems.push(`WI-R4: #whatif-note is ${words} words (want 30 or fewer): "${noteText}"`);
     if (!noteText.startsWith("What-if at 25%")) problems.push(`WI-R4: #whatif-note should start "What-if at 25%", got "${noteText.slice(0, 40)}"`);
-    if (!noteText.includes("Published:")) problems.push("WI-R4: #whatif-note lacks \"Published:\"");
+    // UX-R71 (intake #112 review): "Published 10%:" replaces "Published:".
+    if (!/Published( \d+%)?:/.test(noteText)) problems.push("WI-R4: #whatif-note lacks \"Published 10%:\"");
     if (!noteText.includes("Method v")) problems.push("WI-R4: #whatif-note lacks \"Method v\"");
     // WI-R5: the hero flag names the setting.
     const flag = await page.$eval(".whatif-flag", (f) => f.textContent ?? "").catch(() => "");

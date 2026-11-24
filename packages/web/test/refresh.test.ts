@@ -480,12 +480,13 @@ withBrowser("VISUAL-REFRESH AC-T3 less chunky text", () => {
     });
   }
 
-  it("AC-T3 #pace-lead is 17px or smaller", async () => {
+  // UX-R69 (intake #112 review) supersedes the old "17px or smaller" pin: the answer is 22px, as big as the h2.
+  it("AC-T3 #pace-lead is 22px (UX-R69)", async () => {
     const page = await open({ width: 1280 });
     await selectTab(page, "Pace");
     const size = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById("pace-lead")!).fontSize));
     await page.close();
-    expect(size).toBeLessThanOrEqual(17);
+    expect(size).toBe(22);
   });
 });
 
