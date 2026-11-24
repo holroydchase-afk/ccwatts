@@ -7,8 +7,9 @@ now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me")
 next: 0.2.0 is on npm (Nov 16); post the v0.2.0 GitHub Release and send the portfolio INTAKE; later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
   - Go to merge the dark elevation PR (changes the live playground); OK to fork dark tokens from hearth (UX-R66)
-  - Go on M4.7 Leverage (proposed in IDEAS.md)
+  - Go on M4.7 Leverage (proposed in docs/internal/IDEAS.md)
   - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
+  - Repo settings (#113): About gear: description, topics, website (exact text in docs/product/SPEC-REPO-STANDARDS.md); Settings > Code security: turn on Private vulnerability reporting (SECURITY.md depends on it)
 blockers: []
 -->
 
@@ -27,10 +28,10 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 
 ## Done (latest only; full log in the archive)
 - 2026-11-24: Intake #112 (spec docs/product/SPEC-EVAL-FINDINGS.md): EF-CC-1 What-if total line visible on load (role=status), EF-CC-4 Sample data label by #card, EF-CC-5 Pace lead is one number + range (rest, so-far with its range, agents below the chart; #pace-pill gone), EF-CC-6 params table open (per-parameter notes fold under "About this value"). Tests EF-1 to EF-13 in packages/web/test/eval-findings.test.ts; WI-2, PACE-WEB2 and AC-T2 updated (params open; 1280 budget 1900 -> 1920). EF-CC-2/3 owned by the M4.8.1 hero+CTA PR; dark item already fixed by #110. Plugin bundles rebuilt.
+- 2026-11-24: REPO-STANDARDS (intake #113, spec docs/product/SPEC-REPO-STANDARDS.md; #111's inbox line): ANCHORS, PLAN, IDEAS, KICKOFF and VISION moved to `docs/internal/` (pure git mv); CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, a PR template and bug/feature issue templates added; README, CLAUDE.md and DECISIONS paths updated; CLAUDE.md gains the inbox-first line. Docs only. Chase's settings step is under waiting_on_chase.
 - 2026-11-23: QA-R1 decided (Chase, "root for Windows too"): projectRef names a Windows drive root (`C:\`, `C:/`, `D:`) "(root)", like `/`. Ids unchanged (still the hash of the trimmed path), so old history rows keep their id; a row saved earlier may still show "C:". Tests COV-3b to COV-3b3; plugin bundles rebuilt.
 - 2026-11-23: DARK (intake #108, spec docs/product/SPEC-DARK-ELEVATION.md): dark --surface #24221E, --fill #33302B, --line #383530, --tab-line #77736D; high-contrast dark --muted #C6C0B6 (QA-R1). Tests DARK-1 to DARK-7 in packages/web/test/design-system.test.ts; plugin bundles rebuilt. Forks the dark tokens from hearth themes.paper (UX-R66); a hearth intake should follow if Chase agrees. UX-R67: check on a phone at low brightness once live; fallback surface #282622.
 - 2026-11-23: Intake #107: CLAUDE.md gains the "Self-check before any ask" rule (Chase never updates settings, environments or repos by hand; do it yourself, use a tool or card, else one copy box). Docs only.
-- 2026-11-22: EVAL merged (PR #98, built Nov 18 from the three-seat portfolio review). `npm run evals` writes `docs/EVALS.md` from `evals/models.json` and `evals/cases.json`: model coverage (8 ids), 4 reference checks with assumed inputs labeled, and a sensitivity table; `packages/core/test/evals.test.ts` fails on a stale file or a failed check. It found that Fable and Mythos ids were priced as Sonnet, half of Opus (now the Opus tier, method v0.1.2, no values changed), and that Opus output energy drives about 37% of a heavy day's range against 24% for the cache-read factor. `--by` tables print the unknown-model note. Review backlog next: docs/DESIGN.md, README refocus and release hygiene (tags, CHANGELOG, GitHub Release v0.2.0, close #38), friend beta kit.
 
 ## In progress
 
@@ -38,7 +39,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 0. Second PR: the cloud-session prompt (Claude runs `npx -y ccwatts@latest` and replies in three lines; staff-pm scope + ux-reviewer copy UX-R20 to R27, in the thread "Measure cloud sessions and pasted token counts") on the playground and README. Then check a fresh ccwatts thread saved its counts to /mnt/project-files/ccwatts-usage/.
 1. Chase merges #89, then this PR.
 2. Done Nov 16: 0.2.0 published. Remaining: GitHub Release v0.2.0, close issue #38, portfolio INTAKE (box C in the stable-demo plan).
-3. Then only on Chase's go: M4.7 Leverage (IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
+3. Then only on Chase's go: M4.7 Leverage (docs/internal/IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
 - The old, longer next-step list is in the archive; most of it shipped.
 
 ## Decisions to review (open only; settled ones are in the archive)
