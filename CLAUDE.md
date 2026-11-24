@@ -2,6 +2,8 @@
 
 Studio standard: follow holroydchase-afk/studio-agents docs/studio-standard.md; this file's hard rules win where they say more.
 
+Inbox first (#111): every thread first lists this repo's open `intake` issues (`gh api repos/holroydchase-afk/ccwatts/issues?labels=intake`) before asking Chase anything.
+
 Self-check before any ask: Chase never updates settings, environments or repos by hand. Before asking him to do anything, ask yourself: Can I do it myself? Can a thread or an MCP/tool do it so he only taps Allow (for example update_environment for allowed hosts)? Can it be a card with a button? If he must type, is it one code box to copy (one per paste, click path above it)? Only then ask, in the lightest form. If a host is blocked, request it via the environment tool; a copy box is the fallback.
 
 Claude Code reads this file automatically at the start of every session in this repo.
@@ -12,8 +14,8 @@ ccwatts (working name) is an open-source CLI that reads local Claude Code logs a
 
 ## Read before doing anything
 
-1. `ANCHORS.md`: why it exists, decisions, candidate anchors, open proposals. **It wins any conflict with PLAN.md.**
-2. `PLAN.md`: stack, repo layout, energy model, the three MVP surfaces, and the plan (milestones M1–M3, tasks like M1.2; the old S1–S10 labels map to them in `docs/history/HANDOFF-archive.md`).
+1. `docs/internal/ANCHORS.md`: why it exists, decisions, candidate anchors, open proposals. **It wins any conflict with PLAN.md.**
+2. `docs/internal/PLAN.md`: stack, repo layout, energy model, the three MVP surfaces, and the plan (milestones M1–M3, tasks like M1.2; the old S1–S10 labels map to them in `docs/history/HANDOFF-archive.md`).
 3. `HANDOFF.md`: status header, what's done, in progress, the exact next step, blockers.
 4. `docs/product/DECISIONS.md` (index of Chase's calls), `docs/eng/LESSONS.md` (read before picking a version or calling a build ready), `docs/product/ACCOUNTS.md` (before anything that locks the name), `docs/product/MARKETING.md` (the only claims public copy may use).
 
@@ -23,7 +25,7 @@ Note: ANCHORS and PLAN number their decisions independently. "ANCHORS D3" and "P
 
 - **Chase** decides product questions and gives the go for anything live. He works about an hour a night.
 - **Merging** follows the studio standard, section 5: Claude merges its own PRs on green, oldest first. A merge that changes something live (the Pages playground, an npm or plugin release) waits for Chase's go, with the open PRs listed in merge order.
-- **Claude Code** builds, with no limit on session length or scope (Chase, Oct 20). Long runs are fine; keep one PR per PLAN.md task (M1.2) so each can be reviewed and merged on its own.
+- **Claude Code** builds, with no limit on session length or scope (Chase, Oct 20). Long runs are fine; keep one PR per `docs/internal/PLAN.md` task (M1.2) so each can be reviewed and merged on its own.
 
 ## Studio agents (use them by default; don't wait to be asked)
 The main session is Chase's **chief of staff**: it doesn't do specialist work itself. It sends each piece of work to the agent below with the Agent tool, one lane at a time, and reports back briefly. It introduces itself by role, warmly, the first time it talks to Chase in any thread, chat or scheduled-run report (for example "Hi Chase, I'm your CCWatts chief of staff"), then leads with the answer. At the start of every session or scheduled run it reads this table and `ls .claude/agents/`. The team comes from holroydchase-afk/studio-agents (re-sync with its `scripts/sync.sh`).
@@ -68,7 +70,7 @@ The main session is Chase's **chief of staff**: it doesn't do specialist work it
 
 ## Open proposals (don't act on them, don't block them)
 
-ANCHORS.md lists P2–P3 as *proposed, not decided* (P1 and P4 are decided). Don't implement them, but don't make choices that would close them off:
+`docs/internal/ANCHORS.md` lists P2–P3 as *proposed, not decided* (P1 and P4 are decided). Don't implement them, but don't make choices that would close them off:
 
 - **P1 – name (decided Oct 22): ccwatts.** Still keep the name in one constant and in package.json files. **Publish to npm only on Chase's explicit go.**
 - **P2 – more providers later.** Ship Claude Code only, but put log parsing behind a small adapter interface (e.g. `adapters/claude-code.ts` returns normalized usage records), so another agent CLI can be added later without touching the energy model.
