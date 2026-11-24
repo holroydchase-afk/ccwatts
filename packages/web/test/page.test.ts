@@ -175,8 +175,8 @@ describe("UX-R3 the result stays with its chart; your own logs are one row away 
     for (const id of ['id="chart"', 'id="by-model"', 'id="by-project"']) expect(overview, id).not.toContain(id);
   });
 
-  it("UX-R3: the Overview row #ov-logs links to it with 'Use your own logs'", () => {
-    expect(html).toMatch(/<a[^>]*id="ov-logs"[^>]*href="#drop"[^>]*>[\s\S]*?Use your own logs[\s\S]*?<\/a>/);
+  it("UX-R3: the Overview CTA #ov-cta links to it with 'Try it on your logs' (M4.8.1)", () => {
+    expect(html).toMatch(/<a[^>]*id="ov-cta"[^>]*href="#drop"[^>]*>\s*Try it on your logs\s*<\/a>/);
   });
 
   it("UX-R3: the 7 days / 30 days / All time toggle is one labeled group", () => {

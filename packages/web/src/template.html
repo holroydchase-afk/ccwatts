@@ -64,6 +64,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .intro{display:flex;flex-direction:column;gap:8px}
 h1{font-size:22px;line-height:28px;font-weight:600;text-wrap:balance}
 .lede{max-width:60ch;color:var(--ink)}
+.lede-short{display:none;max-width:60ch;color:var(--ink)}
 .privacy{display:flex;gap:8px;align-items:flex-start}
 .privacy svg{flex:none;width:16px;height:16px;margin-top:4px;color:var(--ink)}
 .privacy b{font-weight:600}
@@ -79,11 +80,13 @@ kbd{border:1px solid var(--tab-line);border-radius:4px;padding:0 4px}
 .tabs [role=tab]:hover{color:var(--accent)}
 .tabs [role=tab][aria-selected="true"]{color:var(--accent);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
 .tabs [role=tab]:focus-visible{outline-offset:-2px}
-@media (max-width:599px){.tabs{gap:0;justify-content:space-between}.tabs [role=tab]{padding:0 4px}.thumb{width:72px}}
+@media (max-width:599px){.tabs{gap:0;justify-content:space-between}.tabs [role=tab]{padding:0 4px}}
 /* Under 375px the five tabs can overflow: fade the right edge so the row reads as scrollable (UX-R62). */
 @media (max-width:374px){.tabs{padding-right:24px;scroll-padding-right:24px;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent)}.tabs [role=tab]{padding:0 4px}}
 /* An unselected panel stays laid out (charts keep their size) but is invisible, unfocusable and takes no space. */
-[role=tabpanel]{display:flex;flex-direction:column;gap:24px;min-width:0}
+/* Deep links (#pace, #share): a panel scrolled to by its hash stops below the sticky tabs (48px + 1px rule), FOCUS-4. */
+[role=tabpanel]{display:flex;flex-direction:column;gap:24px;min-width:0;scroll-margin-top:49px}
+[role=tabpanel] h2{scroll-margin-top:57px}
 [role=tabpanel][hidden]{display:flex!important;visibility:hidden;position:absolute;top:0;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));height:0;overflow:hidden;padding:0;border:0}
 section,.block{display:flex;flex-direction:column;gap:16px;min-width:0}
 .block>p,.explain{max-width:65ch}
@@ -119,7 +122,10 @@ main button.primary:hover,.btn.primary:hover{box-shadow:none;text-decoration:und
 .row-detail{color:var(--muted)}
 .row .range-track{margin:8px 0 4px;max-width:360px}
 .chev{flex:none;width:12px;height:12px;color:var(--accent)}
-.thumb{flex:none;width:96px;height:auto;border-radius:4px;box-shadow:0 0 0 1px var(--line)}
+/* Overview hero (M4.8.1): the EV line sits under the number card, then the one CTA (48px, filled). */
+.ov-compare{padding:0}
+.ov-cta{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.ov-cta .btn{text-decoration:none}
 .back{display:inline-flex;align-items:center;gap:8px;min-height:48px;min-width:48px;align-self:flex-start;font-weight:600;text-decoration:none}
 .back svg{width:12px;height:12px}
 /* The statement in the Electricity tab: amount, plausible range, window. On the page, not in a box. */
@@ -278,8 +284,10 @@ footer p{max-width:65ch}
 .demo-bar__actions a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-weight:600;text-underline-offset:3px}
 @media (max-width:719px){.range-scale{display:none}}
 @media (max-width:599px){
-  /* On a phone the lede and the privacy detail step aside so the tabs start above the fold. */
+  /* On a phone the long lede and the privacy detail step aside so the tabs start above the fold;
+     a one-sentence lede still says what the tool does (EF-CC-2). */
   .lede,.privacy-more{display:none}
+  .lede-short{display:block}
   .wrap{gap:16px;padding-top:16px}
 }
 </style>
@@ -309,6 +317,7 @@ footer p{max-width:65ch}
   <div class="intro">
     <h1>How much electricity does your AI coding use?</h1>
     <p class="lede" id="lede">Electricity estimates for Claude Code, the AI coding agent, from its local logs. Try it on your own logs below.</p>
+    <p class="lede-short" id="lede-short">Electricity estimates for Claude Code, from its local logs.</p>
   </div>
 
   <div class="privacy" id="privacy"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><div><b>Your logs never leave this browser.</b><span class="privacy-more"> No network requests; it reads token counts only.</span></div></div>
@@ -317,9 +326,9 @@ footer p{max-width:65ch}
   <div class="tabs" id="tabs" role="tablist" aria-label="Views">
     <button type="button" role="tab" id="tab-overview" aria-controls="p-overview" aria-selected="true" tabindex="0" data-hash="">Overview</button>
     <button type="button" role="tab" id="tab-electricity" aria-controls="p-electricity" aria-selected="false" tabindex="-1" data-hash="#electricity">Electricity</button>
-    <button type="button" role="tab" id="tab-pace" aria-controls="pace" aria-selected="false" tabindex="-1" data-hash="#pace">Pace</button>
     <button type="button" role="tab" id="tab-share" aria-controls="p-share" aria-selected="false" tabindex="-1" data-hash="#share">Share</button>
     <button type="button" role="tab" id="tab-method" aria-controls="p-method" aria-selected="false" tabindex="-1" data-hash="#method">Method</button>
+    <button type="button" role="tab" id="tab-pace" aria-controls="pace" aria-selected="false" tabindex="-1" data-hash="#pace">Pace</button>
   </div>
 
   <section id="p-overview" role="tabpanel" aria-labelledby="tab-overview">
@@ -328,14 +337,17 @@ footer p{max-width:65ch}
         <h2 class="vh">At a glance</h2>
         <div class="list">
           <a class="row" id="ov-energy" href="#electricity"><span class="row-main"><span class="row-title" id="ov-energy-title">Electricity</span><span class="row-value" id="ov-energy-value">–</span><span class="range-track" id="ov-energy-bar" aria-hidden="true"></span><span class="row-detail" id="ov-energy-detail"></span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
-          <a class="row" id="ov-pace" href="#pace"><span class="row-main"><span class="row-title" id="ov-pace-title">Pace</span><span class="row-text" id="ov-pace-text"></span><span class="row-detail" id="ov-pace-detail"></span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
-          <a class="row" id="ov-drives" href="#electricity"><span class="row-main"><span class="row-title">What drives it</span><span class="row-text" id="ov-drives-text"></span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
         </div>
+        <p class="ov-compare" id="ov-compare"></p>
+      </div>
+      <!-- M4.8.1 (CCW-DEC-17): the one filled button on Overview, playground only. -->
+      <div class="ov-cta" id="ov-cta-wrap" hidden>
+        <a class="btn primary" id="ov-cta" href="#drop">Try it on your logs</a>
+        <p class="phone-only muted" id="ov-cta-note">Needs a computer with Claude Code.</p>
       </div>
       <div class="group">
         <div class="list">
-          <a class="row" id="ov-share" href="#share"><img class="thumb" id="ov-share-thumb" alt="" width="1200" height="627"><span class="row-main"><span class="row-title">Share card</span><span class="row-detail">Save a PNG or copy a LinkedIn post</span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
-          <a class="row" id="ov-logs" href="#drop" hidden><span class="row-main"><span class="row-title">Use your own logs</span><span class="row-detail">Drop in a log folder or .jsonl files</span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+          <a class="row" id="ov-drives" href="#electricity"><span class="row-main"><span class="row-title">What drives it</span><span class="row-text" id="ov-drives-text"></span></span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 1.5 8.5 6 4 10.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
         </div>
       </div>
     </div>

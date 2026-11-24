@@ -37,11 +37,11 @@ const MONO = /monospace|Menlo|Consolas|SF Mono|Courier/i;
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 // STUDIO-DS: the page shows one tab panel at a time (Overview is the default). Checks on panel content
-// select its tab first. Your logs (#drop) is no longer a tab: the Overview row #ov-logs opens it.
+// select its tab first. Your logs (#drop) is no longer a tab: the Overview CTA #ov-cta ("Try it on your logs") opens it.
 const tab = (page: import("playwright-core").Page, name: string) => page.getByRole("tab", { name, exact: true }).click();
 const openLogs = async (page: import("playwright-core").Page) => {
   await tab(page, "Overview");
-  await page.click("#ov-logs");
+  await page.click("#ov-cta");
 };
 const problems: string[] = [];
 for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
@@ -62,24 +62,24 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   if (!(await barText()).includes("Sample data")) problems.push(`DEMO-BAR: did not open on sample data (bar says "${await barText()}")`);
 
-  // Keyboard: Tab reaches the tabs and the Overview row "Use your own logs" (#ov-logs); Enter on it opens
-  // Your logs, and Tab then reaches both file pickers (recruiter-ready RR-5, now through #ov-logs).
+  // Keyboard: Tab reaches the tabs and the Overview CTA "Try it on your logs" (#ov-cta); Enter on it opens
+  // Your logs, and Tab then reaches both file pickers (recruiter-ready RR-5, now through #ov-cta, M4.8.1).
   const reached = new Set<string | undefined>();
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
   }
-  for (const id of ["tab-overview", "ov-logs"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
-  await page.focus("#ov-logs");
+  for (const id of ["tab-overview", "ov-cta"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
+  await page.focus("#ov-cta");
   await page.keyboard.press("Enter");
   for (let i = 0; i < 6; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
   }
-  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} from Your logs (#ov-logs) at ${viewport.width}px`);
+  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} from Your logs (#ov-cta) at ${viewport.width}px`);
 
-  // Tap targets: every button 48px tall or more (RR-9, STUDIO-DS target 48).
-  const short = await page.$$eval("main button, label.btn", (els) => (els as HTMLElement[]).filter((e) => e.offsetParent && e.getBoundingClientRect().height < 48).map((e) => e.id || (e.textContent ?? "").trim()));
+  // Tap targets: every button 48px tall or more (RR-9, STUDIO-DS target 48), including link buttons like the CTA.
+  const short = await page.$$eval("main button, label.btn, a.btn", (els) => (els as HTMLElement[]).filter((e) => e.offsetParent && e.getBoundingClientRect().height < 48).map((e) => e.id || (e.textContent ?? "").trim()));
   // Chart labels stay readable on a phone: drawn at the screen's pixel width, never scaled down (RR-8):
   // 17px text (STUDIO-DS body floor) at real size.
   await tab(page, "Electricity");
@@ -135,15 +135,15 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   }
 
   // UX-R3 (STUDIO-DS): the "Try it" box sits in the Overview, apart from the chart and the rankings,
-  // and the Overview row "Use your own logs" opens it.
+  // and the Overview CTA "Try it on your logs" (#ov-cta, M4.8.1) opens it.
   const order = await page.evaluate(() => {
     const drop = document.querySelector("#drop");
     const apart = !!drop?.closest("#p-overview") && ["#chart", "#by-model", "#by-project"].every((sel) => !document.querySelector(sel)?.closest("#p-overview"));
-    const row = document.querySelector("#ov-logs");
-    return { apart, link: row && /Use your own logs/.test(row.textContent ?? "") ? row.getAttribute("href") : null };
+    const row = document.querySelector("#ov-cta");
+    return { apart, link: row && /^\s*Try it on your logs\s*$/.test(row.textContent ?? "") ? row.getAttribute("href") : null };
   });
   if (!order.apart) problems.push("UX-R3: 'Try it on your own logs' is not in the Overview, apart from the chart and the By model/By project lists");
-  if (order.link !== "#drop") problems.push(`UX-R3: no Overview row 'Use your own logs' linking to #drop (got ${order.link})`);
+  if (order.link !== "#drop") problems.push(`UX-R3: no Overview CTA 'Try it on your logs' linking to #drop (got ${order.link})`);
 
   // UX-R1: errors are announced from #drop-status, and the hero isn't a live region.
   const live = await page.evaluate(() => ({
@@ -660,9 +660,9 @@ for (const p of await showcaseCheck({
   url: pathToFileURL(page_).href,
   browser,
   viewports: [{ width: 1280, height: 900 }, { width: 390, height: 844 }],
-  tapTargets: "button, label.btn", // RR-9
-  // RR-5. Not the pickers (QA-R5): they sit in Your logs, so the RR-5 loop above opens it via #ov-logs first.
-  keyboardReach: ["tab-overview", "ov-logs"],
+  tapTargets: "button, label.btn, a.btn", // RR-9 (a.btn: the Overview CTA)
+  // RR-5. Not the pickers (QA-R5): they sit in Your logs, so the RR-5 loop above opens it via #ov-cta first.
+  keyboardReach: ["tab-overview", "ov-cta"],
   tabPresses: 12,
   // 12px: the studio demo bar's badge (exempt, QA-R9; DEMO-BANNER standard). The kit can't exempt one
   // region, so the 17px STUDIO-DS floor for the rest of the page is design-system.test.ts DS-3.
