@@ -188,3 +188,25 @@ describe("CLOUDP-11 UX-R69 the phone hint is one short line", () => {
     });
   }
 });
+
+describe("CLOUDP-12 QA-R1 the Overview phone note points to Claude Code on the web", () => {
+  // The #cloud prompt in Your logs (first and open on phones) works from a phone, so the note under
+  // "Try it on your logs" must not say a computer is needed.
+  const NOTE = "On a phone? Use Claude Code on the web.";
+  const NBSP = / |&nbsp;|&#160;|&#x0*a0;/i;
+  for (const [name, src] of [["template", template], ["built page", html]] as const) {
+    const raw = /<p[^>]*id="ov-cta-note"[^>]*>([\s\S]*?)<\/p>/.exec(src)?.[1];
+    it(`CLOUDP-12 QA-R1 (${name}) #ov-cta-note reads exactly "${NOTE}"`, () => {
+      expect(raw, "#ov-cta-note found").toBeDefined();
+      expect(text(raw ?? "")).toBe(NOTE);
+    });
+    it(`CLOUDP-12 QA-R1 (${name}) #ov-cta-note has no non-breaking space and no em-dash`, () => {
+      expect(raw, "#ov-cta-note found").toBeDefined();
+      expect(NBSP.exec(raw ?? "")?.index, "U+00A0 in #ov-cta-note").toBeUndefined();
+      expect(raw ?? "").not.toMatch(/—|&mdash;|&#8212;|&#x2014;/i);
+    });
+    it(`CLOUDP-12 QA-R1 (${name}) the page no longer says "Needs a computer with Claude Code"`, () => {
+      expect(src).not.toContain("Needs a computer with Claude Code");
+    });
+  }
+});

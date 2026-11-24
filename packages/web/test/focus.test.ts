@@ -18,8 +18,9 @@ import { launch } from "../../../tools/showcase-check/check.ts";
 //    (the `.primary` style). No other visible a/button/label.btn/[role=button] on the page may be
 //    filled while Overview is showing (the studio demo bar is exempt: it isn't part of the page).
 //  - Clicking the CTA shows the Your logs view (#drop), as #ov-logs does today.
-//  - Phone note: at 390px a visible line right under the CTA mentions "computer" and "Claude Code"
-//    (suggested words: "Needs a computer with Claude Code."). At 1280px it isn't shown.
+//  - Phone note (#ov-cta-note, QA-R1): at 390px a visible line right under the CTA reads
+//    "On a phone? Use Claude Code on the web." (the #cloud prompt in Your logs works from a phone).
+//    At 1280px it isn't shown.
 //  - FOCUS-3: the Overview panel shows a visible line with the same text as #hero-compare, below
 //    the number (#ov-energy-value).
 //  - FOCUS-4: loading the page at #pace or #share (390x844) leaves the panel's first h2 fully in
@@ -34,6 +35,7 @@ const htmlPath = fileURLToPath(new URL("../dist/ccwatts.html", import.meta.url))
 const url = pathToFileURL(htmlPath).href;
 const html = readFileSync(htmlPath, "utf8");
 const CTA = "Try it on your logs";
+const NOTE = "On a phone? Use Claude Code on the web.";
 const TABS = ["Overview", "Electricity", "Share", "Method", "Pace"] as const;
 const PHONE = { width: 390, height: 844 };
 const LAPTOP = { width: 1280, height: 800 };
@@ -149,12 +151,12 @@ withBrowser("M4.8.1 playground, sample data (browser)", () => {
       await page.close();
     });
 
-    it(`FOCUS-1 the "needs a computer" note shows under the CTA on phone only (${at})`, async () => {
+    it(`FOCUS-1 QA-R1 the "${NOTE}" note shows under the CTA on phone only (${at})`, async () => {
       const page = await open(vp);
-      const note = overview(page).getByText(/computer with Claude Code/i);
+      const note = overview(page).getByText(NOTE, { exact: true });
       const shown = (await note.count()) > 0 && (await note.first().isVisible());
       if (vp.width < 600) {
-        expect(shown, "no visible note mentioning a computer with Claude Code on phone").toBe(true);
+        expect(shown, `no visible "${NOTE}" note on phone`).toBe(true);
         const [b, n] = [await cta(page).first().boundingBox(), await note.first().boundingBox()];
         expect(b && n && n.y >= b.y + b.height - 0.5, "note sits under the CTA").toBe(true);
         expect(await fullyInView(page, note.first()), "note position").toBe("inside");
@@ -281,8 +283,8 @@ withBrowser("M4.8.1 ccwatts dashboard (browser)", () => {
     it(`FOCUS-1 dashboard shows no "${CTA}" control and no phone note (${at})`, async () => {
       const page = await open(vp, "", dashUrl);
       expect(await page.getByRole("link", { name: CTA }).or(page.getByRole("button", { name: CTA })).count()).toBe(0);
-      const note = page.getByText(/computer with Claude Code/i);
-      expect((await note.count()) > 0 && (await note.first().isVisible())).toBe(false);
+      const note = page.getByText(NOTE, { exact: true });
+      expect((await note.count()) > 0 && (await note.first().isVisible()), "phone note shown in dashboard").toBe(false);
       await page.close();
     });
 
