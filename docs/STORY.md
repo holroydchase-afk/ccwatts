@@ -2,6 +2,9 @@
 
 Public mirror of the ccwatts build story (the private log is Chase's "Atlas Story: CCWatts"). The `story-keeper` agent appends entries, newest first: date, title, problem, Chase's call, decision and why, result, one-line angle. No personal data, secrets or links to private tools.
 
+## 2026-11-24: cut the demo to one number and one button
+Problem: Chase called the demo "very busy"; a UX and staff PM review scored clarity 5/10 on phone, 6/10 on laptop, with no call to action above the fold. Chase's call: "go with recommendations" (CCW-DEC-17). Decision: Overview cut to the number, the EV line and one "Try it on your logs" button. Result: PR #116 merged on Chase's go, clarity 7/10; PR #119 trimmed the header to 8/10, the bar. Lesson: after a `git merge` stopped on conflicts, `git add -A && git commit` committed conflict markers; caught before the PR and never reached main. Check the merge exit status and `git diff --name-only --diff-filter=U` first. Angle: scored the review, fixed to the bar, and caught our own process slip.
+
 ## 2026-11-19: a range from a total
 Problem: Chase can see a thread's token total (88.8M on an Opus 5 thread) but ccwatts needed a mix. Chase's call: "I should be able to use that." Decision: `ccwatts estimate` (PR #101) applies a mix measured on his own 6 sessions, widens the range with the lightest and heaviest, and says so in one line. Result: 88.8M Opus = 4.8 kWh, range 0.51-22.8. Angle: an honest range beats a confident number.
 

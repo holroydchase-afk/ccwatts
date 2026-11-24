@@ -39,3 +39,7 @@ Post mortems, newest first: what happened, why, and the rule or guard it added. 
 ## 2026-10-22: "verified live" from a container that couldn't reach the site
 **What:** the custom domain served the `*.github.io` certificate from the cloud, so the live page couldn't be checked for days.
 **Guard:** "verified" only for what ran this session; `npm run check:live` loads the real URL in Chromium before calling a deploy done.
+
+## 2026-11-24: committed conflict markers after a stopped merge
+**What:** `git merge origin/main` stopped on conflicts, and a chained `git add -A && git commit` still ran, committing `<<<<<<<` markers in HANDOFF.md and the plugin bundles to a PR branch (caught before the PR, never on main).
+**Guard:** after any merge, check its exit status and `git diff --name-only --diff-filter=U` before committing; resolve, rebuild bundles with `npm run build`, then `git grep -n '^<<<<<<< '` must be empty.
