@@ -7,8 +7,9 @@ now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me")
 next: 0.2.0 is on npm (Nov 16); post the v0.2.0 GitHub Release and send the portfolio INTAKE; later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
   - Go to merge the dark elevation PR (changes the live playground); OK to fork dark tokens from hearth (UX-R66)
-  - Go on M4.7 Leverage (proposed in IDEAS.md)
+  - Go on M4.7 Leverage (proposed in docs/internal/IDEAS.md)
   - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
+  - Repo settings (#113): About gear: description, topics, website (exact text in docs/product/SPEC-REPO-STANDARDS.md); Settings > Code security: turn on Private vulnerability reporting (SECURITY.md depends on it)
 blockers: []
 -->
 
@@ -26,12 +27,10 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-24: REPO-STANDARDS (intake #113, spec docs/product/SPEC-REPO-STANDARDS.md; #111's inbox line): ANCHORS, PLAN, IDEAS, KICKOFF and VISION moved to `docs/internal/` (pure git mv); CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, a PR template and bug/feature issue templates added; README, CLAUDE.md and DECISIONS paths updated; CLAUDE.md gains the inbox-first line. Docs only. Chase's settings step is under waiting_on_chase.
 - 2026-11-23: QA-R1 decided (Chase, "root for Windows too"): projectRef names a Windows drive root (`C:\`, `C:/`, `D:`) "(root)", like `/`. Ids unchanged (still the hash of the trimmed path), so old history rows keep their id; a row saved earlier may still show "C:". Tests COV-3b to COV-3b3; plugin bundles rebuilt.
 - 2026-11-23: DARK (intake #108, spec docs/product/SPEC-DARK-ELEVATION.md): dark --surface #24221E, --fill #33302B, --line #383530, --tab-line #77736D; high-contrast dark --muted #C6C0B6 (QA-R1). Tests DARK-1 to DARK-7 in packages/web/test/design-system.test.ts; plugin bundles rebuilt. Forks the dark tokens from hearth themes.paper (UX-R66); a hearth intake should follow if Chase agrees. UX-R67: check on a phone at low brightness once live; fallback surface #282622.
 - 2026-11-23: Intake #107: CLAUDE.md gains the "Self-check before any ask" rule (Chase never updates settings, environments or repos by hand; do it yourself, use a tool or card, else one copy box). Docs only.
-- 2026-11-22: EVAL merged (PR #98, built Nov 18 from the three-seat portfolio review). `npm run evals` writes `docs/EVALS.md` from `evals/models.json` and `evals/cases.json`: model coverage (8 ids), 4 reference checks with assumed inputs labeled, and a sensitivity table; `packages/core/test/evals.test.ts` fails on a stale file or a failed check. It found that Fable and Mythos ids were priced as Sonnet, half of Opus (now the Opus tier, method v0.1.2, no values changed), and that Opus output energy drives about 37% of a heavy day's range against 24% for the cache-read factor. `--by` tables print the unknown-model note. Review backlog next: docs/DESIGN.md, README refocus and release hygiene (tags, CHANGELOG, GitHub Release v0.2.0, close #38), friend beta kit.
-- 2026-11-22: STUDIO-WIRING (#104, spec docs/product/SPEC-STUDIO-WIRING.md): cloud threads can now run studio agents as general-purpose via `scripts/agent-prompt.sh` and log them with `log-agent-run.sh --as <agent>` ("<time> <agent> via-general-purpose", accepted by check-agent-runs.sh); agents-check.yml gains the "qa-tdd cannot be skipped" rule on code PRs (only "docs only" / "config only" skips pass), pinned SHAs and npm build kept; CLAUDE.md's Studio agents section now matches templates/CLAUDE-agents.md (CCWatts greeting, release-captain row, check-qa-report.ts line and AGENT-NOTES pointer kept). Next: qa-tdd green 3x, then the PR with qa-tdd really run.
-- 2026-11-22: EST merged (PR #101) on Chase's go ("go on green"), after #98. EST, enter a token count (Chase, Nov 19: "I could look at my Opus 5 thread and see it has 88.8M tokens"). `ccwatts estimate 88.8M --model opus` (reads no logs, writes nothing) and a playground box. Core `estimateFromTotal`/`parseTokenCount` (packages/core/src/manual.ts). A total hides the token mix, so params.json gains `token_mix` (measured on 6 counts-only cloud sessions: central, light and heavy mixes); low uses the light mix, high the heavy mix. 88.8M on Opus = 4.8 kWh (range 0.51 to 22.8). Method version not bumped (PR #98 bumps to 0.1.2; whichever merges second reconciles and rebuilds plugin bundles). qa-tdd red first (EST-1 to EST-20), ux-reviewer UX-R28 to R33 fixed test-first. VISION problem 6, IDEAS (2 entries), METHODOLOGY "Estimating from a total". On #102's design the box sits in the Electricity tab beside What if (UX-R65 to R67). qa-tdd now runs via general-purpose + log-agent-run.sh --as.
 
 ## In progress
 
@@ -39,7 +38,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 0. Second PR: the cloud-session prompt (Claude runs `npx -y ccwatts@latest` and replies in three lines; staff-pm scope + ux-reviewer copy UX-R20 to R27, in the thread "Measure cloud sessions and pasted token counts") on the playground and README. Then check a fresh ccwatts thread saved its counts to /mnt/project-files/ccwatts-usage/.
 1. Chase merges #89, then this PR.
 2. Done Nov 16: 0.2.0 published. Remaining: GitHub Release v0.2.0, close issue #38, portfolio INTAKE (box C in the stable-demo plan).
-3. Then only on Chase's go: M4.7 Leverage (IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
+3. Then only on Chase's go: M4.7 Leverage (docs/internal/IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
 - The old, longer next-step list is in the archive; most of it shipped.
 
 ## Decisions to review (open only; settled ones are in the archive)
