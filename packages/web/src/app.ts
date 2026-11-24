@@ -304,17 +304,17 @@ function renderPace() {
   // moves to the quieter "so far" line; the agents line follows the week the lead describes.
   const line = paceLead(weeks, params);
   // EF-CC-5: one number (with its range) above the chart; the rest of the week's figures go below it.
-  $("pace-lead").innerHTML = `<b>${esc(keep(line.lead))}</b>`;
-  $("pace-rest").textContent = keep(line.rest);
+  $("pace-lead").innerHTML = `<b>${keepHtml(line.lead)}</b>`;
+  $("pace-rest").innerHTML = keepHtml(line.rest);
   // QA-R2: the so-far hours carry their range here, like every other hour figure on the page.
   const now = weeks[0]!;
   const soFar =
     line.soFar && now.activeHours.central > 0
       ? `This week so far: about ${paceHours(now.activeHours.central)} hours (range ${paceHoursRange(now.activeHours)}) in ${now.daysCounted} day${now.daysCounted === 1 ? "" : "s"}.`
       : line.soFar;
-  $("pace-sofar").textContent = soFar ? keep(soFar) : "";
+  $("pace-sofar").innerHTML = soFar ? keepHtml(soFar) : "";
   $("pace-sofar").hidden = !line.soFar;
-  $("pace-agents").textContent = line.agents ? keep(line.agents) : "";
+  $("pace-agents").innerHTML = line.agents ? keepHtml(line.agents) : "";
   $("pace-agents").hidden = !line.agents;
   renderPaceChart(weeks);
   renderPaceOverview({ week: weeks[line.focus]!, current: line.focus === 0 }, "");
@@ -343,6 +343,8 @@ function renderPaceOverview(shown: { week: PaceWeek; current: boolean } | null, 
 
 /** Never break inside "2h 51m" or "12 – 14" when the line wraps. */
 const keep = (text: string) => text.replace(/(\d+h) (\d+m)/g, "$1\u00a0$2").replace(/(\d) – (\d)/g, "$1\u00a0–\u00a0$2");
+// UX-R72: a no-break space still lets a line break after "–", so each "a – b" range sits in a nowrap span.
+const keepHtml = (text: string) => esc(keep(text)).replace(/\d+(?:\.\d+)?\u00a0–\u00a0\d+(?:\.\d+)?/g, (m) => `<span class="nw">${m}</span>`);
 
 // The newest week always holds today, still in progress even on a Sunday (QA-R4).
 const weekLabel = (w: PaceWeek, i: number) => (i === 0 ? `${monthDay(w.start)} (so far)` : monthDay(w.start));
@@ -433,7 +435,10 @@ function renderShare(e: Estimate, label: string) {
   ($("card-full") as HTMLAnchorElement).href = fullSizeUrl;
   $("post").textContent = currentPost;
   $("card-sample").hidden = state.source !== "sample";
-  $("share-status").textContent = state.source === "sample" ? "This card shows sample data. Load your own logs to make yours." : "";
+  // UX-R68: the label names the card's own figures (the published estimate), at body size.
+  const t = formatEnergy(e.total);
+  $("card-sample").textContent = e.responses ? `Sample data · ${t.central} (range ${t.range} ${t.unit}) · method v${params.version}` : `Sample data · method v${params.version}`;
+  $("share-status").textContent = "";
 }
 
 /** "theclimatebrink.com" from a source URL, so each link names where it goes. */
@@ -451,7 +456,7 @@ function renderMethod() {
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>
-        `<tr><td data-label="Parameter"><code>${esc(id)}</code><details class="fine"><summary class="disclose">About this value</summary><div class="note">${esc(p.note)}</div></details></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
+        `<tr><td data-label="Parameter"><code>${esc(id)}</code></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a><details class="fine"><summary class="disclose">About this value</summary><div class="note">${esc(p.note)}</div></details></td></tr>`,
     )
     .join("");
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
@@ -505,13 +510,15 @@ function renderWhatIf(e: Estimate, published: Estimate) {
   $("whatif-reset").hidden = !whatIfActive();
   const t = formatEnergy(e.total);
   // EF-CC-1: the result sits beside the slider from the start, so the number is in view while dragging.
-  if (!whatIfActive())
-    return void (note.textContent = e.responses
-      ? `Total: ${t.central} (range ${t.range} ${t.unit}) · Method v${params.version}`
-      : `Load some usage to see the total move. Method v${params.version}.`);
+  // UX-R71: at rest one line naming the published total; after a move, the what-if line then the published one.
   const pub = formatEnergy(published.total);
-  const totals = e.responses ? ` ${t.central} (range ${t.range} ${t.unit}). Published: ${pub.central} (range ${pub.range} ${pub.unit}).` : " Not the published estimate.";
-  note.textContent = `What-if at ${pct(value)}:${totals} The share card keeps ${pct(publishedCache)}. Method v${params.version}.`;
+  const nw = (s: string) => `<span class="nw">${esc(s)}</span>`;
+  const pubLine = (unit: string) => `Published ${pct(publishedCache)}: ${nw(pub.central)} (range ${nw(`${pub.range}${unit}`)})`;
+  if (!whatIfActive())
+    return void (note.innerHTML = e.responses ? `<span class="wl">${pubLine(` ${pub.unit}`)} · Method v${esc(params.version)}</span>` : `Load some usage to see the total move. Method v${esc(params.version)}.`);
+  const first = e.responses ? `What-if at ${pct(value)}: ${nw(t.central)} (range ${nw(t.range)})` : `What-if at ${pct(value)}: not the published estimate.`;
+  const second = e.responses ? `${pubLine("")} · share card keeps ${pct(publishedCache)} · Method v${esc(params.version)}` : `Share card keeps ${pct(publishedCache)} · Method v${esc(params.version)}`;
+  note.innerHTML = `<span class="wl">${first}</span><span class="wl">${second}</span>`;
 }
 
 function setWhatIf(value: number) {

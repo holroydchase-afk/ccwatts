@@ -167,7 +167,7 @@ details:not([open])>:not(summary){display:none}
 details>*+*{margin-top:8px}
 @media (prefers-reduced-motion:no-preference){.disclose::before{transition:transform .15s ease}.rank .bar span{transition:width .3s ease}}
 /* "What if?" cache-read slider (M2.6.5): a what-if view, never the published estimate. */
-.whatif{display:flex;flex-direction:column;gap:8px;max-width:65ch}
+.whatif{display:flex;flex-direction:column;gap:8px;max-width:72ch}
 .whatif-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
 /* UX-R65: the h2 shares the row with the label and value, so the column stays as short as the token box beside it (AC-T2). */
 .whatif-pick{display:flex;align-items:baseline;gap:12px}
@@ -179,6 +179,8 @@ details>*+*{margin-top:8px}
 .whatif-scale .mark{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
 .whatif-scale .mark::before{content:"";position:absolute;left:50%;top:-8px;height:4px;border-left:1px solid var(--muted)}
 .whatif-note{border-left:4px solid var(--sample);padding-left:12px}
+.whatif-note .wl{display:block}
+@media (min-width:960px){.drives-tools{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}}
 .whatif button{align-self:flex-start}
 .note{max-width:65ch}
 /* "Have a token count?" (EST): a total typed in, for usage with no local log. Electricity tab, beside What if on wide screens, under it on phones. */
@@ -240,8 +242,9 @@ a.src{display:inline-flex;align-items:center;min-height:48px;min-width:48px}
 .pace .agent{fill:var(--c4)}
 .legend i.agent{background:var(--c4)}
 .legend i.sofar{background-color:var(--c1);background-image:repeating-linear-gradient(-45deg,transparent 0 2px,var(--hatch) 2px 4px)}
-.pace-lead{max-width:60ch;text-wrap:pretty}
+.pace-lead{max-width:60ch;text-wrap:pretty;font-size:22px;line-height:28px;font-weight:600}
 .pace-lead b{font-weight:600}
+.nw{white-space:nowrap}
 .pace-sofar{color:var(--muted)}
 .legend .whisker{width:2px;height:12px;border-radius:0;background:var(--ink);margin-left:4px;margin-right:8px}
 #pace-chart text.val{fill:var(--ink);font-weight:600}
@@ -447,7 +450,6 @@ Leave out everything else, especially message content. Save the lines as ccwatts
 
   <section id="pace" class="pace" role="tabpanel" aria-labelledby="tab-pace" hidden>
     <div class="pace-title">
-      <span class="eyebrow">Your work rhythm · opt-in · stays local</span>
       <div class="pace-head">
         <h2 id="pace-h">Pace</h2>
       </div>
@@ -462,6 +464,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
       <p class="pace-agents" id="pace-agents"></p>
       <details class="fine" id="pace-how">
         <summary class="disclose">How Pace is counted</summary>
+        <p class="note">Your work rhythm · opt-in · stays local</p>
         <p class="note pace-foot" id="pace-foot">__PACE_NOTES__</p>
       </details>
     </div>
@@ -474,7 +477,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
   <section id="p-share" role="tabpanel" aria-labelledby="tab-share" hidden>
     <div class="block">
       <h2>Share it</h2>
-      <p class="card-sample" id="card-sample">Sample data: this card shows the sample, not your logs.</p>
+      <p class="card-sample" id="card-sample">Sample data</p>
       <img class="card" id="card" alt="Electricity receipt card" width="1200" height="627">
       <a class="phone-only full-size" id="card-full" href="#" target="_blank" rel="noopener noreferrer">Open full size</a>
       <div class="controls">
@@ -500,7 +503,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
         <p class="explain" id="method-more"></p>
       </details>
       <details id="params-box" open>
-        <summary class="disclose">Show all parameters and sources</summary>
+        <summary class="disclose">Parameters and sources</summary>
         <div class="tablewrap"><table id="params"></table></div>
       </details>
     </div>
