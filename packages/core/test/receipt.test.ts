@@ -66,10 +66,17 @@ describe("receipt", () => {
   });
 
   describe("round 2 (recruiter-ready RR-15, RR-17)", () => {
+    // M4.8.3 (SPEC-RANGES RANGE-9): "big" now means the share's LOW end is at least 50%. The demo's
+    // cache share is 64% central but 30% at the low end, so it is no longer a surprise.
     it("says estimated, not measured, and only calls a big cache share a surprise", () => {
       const post = linkedInPost(input);
       expect(post).not.toContain("I measured");
-      expect(post).toContain("The surprise:");
+      expect(post).not.toContain("The surprise:");
+      const heavy = estimate(
+        [{ source: "claude-code", key: "r1", timestamp: "2026-10-01T10:00:00Z", model: "claude-opus-4-6", project: null, tokens: { input: 0, cacheWrite: 0, cacheRead: 100_000_000, output: 1_000 } }],
+        params,
+      );
+      expect(linkedInPost({ ...input, estimate: heavy })).toContain("The surprise:");
       const small = { ...input, estimate: estimate(claudeCodeAdapter.parse(readFileSync(new URL("../../../fixtures/claude-code/sample.jsonl", import.meta.url), "utf8")), params) };
       expect(linkedInPost(small)).not.toContain("The surprise:");
     });

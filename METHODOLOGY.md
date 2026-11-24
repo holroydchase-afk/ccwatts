@@ -65,7 +65,12 @@ low  = central ÷ exp( √Σ ln(valueᵢ / lowᵢ)² )
 
 Across token types and models, ranges simply add up (lows with lows, highs with highs). That treats them as fully correlated, which is the cautious choice, since the same unknowns drive all of them.
 
-The comparison line ("about X miles in an EV") always uses the central value and says "about".
+### Ranges on shares and comparisons
+
+Every share and comparison shown carries its own range, derived from the energy ranges above (method v0.1.2 onward; nothing new is estimated).
+
+- **Shares** ("about 64% (30–72%) comes from re-reading the conversation") are worked out at three corners: the part's low over the total's low, central over central, and high over high. The low and high shown are the smallest and largest of those three ratios, not low/low and high/high in order, because a share can fall as the total rises: in the sample, cache writes are 48% of the low total but 21% of the high one. When all three round to the same whole percent, one number is shown; a share above zero that rounds to 0 reads "<1%". Token-count ratios ("cache reads were …% of tokens") are exact counts, so they carry no range and always say "of tokens".
+- **Comparisons** ("driving an EV about 28 miles (4.4–102)") divide the energy's low, central and high by the comparison's factor from `params.json`. The factor itself is held at its central value, so the range reflects the energy estimate only, not the spread in EV efficiency or fridge size. The amount in JSON output stays the central value.
 
 The playground's "What if?" slider lets you move `cache_read_vs_input` within its published low and high. The chosen value is pinned (its low and high both equal it), so the what-if range comes only from the other parameters' bounds. A what-if never changes the published estimate: the share card, LinkedIn post, CLI and params.json always use the values above.
 

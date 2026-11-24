@@ -550,9 +550,10 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   const META = `Method v${methodVersion} · typical Claude Code mix assumed`; // UX-R32
   const WIDE = "Wide range: the mix of token types is guessed."; // UX-R28
   const BAD = "Couldn't read that as a token count. Try 88.8M, 1.2k or 88800000."; // UX-R33
-  // UX-R29: the comparison line the CLI prints for the same input (built CLI, npm run build first).
-  const cliCompare = (model: string) => (spawnSync(process.execPath, [fileURLToPath(new URL("../packages/cli/dist/index.js", import.meta.url)), "estimate", "88.8M", "--model", model], { encoding: "utf8", env: { PATH: process.env.PATH ?? "", HOME: scratch } }).stdout
-    .split("\n").map((l) => l.trim()).find((l) => l.startsWith("≈ ")) ?? "(CLI printed no ≈ line)");
+  // UX-R29: the comparison lines the CLI prints for the same input (built CLI, npm run build first). Since
+  // M4.8.3 (RANGE-10) each comparison carries a range and gets its own "≈" line, so all of them must match.
+  const cliCompare = (model: string) => JSON.stringify(spawnSync(process.execPath, [fileURLToPath(new URL("../packages/cli/dist/index.js", import.meta.url)), "estimate", "88.8M", "--model", model], { encoding: "utf8", env: { PATH: process.env.PATH ?? "", HOME: scratch } }).stdout
+    .split("\n").map((l) => l.trim()).filter((l) => l.startsWith("≈ ")));
   const compare = { Opus: cliCompare("opus"), Sonnet: cliCompare("sonnet") };
   for (const colorScheme of ["light", "dark"] as const) {
     for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
@@ -585,7 +586,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
         if (!lines.includes(META)) problems.push(`EST-17 UX-R32: ${label} result has no line "${META}" ${at}: ${shown}`);
         if (!lines.includes(WIDE)) problems.push(`EST-17 UX-R28: ${label} result has no line "${WIDE}" ${at}: ${shown}`);
         const cmp = lines.filter((l) => l.startsWith("≈ ") && !RESULT.test(l));
-        if (cmp.length !== 1 || cmp[0] !== compare[label]) problems.push(`EST-17 UX-R29: ${label} result's comparison line is ${JSON.stringify(cmp)}, want the CLI's "${compare[label]}" ${at}`);
+        if (cmp.length < 1 || JSON.stringify(cmp) !== compare[label]) problems.push(`EST-17 UX-R29: ${label} result's comparison lines are ${JSON.stringify(cmp)}, want the CLI's ${compare[label]} ${at}`);
       };
       await input.fill("88.8M");
       const opus = RESULT.exec(await boxText());

@@ -3,6 +3,8 @@ import {
   TYPE_LABELS,
   everyday,
   formatEnergy,
+  formatShare,
+  shareRange,
   int,
   num,
   shortModel,
@@ -45,19 +47,28 @@ export { num };
 
 const totalTokens = (t: TokenCounts) => TOKEN_TYPES.reduce((s, k) => s + t[k], 0);
 
-/** A share as a whole percent, but "<1%" when it is above zero and would round to 0. */
-export function percent(part: number, total: number): string {
-  if (!(total > 0)) return "0%";
-  const p = Math.round((part / total) * 100);
-  return p === 0 && part > 0 ? "<1%" : `${p}%`;
+/** Summary lines stay within a classic terminal width. */
+const COLS = 80;
+
+/**
+ * "opus-4-6 65% (61–65%)   sonnet-4-6 28% (…)": each item with its share range, largest first, as many as
+ * fit in `room` columns. Returns how many were left off, so the caller can point to --by.
+ */
+function shares(rows: Breakdown[], total: Range, label: (key: string) => string, room: number): { text: string; left: number } {
+  const shown: string[] = [];
+  let width = 0;
+  for (const r of rows) {
+    const item = `${clip(label(r.key))} ${formatShare(shareRange(r.energy, total))}`;
+    const next = width + (shown.length ? 3 : 0) + [...item].length;
+    if (shown.length && next > room) break;
+    shown.push(item);
+    width = next;
+  }
+  return { text: shown.join("   "), left: rows.length - shown.length };
 }
 
-function shares(rows: Breakdown[], total: number, label: (key: string) => string, max = 4): string {
-  const shown = rows.slice(0, max).map((r) => `${clip(label(r.key))} ${percent(r.energy.central, total)}`);
-  const rest = rows.slice(max).reduce((s, r) => s + r.energy.central, 0);
-  if (rest > 0) shown.push(`other ${percent(rest, total)}`);
-  return shown.join("   ");
-}
+/** "  ≈ driving an EV about 28 miles (4.4–102)", one comparison per line so each fits 80 columns. */
+const compareLines = (total: Range, params: Params) => everyday(total, params).split(" · ").map((c) => `  ≈ ${c}`);
 
 /** Longest name a table or summary line shows; longer ones end in "…" so lines fit a terminal. */
 const LABEL_MAX = 40;
@@ -85,18 +96,22 @@ export function summary(e: Estimate, params: Params, window: Window, sample = fa
   if (e.responses === 0) return `${header(params, window)}\n\n  No Claude Code usage found in this window. Try --since all.`;
   const { bold, dim } = styles(opts.color);
   const total = energy(e.total);
-  const kwh = e.total.central / 1000;
-  const compare = everyday(kwh, params);
   const top = e.byProject[0];
+  const lead = "  By model      ";
+  const byModel = shares(e.byModel, e.total, shortModel, COLS - lead.length);
+  const byType = shares(e.byType, e.total, (k) => TYPE_LABELS[k as TokenType], COLS - lead.length);
+  const more = [byModel.left ? "model" : "", byType.left ? "type" : ""].filter(Boolean).map((d) => `${APP_NAME} --by ${d}`);
   const lines = [
     header(params, window),
     "",
     `  Electricity   ${bold(total.central)}   ${dim(`(range ${total.range})`)}`,
-    `  ≈ ${compare}`,
+    ...compareLines(e.total, params),
     "",
-    `  By model      ${shares(e.byModel, e.total.central, shortModel, 3)}`,
-    `  By type       ${shares(e.byType, e.total.central, (k) => TYPE_LABELS[k as TokenType])}`,
+    `  By model      ${byModel.text}`,
+    `  By type       ${byType.text}`,
   ];
+  // Items that don't fit the line stay one command away, with their ranges.
+  if (more.length) lines.push(`  Full split    ${dim(more.join("   "))}`);
   if (top) {
     const t = energy(top.energy);
     lines.push(`  Top project   ${clip(projectName(top.key))}   ${t.central} ${dim(`(range ${t.range})`)}`);
@@ -151,7 +166,7 @@ export function breakdown(e: Estimate, params: Params, window: Window, dim: Dime
     int(totalTokens(r.tokens)),
     num(r.energy.central / scale),
     `${num(r.energy.low / scale)} – ${num(r.energy.high / scale)}`,
-    percent(r.energy.central, e.total.central),
+    formatShare(shareRange(r.energy, e.total)),
   ]);
   const t = energy(e.total);
   body.push(["total", int(totalTokens(e.tokens)), num(e.total.central / scale), t.range, "100%"]);
@@ -173,7 +188,7 @@ export function method(params: Params): string {
   lines.push(table(["parameter", "value", "range", "unit", "label"], rows, 1, { indent: "" }));
   lines.push("", "Sources:");
   for (const [id, p] of Object.entries(params.params)) lines.push(`  ${id}: ${p.source}`);
-  lines.push("", "Comparisons (central value only):");
+  lines.push("", "Comparisons (factor held at its central value; the range comes from the energy range):");
   for (const [id, c] of Object.entries(params.comparisons)) lines.push(`  ${id}: ${c.value} ${c.unit} · ${c.source}`);
   lines.push("", `Full write-up: ${REPO_URL}/blob/main/METHODOLOGY.md`);
   return lines.join("\n");
@@ -199,7 +214,7 @@ export function json(e: Estimate, params: Params, window: Window, sample = false
       responses: e.responses,
       tokens: e.tokens,
       wh: e.total,
-      comparisons: comparisons(e.total.central / 1000, params).map(({ id, amount }) => ({ id, amount })),
+      comparisons: comparisons(e.total, params).map(({ id, amount }) => ({ id, amount })),
       byModel: rows(e.byModel, "model"),
       byType: rows(e.byType, "type"),
       byDay: rows(e.byDay, "day"),
@@ -233,16 +248,19 @@ export function manual(r: ManualEstimate, params: Params, opts: RenderOptions = 
     `${APP_NAME} v${APP_VERSION} · method v${params.version} · a token count you entered`,
     "",
     `  Electricity   ${bold(total.central)}   ${dim(`(range ${total.range})`)}`,
-    `  ≈ ${everyday(r.total.central / 1000, params)}`,
+    ...compareLines(r.total, params),
     "",
     `  Model         ${clip(r.model)}${r.knownModel ? "" : ` (counted as ${r.tier})`}`,
-    `  Tokens        ${int(totalTokens(r.tokens))} · ${r.mixAssumed ? `mix assumed: ${mixLine(params)}` : given}`,
+    // The assumed mix gets its own line so the summary stays within 80 columns (RANGE-10).
+    ...(r.mixAssumed
+      ? [`  Tokens        ${int(totalTokens(r.tokens))}`, `  Mix assumed   ${mixLine(params)}`]
+      : [`  Tokens        ${int(totalTokens(r.tokens))} · ${given}`]),
   ];
   for (const w of r.warnings) lines.push(`  Note          ${w}`);
   lines.push("");
   if (r.mixAssumed) {
     lines.push(dim(`  ${MIX_GUESSED}`));
-    lines.push(dim(`  Know the split? Add --output, --cache-read, --cache-write or --input to narrow it.`));
+    lines.push(dim(`  Know the split? Add --output, --cache-read, --cache-write or --input.`));
   }
   lines.push(dim(`  How this is estimated: ${APP_NAME} --method`));
   return lines.join("\n");
@@ -262,7 +280,7 @@ export function manualJson(r: ManualEstimate, params: Params): string {
       tokens: r.tokens,
       mixAssumed: r.mixAssumed,
       wh: r.total,
-      comparisons: comparisons(r.total.central / 1000, params).map(({ id, amount }) => ({ id, amount })),
+      comparisons: comparisons(r.total, params).map(({ id, amount }) => ({ id, amount })),
     },
     null,
     2,

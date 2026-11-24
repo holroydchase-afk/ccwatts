@@ -63,13 +63,13 @@ export function energySummary(usage: Usage, window: Window, params: Params) {
   return {
     ...base(params, window, usage),
     summary: e.responses
-      ? `About ${text(e.total)} of electricity, ${window.label}: ${everyday(e.total.central / 1000, params)}. Estimate, method v${params.version}.`
+      ? `About ${text(e.total)} of electricity, ${window.label}: ${everyday(e.total, params)}. Estimate, method v${params.version}.`
       : `No Claude Code usage found, ${window.label}.`,
     wh: wh(e.total),
     span: e.span,
     responses: e.responses,
     tokens: e.tokens,
-    comparisons: comparisons(e.total.central / 1000, params).map((c) => ({ id: c.id, amount: round(c.amount), text: c.text })),
+    comparisons: comparisons(e.total, params).map((c) => ({ id: c.id, amount: round(c.amount), text: c.text })),
     byModel: e.byModel.map((r) => ({ model: r.key, wh: wh(r.energy), share: share(r, e.total), tokens: tokenTotal(r.tokens) })),
     byType: e.byType.map((r) => ({ type: r.key, wh: wh(r.energy), share: share(r, e.total), tokens: tokenTotal(r.tokens) })),
     warnings: e.warnings,

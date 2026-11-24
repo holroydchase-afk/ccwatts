@@ -1,5 +1,5 @@
-import { comparisons, type Estimate } from "./energy.js";
-import { formatEnergy, int, num, shortModel, TYPE_LABELS } from "./format.js";
+import { comparisons, type Estimate, type Range } from "./energy.js";
+import { formatEnergy, formatShare, int, num, shareRange, shortModel, TYPE_LABELS } from "./format.js";
 import { APP_NAME, PLAYGROUND_URL, REPO_URL } from "./meta.js";
 import type { Params } from "./params.js";
 import { TOKEN_TYPES, type TokenType } from "./types.js";
@@ -13,9 +13,9 @@ export interface ReceiptInput {
   sample?: boolean | undefined;
 }
 
-/** Up to two everyday comparisons big enough to picture (at least 1 of the thing), else the largest. */
-export function everyday(kwh: number, params: Params): string {
-  const all = comparisons(kwh, params);
+/** Up to two everyday comparisons big enough to picture (at least 1 of the thing, central), else the largest. Each carries its range. */
+export function everyday(total: Range, params: Params): string {
+  const all = comparisons(total, params);
   const big = all.filter((c) => c.amount >= 1).slice(0, 2);
   const fallback = [...all].sort((a, b) => b.amount - a.amount).slice(0, 1);
   return (big.length ? big : fallback).map((c) => c.text).join(" · ");
@@ -35,10 +35,20 @@ function sampleWhose(windowLabel: string): string {
   return windowLabel === "all time" ? "(Sample data) All of a sample's Claude Code use" : `(Sample data) ${windowLabel[0]!.toUpperCase()}${windowLabel.slice(1)} of Claude Code`;
 }
 
+/**
+ * The cache-read ("re-reading") share in words, the one place its headline wording lives (SPEC-RANGES,
+ * "Decision for Chase", pending): "About 64% (30–72%)", never "Most"; a surprise only when even the low
+ * end is at least half.
+ */
+export function rereadShare(share: Range): { share: string; sentence: string; surprise: boolean } {
+  const text = formatShare(share);
+  return { share: text, sentence: `About ${text}`, surprise: share.low >= 0.5 };
+}
+
 /** One line to paste anywhere. Central value first, range right after, method version always. */
 export function shareLine({ estimate: e, params, windowLabel, sample }: ReceiptInput): string {
   const t = formatEnergy(e.total);
-  const first = everyday(e.total.central / 1000, params).split(" · ")[0];
+  const first = everyday(e.total, params).split(" · ")[0];
   return `${sample ? sampleWhose(windowLabel) : whose(windowLabel)} came to about ${t.central} of electricity (range ${t.range} ${t.unit}), like ${first}. Estimated locally with ${APP_NAME}, method v${params.version}: ${repoShort}`;
 }
 
@@ -46,28 +56,29 @@ export function shareLine({ estimate: e, params, windowLabel, sample }: ReceiptI
 export function linkedInPost(input: ReceiptInput): string {
   const { estimate: e, params, windowLabel, sample } = input;
   const t = formatEnergy(e.total);
-  const cacheShare = e.total.central > 0 ? Math.round(((e.byType.find((r) => r.key === "cacheRead")?.energy.central ?? 0) / e.total.central) * 100) : 0;
+  const read = e.byType.find((r) => r.key === "cacheRead")?.energy ?? { low: 0, central: 0, high: 0 };
+  const cache = rereadShare(shareRange(read, e.total));
   if (sample) {
     return [
-      `(Sample data) This is what ${APP_NAME} shows for a sample developer, not a real measurement. ${sampleWhose(windowLabel).replace("(Sample data) ", "")}: about ${t.central} (range ${t.range} ${t.unit}), like ${everyday(e.total.central / 1000, params).replace(" · ", " or ")}.`,
+      `(Sample data) This is what ${APP_NAME} shows for a sample developer, not a real measurement. ${sampleWhose(windowLabel).replace("(Sample data) ", "")}: about ${t.central} (range ${t.range} ${t.unit}), like ${everyday(e.total, params).replace(" · ", " or ")}.`,
       "",
-      `${cacheShare}% of it came from the agent re-reading context it had already seen.`,
+      `${cache.sentence} of it came from the agent re-reading context it had already seen.`,
       "",
       `It's a range because nobody outside the AI labs knows the real energy per token. Every assumption is sourced, and it runs entirely on your own machine, so no logs leave it.`,
       "",
       `Try it on your own logs: ${PLAYGROUND_URL}`,
-      `Code and method: ${REPO_URL}`,
+      `Code and method v${params.version}: ${REPO_URL}`,
     ].join("\n");
   }
   return [
-    `I estimated the electricity behind my AI coding. ${whose(windowLabel)}: about ${t.central} (range ${t.range} ${t.unit}), like ${everyday(e.total.central / 1000, params).replace(" · ", " or ")}.`,
+    `I estimated the electricity behind my AI coding. ${whose(windowLabel)}: about ${t.central} (range ${t.range} ${t.unit}), like ${everyday(e.total, params).replace(" · ", " or ")}.`,
     "",
-    `${cacheShare >= 50 ? "The surprise: " : ""}${cacheShare}% of it came from the agent re-reading context it had already seen.`,
+    `${cache.surprise ? "The surprise: about" : "About"} ${cache.share} of it came from the agent re-reading context it had already seen.`,
     "",
     `It's a range because nobody outside the AI labs knows the real energy per token. Every assumption is sourced, and the tool runs entirely on my laptop, so no logs leave it.`,
     "",
     `Try it in your browser: ${PLAYGROUND_URL}`,
-    `Code and method: ${REPO_URL}`,
+    `Code and method v${params.version}: ${REPO_URL}`,
   ].join("\n");
 }
 
@@ -87,8 +98,7 @@ export function receiptSvg({ estimate: e, params, windowLabel, sample }: Receipt
   const W = 1200;
   const H = 627;
   const t = formatEnergy(e.total);
-  const kwh = e.total.central / 1000;
-  const compare = everyday(kwh, params).split(" · ");
+  const compare = everyday(e.total, params).split(" · ");
   const unit = t.unit;
   const scale = unit === "kWh" ? 1000 : 1;
 
@@ -106,15 +116,18 @@ export function receiptSvg({ estimate: e, params, windowLabel, sample }: Receipt
   );
   for (const type of types) {
     const r = e.byType.find((x) => x.key === type);
-    items.push({ text: row(TYPE_LABELS[type as TokenType], `${num((r?.energy.central ?? 0) / scale)} ${unit}`, cols) });
+    const en = r?.energy ?? { low: 0, central: 0, high: 0 };
+    items.push({ text: row(TYPE_LABELS[type as TokenType], `${num(en.central / scale)} (${num(en.low / scale)}–${num(en.high / scale)}) ${unit}`, cols) });
   }
   items.push({ text: dash, muted: true });
   items.push({ text: row("TOTAL (central)", t.central, cols), weight: "bold" });
   items.push({ text: row("RANGE", `${t.range} ${unit}`, cols) });
   items.push({ text: dash, muted: true });
   for (const m of e.byModel.slice(0, 3)) {
-    const pct = e.total.central > 0 ? Math.round((m.energy.central / e.total.central) * 100) : 0;
-    items.push({ text: row(shortModel(m.key), `${pct}%`, cols), muted: true });
+    const share = formatShare(shareRange(m.energy, e.total));
+    const name = shortModel(m.key);
+    const room = cols - share.length - 4;
+    items.push({ text: row(name.length > room ? `${name.slice(0, room - 1)}…` : name, share, cols), muted: true });
   }
   items.push({ text: row("responses", int(e.responses), cols), muted: true });
   items.push({ text: `method v${params.version} · counts only`, muted: true });

@@ -277,12 +277,16 @@ describe("ccwatts CLI day-one gaps (CCW-M2.6.2)", () => {
     expect(r.out).not.toContain("2026-10-01 to 2026-10-01");
   });
 
+  // M4.8.3 RANGE-10: the summary's "By type" line now carries share ranges and only lists what fits in
+  // 80 columns, so the small input share moved behind `--by type`, where every row shows its share.
   it("CCW-F5: a share above zero that rounds to 0 prints '<1%', not '0%'", () => {
-    const r = cli(["--path", oneDay(), "--since", "all"], { HOME: home() });
+    const r = cli(["--path", oneDay(), "--since", "all", "--by", "type"], { HOME: home() });
     expect(r.code).toBe(0);
-    const byType = r.out.split("\n").find((l) => l.includes("By type")) ?? "";
-    expect(byType).toContain("input <1%");
-    expect(byType).not.toMatch(/input 0%/);
+    const input = r.out.split("\n").find((l) => /^\s+input\s/.test(l)) ?? "";
+    expect(input).toMatch(/\s<1%$/);
+    expect(input).not.toMatch(/\s0%/);
+    const summary = cli(["--path", oneDay(), "--since", "all"], { HOME: home() }).out;
+    expect(summary).not.toMatch(/input 0%/);
   });
 
   it("CCW-F5: history with one recorded day says '1 day', not '1 days'", () => {

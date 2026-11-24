@@ -49,7 +49,8 @@ function tree(dir: string): string[] {
 
 const MISSING = "Give a token count, e.g. ccwatts estimate 88.8M --model opus";
 const WIDE = "Wide range: the mix of token types is guessed.";
-const KNOW_SPLIT = "Know the split? Add --output, --cache-read, --cache-write or --input to narrow it.";
+// M4.8.3 RANGE-10: shortened from "... or --input to narrow it." so the line fits 80 columns.
+const KNOW_SPLIT = "Know the split? Add --output, --cache-read, --cache-write or --input.";
 const unreadable = (x: string) => `Couldn't read "${x}" as a token count. Try 88.8M, 1.2k or 88800000.`;
 
 describe("EST-8 ccwatts estimate: text", () => {
@@ -64,7 +65,8 @@ describe("EST-8 ccwatts estimate: text", () => {
     expect(shown.unit).toBe("kWh");
     expect(r.out).toMatch(/≈ /); // the comparison line, as in the summary
     expect(r.out).toMatch(/Model\s+opus\n/); // UX-R31: no "(tier opus)"
-    expect(r.out).toMatch(/Tokens\s+88,800,000 · mix assumed: /);
+    // M4.8.3 RANGE-10: the assumed mix moved to its own line to fit 80 columns.
+    expect(r.out).toMatch(/Tokens\s+88,800,000\n\s+Mix assumed\s+\d/);
     expect(r.out).toContain(KNOW_SPLIT); // UX-R28 wording
     expect(r.out).toContain("How this is estimated: ccwatts --method");
   });

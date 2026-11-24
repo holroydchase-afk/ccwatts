@@ -195,7 +195,9 @@ describe("EF-CC-4 Share card preview (EF-5, EF-6, static)", () => {
   it("EF-6 the sample card SVG from core is byte-identical to before (pinned hash)", () => {
     const rows = readSample(html);
     const svg = receiptSvg({ estimate: estimate(rollupRecords(rows), defaultParams), params: defaultParams, windowLabel: "EF-6 fixture", sample: true });
-    expect(createHash("sha256").update(svg).digest("hex")).toBe("b9ea1343c9e18d88a34b139df0cfa37040f4131034c51bfb21a9106fa62daf5f");
+    // Re-pinned for M4.8.3 (SPEC-RANGES RANGE-8): the slip's per-type and model rows now carry ranges and the
+    // comparison lines carry (low–high). The EF-6 intent stands: the web preview changes nothing in the card.
+    expect(createHash("sha256").update(svg).digest("hex")).toBe("17fc38c7af21499ce024c5043d94f874ba86a228ac59df074c6fa822e2e3cca1");
   });
 });
 
