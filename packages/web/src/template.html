@@ -173,7 +173,7 @@ details:not([open])>:not(summary){display:none}
 details>*+*{margin-top:8px}
 @media (prefers-reduced-motion:no-preference){.disclose::before{transition:transform .15s ease}.rank .bar span{transition:width .3s ease}}
 /* "What if?" cache-read slider (M2.6.5): a what-if view, never the published estimate. */
-.whatif{display:flex;flex-direction:column;gap:8px;max-width:65ch}
+.whatif{display:flex;flex-direction:column;gap:8px;max-width:72ch}
 .whatif-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
 /* UX-R65: the h2 shares the row with the label and value, so the column stays as short as the token box beside it (AC-T2). */
 .whatif-pick{display:flex;align-items:baseline;gap:12px}
@@ -185,6 +185,8 @@ details>*+*{margin-top:8px}
 .whatif-scale .mark{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
 .whatif-scale .mark::before{content:"";position:absolute;left:50%;top:-8px;height:4px;border-left:1px solid var(--muted)}
 .whatif-note{border-left:4px solid var(--sample);padding-left:12px}
+.whatif-note .wl{display:block}
+@media (min-width:960px){.drives-tools{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}}
 .whatif button{align-self:flex-start}
 .note{max-width:65ch}
 /* "Have a token count?" (EST): a total typed in, for usage with no local log. Electricity tab, beside What if on wide screens, under it on phones. */
@@ -246,8 +248,9 @@ a.src{display:inline-flex;align-items:center;min-height:48px;min-width:48px}
 .pace .agent{fill:var(--c4)}
 .legend i.agent{background:var(--c4)}
 .legend i.sofar{background-color:var(--c1);background-image:repeating-linear-gradient(-45deg,transparent 0 2px,var(--hatch) 2px 4px)}
-.pace-lead{max-width:60ch;text-wrap:pretty}
+.pace-lead{max-width:60ch;text-wrap:pretty;font-size:22px;line-height:28px;font-weight:600}
 .pace-lead b{font-weight:600}
+.nw{white-space:nowrap}
 .pace-sofar{color:var(--muted)}
 .legend .whisker{width:2px;height:12px;border-radius:0;background:var(--ink);margin-left:4px;margin-right:8px}
 #pace-chart text.val{fill:var(--ink);font-weight:600}
@@ -427,7 +430,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
           </div>
           <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
           <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
-          <p class="whatif-note" id="whatif-note" role="status" hidden></p>
+          <p class="whatif-note" id="whatif-note" role="status"></p>
           <details class="fine" id="whatif-why">
             <summary class="disclose">Why this assumption?</summary>
             <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
@@ -459,21 +462,21 @@ Leave out everything else, especially message content. Save the lines as ccwatts
 
   <section id="pace" class="pace" role="tabpanel" aria-labelledby="tab-pace" hidden>
     <div class="pace-title">
-      <span class="eyebrow">Your work rhythm · opt-in · stays local</span>
       <div class="pace-head">
         <h2 id="pace-h">Pace</h2>
-        <span class="pill sample" id="pace-pill">Sample data</span>
       </div>
     </div>
     <div id="pace-body">
       <p class="pace-lead" id="pace-lead"></p>
-      <p class="pace-sofar" id="pace-sofar" hidden></p>
-      <p class="pace-agents" id="pace-agents"></p>
       <div class="legend" id="pace-legend" aria-hidden="true"><span><i style="background:var(--c1)"></i>Active hours</span><span><i style="background:var(--c2)"></i>Past __PACE_LATE__ (part of active)</span><span><i class="agent"></i>Agent-only</span><span><i class="sofar"></i>This week, so far</span><span><i class="whisker"></i>Low – high range</span></div>
       <svg class="chart" id="pace-chart" viewBox="0 0 720 260" role="img" aria-label="Active and agent-only hours per week, last 4 weeks"></svg>
       <table class="vh" id="pace-table"></table>
+      <p class="pace-rest" id="pace-rest"></p>
+      <p class="pace-sofar" id="pace-sofar" hidden></p>
+      <p class="pace-agents" id="pace-agents"></p>
       <details class="fine" id="pace-how">
         <summary class="disclose">How Pace is counted</summary>
+        <p class="note">Your work rhythm · opt-in · stays local</p>
         <p class="note pace-foot" id="pace-foot">__PACE_NOTES__</p>
       </details>
     </div>
@@ -486,6 +489,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
   <section id="p-share" role="tabpanel" aria-labelledby="tab-share" hidden>
     <div class="block">
       <h2>Share it</h2>
+      <p class="card-sample" id="card-sample">Sample data</p>
       <img class="card" id="card" alt="Electricity receipt card" width="1200" height="627">
       <a class="phone-only full-size" id="card-full" href="#" target="_blank" rel="noopener noreferrer">Open full size</a>
       <div class="controls">
@@ -510,8 +514,8 @@ Leave out everything else, especially message content. Save the lines as ccwatts
         <summary class="disclose">More on the method</summary>
         <p class="explain" id="method-more"></p>
       </details>
-      <details id="params-box">
-        <summary class="disclose">Show all parameters and sources</summary>
+      <details id="params-box" open>
+        <summary class="disclose">Parameters and sources</summary>
         <div class="tablewrap"><table id="params"></table></div>
       </details>
     </div>
