@@ -19,7 +19,10 @@ function fnv1a64(text: string): string {
 export function projectRef(cwd: string): ProjectRef {
   const trimmed = cwd.replace(/[\\/]+$/, "");
   const base = trimmed.split(/[\\/]/).pop() || trimmed;
-  // A session run at the filesystem root has no basename; a name of only control characters is empty once cleaned.
-  const name = trimmed === "" ? "(root)" : safeName(base) || "(unnamed)";
+  // A session run at a filesystem root ("/" trims to "", a Windows drive root like "C:\" or "D:"
+  // trims to "C:") has no basename, so it is named "(root)"; the id still hashes the trimmed path,
+  // so each drive keeps its own id. A name of only control characters is empty once cleaned.
+  const isRoot = trimmed === "" || /^[A-Za-z]:$/.test(trimmed);
+  const name = isRoot ? "(root)" : safeName(base) || "(unnamed)";
   return { id: fnv1a64(trimmed), name };
 }
