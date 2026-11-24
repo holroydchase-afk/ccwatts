@@ -28,8 +28,9 @@ const readmePrompt = [...readme.matchAll(/^```[^\n]*\n([\s\S]*?)\n```$/gm)].map(
 
 const SUMMARY = "Use Claude Code on the web? Ask it.";
 const INTRO = "Paste this into a Claude Code session at claude.ai/code. Claude runs ccwatts there and replies with that session's electricity, from token counts only. Each web session keeps only its own log. Plain claude.ai chats keep none; use the token count box instead.";
-const FALLBACK = "Claude says npm is blocked? Some sessions can't download tools. If your app shows a token total for the session, type it in the \"Have a token count?\" box on this page. Otherwise, run the prompt on a computer with Claude Code.";
-const PHONE = "On a phone? Your logs live where Claude Code runs. Use the prompt below in Claude Code on the web.";
+const FALLBACK = "Claude says npm is blocked? Some sessions can't download tools. If your app shows a token total for the session, type it in the \"Have a token count?\" box on the Electricity tab. Otherwise, run the prompt on a computer with Claude Code.";
+// UX-R69: the phone hint is one line; the disclosure's own summary already says what to do.
+const PHONE = "On a phone? Your logs live where Claude Code runs.";
 const PROMPT = `Estimate the electricity this Claude Code session has used, with ccwatts.
 
 1. Run: npx -y ccwatts@latest
@@ -156,4 +157,34 @@ describe("CLOUDP-9 the fallback line uses plain spaces", () => {
       expect(NBSP.exec(line)?.index, `${name}: U+00A0 in the fallback line`).toBeUndefined();
     }
   });
+});
+
+describe("CLOUDP-10 UX-R70 the fallback line points to the token box on the Electricity tab", () => {
+  // The token box is no longer on the same view as #drop (STUDIO-DS tabs), so "on this page" misleads.
+  const line = (src: string) => /<p[^>]*>\s*Claude says npm is blocked\?[\s\S]*?<\/p>/.exec(cloudIn(src))?.[0] ?? "";
+  for (const [name, src] of [["template", template], ["built page", html]] as const) {
+    it(`CLOUDP-10 UX-R70 (${name}) the line says "on the Electricity tab", not "on this page"`, () => {
+      const t = text(line(src));
+      expect(t, "fallback line found").not.toBe("");
+      expect(t).toContain("box on the Electricity tab.");
+      expect(t).not.toContain("on this page");
+    });
+    it(`CLOUDP-10 UX-R70 (${name}) "Have a token count?" in it is a link to #electricity`, () => {
+      const links = [...line(src).matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+      const box = links.find((m) => text(m[2]) === "Have a token count?");
+      expect(box, "<a> whose text is \"Have a token count?\"").toBeDefined();
+      expect(box?.[1]).toMatch(/\shref="#electricity"/);
+    });
+  }
+});
+
+describe("CLOUDP-11 UX-R69 the phone hint is one short line", () => {
+  for (const [name, src] of [["template", template], ["built page", drop]] as const) {
+    it(`CLOUDP-11 UX-R69 (${name}) #phone-hint reads exactly "${PHONE}"`, () => {
+      const hint = /<p[^>]*id="phone-hint"[^>]*>([\s\S]*?)<\/p>/.exec(src)?.[1];
+      expect(hint, "#phone-hint found").toBeDefined();
+      expect(text(hint ?? "")).toBe(PHONE);
+      expect(text(hint ?? "")).not.toContain("prompt below");
+    });
+  }
 });

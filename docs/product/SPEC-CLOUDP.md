@@ -25,10 +25,12 @@ Rules: ccwatts reads token counts only. Don't open, read, search or quote the lo
 ```
 
 ### Under the Copy button
-Claude says npm is blocked? Some sessions can't download tools. If your app shows a token total for the session, type it in the "Have a token count?" box on this page. Otherwise, run the prompt on a computer with Claude Code.
+Claude says npm is blocked? Some sessions can't download tools. If your app shows a token total for the session, type it in the "Have a token count?" box on the Electricity tab. Otherwise, run the prompt on a computer with Claude Code.
+
+("Have a token count?" is a link to `#electricity`. Plain spaces only, no U+00A0: CLOUDP-9, UX-R70.)
 
 ### Phone hint (replaces `#phone-hint`)
-On a phone? Your logs live where Claude Code runs. Use the prompt below in Claude Code on the web.
+On a phone? Your logs live where Claude Code runs.
 
 ### README
 Under the playground or CLI section: "Using Claude Code on the web? Paste this prompt into a session, and Claude runs `npx -y ccwatts@latest` there and replies with that session's range. It counts tokens only, and only that session." followed by the prompt in a code block.
