@@ -67,7 +67,7 @@ function shares(rows: Breakdown[], total: Range, label: (key: string) => string,
   return { text: shown.join("   "), left: rows.length - shown.length };
 }
 
-/** "  ≈ driving an EV about 28 miles (4.4–102)", one comparison per line so each fits 80 columns. */
+/** "  ≈ driving an EV about 28 miles (4.4–100)", one comparison per line so each fits 80 columns. */
 const compareLines = (total: Range, params: Params) => everyday(total, params).split(" · ").map((c) => `  ≈ ${c}`);
 
 /** Longest name a table or summary line shows; longer ones end in "…" so lines fit a terminal. */
@@ -165,7 +165,7 @@ export function breakdown(e: Estimate, params: Params, window: Window, dim: Dime
     label(r.key),
     int(totalTokens(r.tokens)),
     num(r.energy.central / scale),
-    `${num(r.energy.low / scale)} – ${num(r.energy.high / scale)}`,
+    `${num(r.energy.low / scale)}–${num(r.energy.high / scale)}`,
     formatShare(shareRange(r.energy, e.total)),
   ]);
   const t = energy(e.total);
@@ -314,7 +314,7 @@ export function history(e: Estimate, params: Params, window: Window, storedDays:
   const rows = weeks.map((w) => [
     `week of ${tag(w.start)}`,
     num(w.central / scale),
-    `${num(w.low / scale)} – ${num(w.high / scale)}`,
+    `${num(w.low / scale)}–${num(w.high / scale)}`,
     "█".repeat(Math.round((w.central / peak) * 20)),
   ]);
   const active = weeks.filter((w) => w.central > 0);

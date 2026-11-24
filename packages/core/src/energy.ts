@@ -204,25 +204,41 @@ export interface ComparisonLine {
 /** Rounds a comparison amount: whole numbers from 10 up, else one decimal. */
 const roundAmount = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10);
 
-/** A range end with the central's rounding; above 0 but rounding to 0 reads "<0.1". */
-const end = (n: number) => (n > 0 && roundAmount(n) === 0 ? "<0.1" : String(roundAmount(n)));
+/**
+ * A range end: 2 significant figures, at most 1 decimal (102 -> 100, 4.44 -> 4.4, 0.93 -> 0.9), so the
+ * ends never claim more precision than the central (UX-R14). Above 0 but rounding to 0 reads "<0.1".
+ */
+function roundEnd(n: number): number {
+  if (n <= 0) return 0;
+  const d = Math.min(1, 1 - Math.floor(Math.log10(n)));
+  return d >= 0 ? Math.round(n * 10 ** d) / 10 ** d : Math.round(n / 10 ** -d) * 10 ** -d;
+}
+const end = (n: number) => (n > 0 && roundEnd(n) === 0 ? "<0.1" : String(roundEnd(n)));
 
-/** "(4.4–102)": both ends of a comparison, from the total's low and high. Nothing when both ends round the same (a point estimate). */
+/** "(4.4–100)": both ends of a comparison, from the total's low and high. Nothing when both ends round the same (a point estimate). */
 const span = (low: number, high: number) => (end(low) === end(high) ? "" : ` (${end(low)}–${end(high)})`);
 
 /**
  * Phone charges in words: "about 30% (10–90%) of a phone charge" rather than "0.3 times" for small
- * totals, with the range in the same unit as the central.
+ * totals, with the range in the same unit as the central. A range whose high end tops one charge never
+ * prints a percent above 100; it reads in charges instead: "about half a phone charge (0.1–1.5 charges)".
+ * A total whose high end is under 1% of a charge reads "under 1% of a phone charge".
  */
 function phoneText(c: Range): string {
-  if (c.central >= 1) {
+  if (roundAmount(c.central) >= 1) {
     const times = roundAmount(c.central) === 1 ? "once" : `${roundAmount(c.central)} times`;
     return `charging a phone about ${times}${span(c.low, c.high)}`;
   }
+  if (Math.round(c.high * 100) > 100) {
+    const tenths = Math.round(c.central * 10) / 10;
+    const central = tenths === 0 ? "under a tenth of" : tenths === 0.5 ? "about half" : `about ${tenths} of`;
+    return `${central} a phone charge (${end(c.low)}–${end(c.high)} charges)`;
+  }
+  if (c.high < 0.01) return "under 1% of a phone charge";
   const pct = (v: number) => (v > 0 && Math.round(v * 100) === 0 ? "<1" : String(Math.round(v * 100)));
-  if (Math.round(c.high * 100) < 1) return "under 1% of a phone charge";
   const central = Math.round(c.central * 100);
-  const shown = central >= 10 ? Math.round(central / 10) * 10 : central || "<1";
+  if (central === 0) return `under 1% (<1–${pct(c.high)}%) of a phone charge`;
+  const shown = central >= 10 ? Math.round(central / 10) * 10 : central;
   return `about ${shown}% (${pct(c.low)}–${pct(c.high)}%) of a phone charge`;
 }
 

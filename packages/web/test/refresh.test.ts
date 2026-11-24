@@ -81,7 +81,7 @@ function sampleWindow(rows: RollupRow[], id: "7d" | "30d" | "all"): RollupRow[] 
 }
 function expectedHero(id: "7d" | "30d" | "all") {
   const t = formatEnergy(estimate(rollupRecords(sampleWindow(readSample(html), id)), defaultParams).total);
-  const [low, high] = t.range.split(" – ");
+  const [low, high] = t.range.split("–");
   return { low: low!, high: high!, central: t.central.split(" ")[0]! };
 }
 

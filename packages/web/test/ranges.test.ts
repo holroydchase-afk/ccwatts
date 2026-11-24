@@ -11,12 +11,12 @@ import { launch } from "../../../tools/showcase-check/check.ts";
 // RANGE-12; UX-R6 P1, CCW-DEC-17). Tested on the built page (packages/web/dist/ccwatts.html,
 // synthetic sample data only) in a real browser, playground and `ccwatts dashboard` mode.
 //
-// Expected numbers come from the sample (method v0.1.2): total 1.3 – 30.5 kWh, central 8.5;
+// Expected numbers come from the sample (method v0.1.2): total 1.3–30.5 kWh, central 8.5;
 // cache read share 30 / 64 / 72 %, cache write 48 / 26 / 21, output 22 / 10 / 7;
 // EV 4.4 / 28 / 102 miles, fridge 0.9 / 5.7 / 20 days. If params.json or the sample move, these move.
 //
 // API choices pinned here (for the engineer):
-//  - A share reads "64% (30–72%)" and a comparison "about 28 miles (4.4–102)" (core formatShare /
+//  - A share reads "64% (30–72%)" and a comparison "about 28 miles (4.4–100)" (core formatShare /
 //    comparisons, en dash, no spaces), inside the same block element as the number.
 //  - RANGE-7: one link per panel (Overview, Electricity), accessible name exactly "How we got this
 //    range", href="#method", not nested in another <a>, tap target >= 48x48 px, within 120px
@@ -37,7 +37,7 @@ const LINK = "How we got this range";
 const CACHE_READ = "64% (30–72%)";
 const CACHE_WRITE = "26% (21–48%)";
 const OUTPUT = "10% (7–22%)";
-const EV = "about 28 miles (4.4–102)";
+const EV = "about 28 miles (4.4–100)"; // UX-R14 (was 4.4–102)
 const FRIDGE = "about 5.7 days (0.9–20)";
 
 // ---------------------------------------------------------------------------------------------

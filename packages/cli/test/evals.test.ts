@@ -32,7 +32,7 @@ describe("EVAL-3 The breakdown table says when a model was unknown (render)", ()
   it("EVAL-3 the note still comes with the range and the method version", () => {
     const out = breakdown(estimate([record("mystery-1")], params), params, window, "model");
     expect(out).toContain(NOTE);
-    expect(out).toMatch(/[\d.]+ – [\d.]+/);
+    expect(out).toMatch(/[\d.]+–[\d.]+/);
     expect(out).toContain(`method v${params.version}`);
   });
 

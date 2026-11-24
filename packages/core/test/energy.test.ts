@@ -138,7 +138,7 @@ describe("comparisons", () => {
     const phone = (kwh: number) => comparisons(spread(kwh), params).find((c) => c.id === "phone")?.text;
     expect(phone(0.0095)).toBe("about 50% (25–100%) of a phone charge");
     expect(phone(0.0057)).toBe("about 30% (15–60%) of a phone charge");
-    expect(phone(0.000002)).toBe("under 1% of a phone charge");
+    expect(phone(0.00005)).toBe("under 1% of a phone charge"); // QA-R1: restored to the original CCW-RR-20 input
     expect(phone(0.019)).toBe("charging a phone about once (0.5–2)");
     expect(phone(0.038)).toBe("charging a phone about 2 times (1–4)");
     for (const kwh of [0.0095, 0.0057, 0.019, 0.038]) expect(phone(kwh)).not.toMatch(/\d\.\d times/);

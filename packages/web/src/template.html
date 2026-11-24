@@ -126,7 +126,8 @@ main button.primary:hover,.btn.primary:hover{box-shadow:none;text-decoration:und
 .ov-compare{padding:0}
 /* RANGE-7: "How we got this range" sits beside the range, outside the row link. 48px target, drawn compact. */
 .how{display:inline-flex;align-items:center;align-self:flex-start;min-height:48px;min-width:48px;margin:-12px 0}
-.group>.how{padding:0 16px}
+/* UX-R13: the Overview link text lines up with the comparison under it; 4px bottom margin + the 8px gap keep its 48px box 12px clear of it. */
+.group>.how{padding:0;margin:-12px 0 4px}
 .ov-cta{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .ov-cta .btn{text-decoration:none}
 .back{display:inline-flex;align-items:center;gap:8px;min-height:48px;min-width:48px;align-self:flex-start;font-weight:600;text-decoration:none}

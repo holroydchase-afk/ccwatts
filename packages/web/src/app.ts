@@ -152,7 +152,7 @@ function renderRangeBar(e: Estimate, t: ReturnType<typeof formatEnergy>, fixed: 
     el.innerHTML = `<span class="range-empty">No usage in this window.</span>`;
     return;
   }
-  const [low, high] = t.range.split(" – ");
+  const [low, high] = t.range.split("–");
   const at = rangeAt(e);
   el.setAttribute("aria-label", `Plausible range ${t.range} ${t.unit}, central ${t.central}${fixed}`);
   el.innerHTML =

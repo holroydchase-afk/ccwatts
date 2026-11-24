@@ -23,14 +23,14 @@ export function num(n: number): string {
 /** Like num(), but keeps one decimal between 1 and 100 ("8.0", not "8"), so totals line up across surfaces. */
 const fixed = (n: number) => (n >= 1 && n < 100 ? n.toFixed(1) : num(n));
 
-/** Picks Wh or kWh from the high bound and uses it for the whole range, so no row reads "88.5 – 2,155 Wh". */
+/** Picks Wh or kWh from the high bound and uses it for the whole range, so no row reads "88.5–2,155 Wh". Tight en dash, like every other range (UX-R15). */
 export function formatEnergy(range: Range): { central: string; range: string; unit: string } {
   const kwh = range.high >= 1000;
   const scale = kwh ? 1000 : 1;
   const unit = kwh ? "kWh" : "Wh";
   return {
     central: `${fixed(range.central / scale)} ${unit}`,
-    range: `${fixed(range.low / scale)} – ${fixed(range.high / scale)}`,
+    range: `${fixed(range.low / scale)}–${fixed(range.high / scale)}`,
     unit,
   };
 }

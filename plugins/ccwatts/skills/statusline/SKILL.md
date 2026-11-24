@@ -5,7 +5,7 @@ disable-model-invocation: true
 ---
 
 Set up a status line that shows this session's energy estimate, for example:
-`⚡ ~9.1 Wh this session (range 2.3 – 27.5) · method v0.1.0`
+`⚡ ~9.1 Wh this session (range 2.3–27.5) · method v0.1.0`
 
 Plugins can't set a status line themselves, so this edits the user's own settings. Steps:
 

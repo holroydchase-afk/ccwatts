@@ -50,11 +50,11 @@ const PAGE = { kwh: "8.5", low: "1.3", high: "30.5", method: "0.1.2", from: "202
 const inclusiveDays = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
 
 describe("portfolio page numbers (intake #117)", () => {
-  it("PORT-1 --demo prints the quoted 8.5 kWh with range 1.3 – 30.5", () => {
+  it("PORT-1 --demo prints the quoted 8.5 kWh with range 1.3–30.5", () => {
     const r = cli(["--demo"]);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/sample data/i);
-    expect(r.out).toContain(`Electricity   ${PAGE.kwh} kWh   (range ${PAGE.low} – ${PAGE.high})`);
+    expect(r.out).toContain(`Electricity   ${PAGE.kwh} kWh   (range ${PAGE.low}–${PAGE.high})`);
   });
 
   it("PORT-2 --demo shows method v0.1.2 and the 30-day span the page quotes", () => {

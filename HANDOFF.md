@@ -34,7 +34,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - 2026-11-24: CLOUDP (spec docs/product/SPEC-CLOUDP.md): a cloud-session prompt in Your logs ("Use Claude Code on the web? Ask it.": Claude runs `npx -y ccwatts@latest` and replies in three lines, token counts only) and the same prompt byte for byte in the README. CLOUDP-1 to CLOUDP-11 test-first (packages/web/test/cloudp.test.ts, plus the browser block in check-no-network.ts). ux-reviewer UX-R69 (one-line phone hint) and UX-R70 (fallback points to the "Have a token count?" box on the Electricity tab, now a link to #electricity) fixed; UX-R68 left as P2. Save hook verified Nov 23: 6 sessions saved since Nov 22.
 
 ## In progress
-- M4.8.3 ranges on every number: built on `claude/project-thread-g2k1g8`, awaiting qa-tdd 3x, ux-reviewer (RANGE-13; also the shortened "Know the split?" CLI line) and the PR.
+- M4.8.3 ranges on every number: built on `claude/project-thread-g2k1g8`. Fix round done (Nov 24): QA-R1 tiny phone totals read "under 1% of a phone charge" again and a phone range topping one charge reads in charges ("about half a phone charge (0.1–1.5 charges)", never >100%); UX-R13 #ov-how text lines up with #ov-compare, 12px clear; UX-R14 comparison ends at 2 significant figures ("(4.4–100)"); UX-R15 tight en dash for kWh ranges ("1.3–30.5"; Pace hours and the Method params table keep "a – b"). EF-6 card hash re-pinned (diff is dash/rounding only). Next: qa-tdd green 3x, ux-reviewer recheck, then the PR.
 
 ## Exact next step
 0. Chase: the manual CLOUDP-8 check (paste the cloud prompt into a fresh claude.ai/code thread and a plain chat; neither should invent a number).

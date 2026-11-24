@@ -80,7 +80,7 @@ describe("EST-8 ccwatts estimate: text", () => {
   it("EST-8 small counts scale down to Wh", () => {
     const r = cli(["estimate", "1.2k", "--model", "sonnet"], { HOME: home() });
     expect(r.code, r.err).toBe(0);
-    expect(r.out).toMatch(/Electricity\s+[\d.]+ Wh\s+\(range [\d.]+ – [\d.]+\)/);
+    expect(r.out).toMatch(/Electricity\s+[\d.]+ Wh\s+\(range [\d.]+–[\d.]+\)/);
   });
 
   it("EST-8 an unknown model still answers, with the fallback tier and a note", () => {

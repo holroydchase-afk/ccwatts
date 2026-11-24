@@ -12,7 +12,7 @@ import { claudeCodeAdapter, defaultParams as params, estimate, shortModel, TYPE_
 //
 // Pinned for the engineer:
 //  - Shares read "64% (30–72%)" (or "7%" / "<1%" when every corner rounds the same, as core
-//    formatShare does); comparisons read "about 28 miles (4.4–102)".
+//    formatShare does); comparisons read "about 28 miles (4.4–100)".
 //  - No line over 80 columns. A "By model" / "By type" item that doesn't fit is left off that line, and
 //    the output then names `--by model` / `--by type` so the person can see the rest.
 
@@ -78,13 +78,13 @@ describe("RANGE-10 ccwatts --demo: comparisons and shares carry ranges, 80 colum
   it("RANGE-10 --demo estimates the same sample the test computes (sanity)", () => {
     const r = cli(["--demo"]);
     expect(r.code, r.err).toBe(0);
-    expect(r.out).toContain("(range 1.3 – 30.5)");
+    expect(r.out).toContain("(range 1.3–30.5)"); // UX-R15 tight en dash
     expect(e.total.central).toBeCloseTo(8506.55, 1);
   });
 
-  it('RANGE-10 --demo comparisons carry ranges ("about 28 miles (4.4–102)", "about 5.7 days (0.9–20)")', () => {
+  it('RANGE-10 --demo comparisons carry ranges ("about 28 miles (4.4–100)", "about 5.7 days (0.9–20)")', () => {
     const out = cli(["--demo"]).out;
-    expect(out).toContain("about 28 miles (4.4–102)");
+    expect(out).toContain("about 28 miles (4.4–100)"); // UX-R14
     expect(out).toContain("about 5.7 days (0.9–20)");
     expect(bareComparisons(out)).toEqual([]);
   });

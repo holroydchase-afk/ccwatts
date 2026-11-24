@@ -69,7 +69,7 @@ npx ccwatts pace          # your own logs
 Working late? Turn on the bedtime nudge and, from 11pm to 5am, the status line gets a second line suggesting bed, in a persona you pick: serious (`coach`, `researcher`, `stoic`) or funny (`grandma`, `narrator`, `pirate`, `haiku`, `sergeant`), or `random` for a new one each hour.
 
 ```
-⚡ ~9.1 Wh this session (range 2.3 – 27.5) · method v0.1.2
+⚡ ~9.1 Wh this session (range 2.3–27.5) · method v0.1.2
 🌙 Sweetheart, it's 1:14am. The computer will still be there in the morning.
 ```
 

@@ -546,7 +546,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 {
   const methodVersion = JSON.parse(readFileSync(new URL("../methodology/params.json", import.meta.url), "utf8")).version as string;
   // The kWh line and the meta line may be separate lines (UX-R32); all four parts must be there.
-  const RESULT = /≈ ([\d.]+) kWh \(range ([\d.]+) – ([\d.]+)\)/;
+  const RESULT = /≈ ([\d.]+) kWh \(range ([\d.]+)–([\d.]+)\)/;
   const META = `Method v${methodVersion} · typical Claude Code mix assumed`; // UX-R32
   const WIDE = "Wide range: the mix of token types is guessed."; // UX-R28
   const BAD = "Couldn't read that as a token count. Try 88.8M, 1.2k or 88800000."; // UX-R33
@@ -590,7 +590,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       };
       await input.fill("88.8M");
       const opus = RESULT.exec(await boxText());
-      if (!opus) problems.push(`EST-17: 88.8M shows no "≈ N kWh (range L – H)" ${at}: "${(await boxText()).slice(0, 200)}"`);
+      if (!opus) problems.push(`EST-17: 88.8M shows no "≈ N kWh (range L–H)" ${at}: "${(await boxText()).slice(0, 200)}"`);
       else {
         await resultChecks("Opus");
         // UX-R32: the meta line is in the reading font, not monospace.

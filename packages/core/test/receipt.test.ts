@@ -9,7 +9,7 @@ describe("receipt", () => {
   it("share line has the central value, the range and the method version", () => {
     const line = shareLine(input);
     expect(line).toMatch(/about [\d.]+ kWh/);
-    expect(line).toMatch(/range [\d.]+ – [\d.]+ kWh/);
+    expect(line).toMatch(/range [\d.]+–[\d.]+ kWh/);
     expect(line).toContain(`method v${params.version}`);
   });
 
@@ -81,18 +81,18 @@ describe("receipt", () => {
       expect(linkedInPost(small)).not.toContain("The surprise:");
     });
 
-    it("picks the range unit from the high bound so a row never reads 88.5 – 2,155 Wh", () => {
+    it("picks the range unit from the high bound so a row never reads 88.5–2,155 Wh", () => {
       const t = formatEnergy({ low: 88.5, central: 618, high: 2155 });
       expect(t.unit).toBe("kWh");
-      expect(t.range).toBe("0.09 – 2.2");
+      expect(t.range).toBe("0.09–2.2");
       expect(formatEnergy({ low: 2.3, central: 9.1, high: 27.5 }).unit).toBe("Wh");
     });
 
     // CCW-RR-21: the dashboard showed "8 kWh" where the playground showed "8.5 kWh".
     it("keeps one decimal between 1 and 100 so totals line up across surfaces", () => {
       expect(formatEnergy({ low: 1200, central: 8000, high: 30000 }).central).toBe("8.0 kWh");
-      expect(formatEnergy({ low: 1300, central: 8500, high: 30500 }).range).toBe("1.3 – 30.5");
-      expect(formatEnergy({ low: 1000, central: 2000, high: 3000 }).range).toBe("1.0 – 3.0");
+      expect(formatEnergy({ low: 1300, central: 8500, high: 30500 }).range).toBe("1.3–30.5");
+      expect(formatEnergy({ low: 1000, central: 2000, high: 3000 }).range).toBe("1.0–3.0");
       expect(formatEnergy({ low: 88.5, central: 618, high: 2155 }).central).toBe("0.62 kWh");
       expect(formatEnergy({ low: 120, central: 340, high: 900 }).central).toBe("340 Wh");
     });

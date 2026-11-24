@@ -14,7 +14,7 @@ first viewport (FOCUS-1), cut words, not the range.
 | # | Where | Shown | Range from core? | Call |
 |---|---|---|---|---|
 | A1 | Overview "What drives it", Electricity lead + "Why this happens" | 64% re-reading | cacheRead.low/total.low = **30%**, central 64%, high **72%** | Show range. Not constant. |
-| A2 | Overview `#ov-compare`, Electricity `#hero-compare`, CLI, share line, post, card, MCP text, manual estimate | ~28 EV miles, fridge ~5.7 days | total.low/high ÷ factor: EV **4.4–102**, fridge **0.9–20** | Show range. |
+| A2 | Overview `#ov-compare`, Electricity `#hero-compare`, CLI, share line, post, card, MCP text, manual estimate | ~28 EV miles, fridge ~5.7 days | total.low/high ÷ factor: EV **4.4–100** (ends at 2 significant figures, UX-R14), fridge **0.9–20** | Show range. |
 | A3 | Electricity "Why this happens" | cache write 26%, output 10% | 48% / 22% at low end, 21% / 7% at high | Show range. |
 | A4 | Electricity by-model / by-project rows | "3.2 kWh · 37%" | kWh range already on the row; shares move ≤4 pts (opus 61–65, portfolio 36–37) | Drop the %; bar + kWh range carry it. |
 | A5 | CLI default "By model" / "By type" | 65% / 64% | as above | Show range per item. |
@@ -34,7 +34,7 @@ JSON share bounds are backlog.
 - **RANGE-2** (auto) `formatShare` gives "64% (30–72%)"; if all three round equal it gives "7%"; above 0 but
   rounding to 0 gives "<1%".
 - **RANGE-3** (auto) `comparisons`/`everyday` take the total `Range` and give "driving an EV about 28 miles
-  (4.4–102)", ends rounded with the central's rule.
+  (4.4–100)", ends rounded to 2 significant figures, at most 1 decimal (fix round, UX-R14; was the central's rule, "4.4–102"). Energy ranges use the same tight en dash: "1.3–30.5 kWh" (UX-R15). Phone ranges whose high end tops one charge read in charges ("about half a phone charge (0.1–1.5 charges)"), never a % above 100 (QA-R1).
 - **RANGE-4** (auto) Overview: `#ov-drives-text` and `#ov-compare` contain a range; no new row added.
 - **RANGE-5** (auto) Electricity: `#hero-compare`, `#explain`, `#explain-more` show every share and comparison with
   a range (token share exempt, says "of tokens").

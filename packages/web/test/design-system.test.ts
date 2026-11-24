@@ -742,7 +742,7 @@ withBrowser("DS-7 Overview roll-up", () => {
 
   it("DS-7 #ov-energy shows the central kWh, its range and the method version", async () => {
     const t = formatEnergy(estimate(rollupRecords(sampleWindow(readSample(html), 30)), defaultParams).total);
-    const [low, high] = t.range.split(" – ");
+    const [low, high] = t.range.split("–");
     const central = t.central.split(" ")[0]!;
     const page = await open({ width: 1280 });
     const text = await textOf(page, "ov-energy");

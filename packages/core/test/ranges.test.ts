@@ -29,7 +29,7 @@ import {
 //    no spaces), "7%" when all three round equal, "<1%" when above 0 but all round to 0.
 //  - `comparisons(total: Range, params)` and `everyday(total: Range, params)` take the estimate's total
 //    Range IN WATT-HOURS (Estimate.total, the same thing formatEnergy takes), no longer central kWh.
-//    Each line reads "driving an EV about 28 miles (4.4–102)": both ends rounded with the rule the
+//    Each line reads "driving an EV about 28 miles (4.4–100)": both ends rounded with the rule the
 //    central already uses (>= 10 whole, else one decimal). `amount` stays the central value (MCP JSON).
 
 const demo = readFileSync(new URL("../../../fixtures/claude-code/demo.jsonl", import.meta.url), "utf8");
@@ -58,7 +58,7 @@ function slipLines(svg: string): string[] {
 }
 
 const RANGE_IN = /\d[\d.,]*\s?[–-]\s?\d/; // "0.4–22" or "0.4 – 22"
-const EV = "driving an EV about 28 miles (4.4–102)";
+const EV = "driving an EV about 28 miles (4.4–100)"; // UX-R14: ends at 2 significant figures (was 4.4–102)
 const FRIDGE = "running a fridge about 5.7 days (0.9–20)";
 
 describe("RANGE-1 core shareRange: part/total at the low, central and high corners", () => {
