@@ -107,6 +107,20 @@ npx ccwatts --demo        # no Claude Code logs? try it on sample data
 
 No runtime dependencies. To build from source: `npm install && npm run build && node packages/cli/dist/index.js`.
 
+### Claude Code on the web
+
+Using Claude Code on the web? Paste this prompt into a session, and Claude runs `npx -y ccwatts@latest` there and replies with that session's range. It counts tokens only, and only that session.
+
+```
+Estimate the electricity this Claude Code session has used, with ccwatts.
+
+1. Run: npx -y ccwatts@latest
+2. Reply in three short lines: the energy range exactly as ccwatts shows it, the method version, and the one comparison it prints.
+3. If I ask for a breakdown, run: npx -y ccwatts@latest --by day
+
+Rules: ccwatts reads token counts only. Don't open, read, search or quote the log files or anything from our conversation yourself. Use only what ccwatts prints. If the command fails, tell me the error in one line. Don't guess a number.
+```
+
 ### Inside Claude Code
 
 ccwatts is also a Claude Code plugin, so you can check your number without leaving a session:

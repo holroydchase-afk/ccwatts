@@ -93,11 +93,14 @@ describe("EST-20 What if and the token box sit in the Electricity tab, not the O
     expect(electricity).toContain('id="whatif-cache"');
     expect(electricity).toMatch(/<h2[^>]*>\s*Have a token count\?\s*<\/h2>/);
   });
+  // The Overview may name the box in prose (SPEC-CLOUDP's fallback line in #drop points to it);
+  // what must not be there is the slider, the box's section or its heading.
   it("EST-20 neither is in the Overview panel", () => {
     const overview = panel("p-overview");
     expect(overview).not.toBe("");
     expect(overview).not.toContain('id="whatif-cache"');
-    expect(overview).not.toContain("Have a token count?");
+    expect(overview).not.toMatch(/id="(manual|manual-h|manual-tokens)"/);
+    expect(overview).not.toMatch(/<h[1-6][^>]*>\s*Have a token count\?\s*<\/h[1-6]>/);
   });
 });
 
