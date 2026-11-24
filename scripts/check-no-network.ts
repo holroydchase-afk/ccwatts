@@ -37,11 +37,11 @@ const MONO = /monospace|Menlo|Consolas|SF Mono|Courier/i;
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 // STUDIO-DS: the page shows one tab panel at a time (Overview is the default). Checks on panel content
-// select its tab first. Your logs (#drop) is no longer a tab: the Overview row #ov-logs opens it.
+// select its tab first. Your logs (#drop) is no longer a tab: the Overview CTA #ov-cta ("Try it on your logs") opens it.
 const tab = (page: import("playwright-core").Page, name: string) => page.getByRole("tab", { name, exact: true }).click();
 const openLogs = async (page: import("playwright-core").Page) => {
   await tab(page, "Overview");
-  await page.click("#ov-logs");
+  await page.click("#ov-cta");
 };
 const problems: string[] = [];
 for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
@@ -62,24 +62,24 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 
   if (!(await barText()).includes("Sample data")) problems.push(`DEMO-BAR: did not open on sample data (bar says "${await barText()}")`);
 
-  // Keyboard: Tab reaches the tabs and the Overview row "Use your own logs" (#ov-logs); Enter on it opens
-  // Your logs, and Tab then reaches both file pickers (recruiter-ready RR-5, now through #ov-logs).
+  // Keyboard: Tab reaches the tabs and the Overview CTA "Try it on your logs" (#ov-cta); Enter on it opens
+  // Your logs, and Tab then reaches both file pickers (recruiter-ready RR-5, now through #ov-cta, M4.8.1).
   const reached = new Set<string | undefined>();
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
   }
-  for (const id of ["tab-overview", "ov-logs"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
-  await page.focus("#ov-logs");
+  for (const id of ["tab-overview", "ov-cta"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} at ${viewport.width}px`);
+  await page.focus("#ov-cta");
   await page.keyboard.press("Enter");
   for (let i = 0; i < 6; i++) {
     await page.keyboard.press("Tab");
     reached.add(await page.evaluate(() => document.activeElement?.id));
   }
-  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} from Your logs (#ov-logs) at ${viewport.width}px`);
+  for (const id of ["pick-folder", "pick-files"]) if (!reached.has(id)) problems.push(`Tab never reaches #${id} from Your logs (#ov-cta) at ${viewport.width}px`);
 
-  // Tap targets: every button 48px tall or more (RR-9, STUDIO-DS target 48).
-  const short = await page.$$eval("main button, label.btn", (els) => (els as HTMLElement[]).filter((e) => e.offsetParent && e.getBoundingClientRect().height < 48).map((e) => e.id || (e.textContent ?? "").trim()));
+  // Tap targets: every button 48px tall or more (RR-9, STUDIO-DS target 48), including link buttons like the CTA.
+  const short = await page.$$eval("main button, label.btn, a.btn", (els) => (els as HTMLElement[]).filter((e) => e.offsetParent && e.getBoundingClientRect().height < 48).map((e) => e.id || (e.textContent ?? "").trim()));
   // Chart labels stay readable on a phone: drawn at the screen's pixel width, never scaled down (RR-8):
   // 17px text (STUDIO-DS body floor) at real size.
   await tab(page, "Electricity");
@@ -88,13 +88,15 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // Method table: no sideways scroll inside it on a phone, distinct source links 48px tall (RR-10, RR-11).
   // Closed <details> content takes no space now, so open the Method tab and the parameter table first.
   await tab(page, "Method");
-  await page.click("#params-box > summary");
+  // EF-12 (intake #112): #params-box starts open, so only click it open if it is closed.
+  const paramsWasOpen = await page.$eval("#params-box", (d) => (d as HTMLDetailsElement).open);
+  if (!paramsWasOpen) await page.click("#params-box > summary");
   const table = await page.$eval(".tablewrap", (t) => ({ over: t.scrollWidth - t.clientWidth }));
   if (table.over > 1) problems.push(`method table scrolls sideways by ${table.over}px at ${viewport.width}px`);
   const links = await page.$$eval("#params a", (as) => as.map((a) => ({ t: (a.textContent ?? "").trim(), h: a.getBoundingClientRect().height })));
   if (links.some((l) => l.t === "source")) problems.push("source links don't name their source");
   if (links.some((l) => l.h < 48)) problems.push(`source links under 48px at ${viewport.width}px`);
-  await page.click("#params-box > summary");
+  if (!paramsWasOpen) await page.click("#params-box > summary");
   // Phones get a hint that logs live on a computer (RR-13).
   await openLogs(page);
   const hint = await page.$eval("#phone-hint", (h) => h.getBoundingClientRect().height > 0).catch(() => null);
@@ -116,7 +118,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       body: body!,
       paragraphs: [...document.querySelectorAll("main p")].filter((p) => p.textContent?.trim())
         .map((p) => ({ id: p.id || p.className || (p.textContent ?? "").slice(0, 30), f: getComputedStyle(p).fontFamily })),
-      methodNotes: [...document.querySelectorAll("#params td[data-label='Parameter'] div")].map((d) => getComputedStyle(d).fontFamily),
+      methodNotes: [...document.querySelectorAll("#params details .note")].map((d) => getComputedStyle(d).fontFamily),
       post: post!,
     };
   });
@@ -133,15 +135,15 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   }
 
   // UX-R3 (STUDIO-DS): the "Try it" box sits in the Overview, apart from the chart and the rankings,
-  // and the Overview row "Use your own logs" opens it.
+  // and the Overview CTA "Try it on your logs" (#ov-cta, M4.8.1) opens it.
   const order = await page.evaluate(() => {
     const drop = document.querySelector("#drop");
     const apart = !!drop?.closest("#p-overview") && ["#chart", "#by-model", "#by-project"].every((sel) => !document.querySelector(sel)?.closest("#p-overview"));
-    const row = document.querySelector("#ov-logs");
-    return { apart, link: row && /Use your own logs/.test(row.textContent ?? "") ? row.getAttribute("href") : null };
+    const row = document.querySelector("#ov-cta");
+    return { apart, link: row && /^\s*Try it on your logs\s*$/.test(row.textContent ?? "") ? row.getAttribute("href") : null };
   });
   if (!order.apart) problems.push("UX-R3: 'Try it on your own logs' is not in the Overview, apart from the chart and the By model/By project lists");
-  if (order.link !== "#drop") problems.push(`UX-R3: no Overview row 'Use your own logs' linking to #drop (got ${order.link})`);
+  if (order.link !== "#drop") problems.push(`UX-R3: no Overview CTA 'Try it on your logs' linking to #drop (got ${order.link})`);
 
   // UX-R1: errors are announced from #drop-status, and the hero isn't a live region.
   const live = await page.evaluate(() => ({
@@ -189,7 +191,14 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     if (box < 48) problems.push(`WI-R7: slider is ${box.toFixed(1)}px tall at ${viewport.width}px (want 48+)`);
     const scalePx = await page.$eval(".whatif-scale", (s) => parseFloat(getComputedStyle(s).fontSize)).catch(() => 0);
     if (scalePx < 17) problems.push(`WI-R6: .whatif-scale is ${scalePx}px at ${viewport.width}px (want 17+)`);
-    if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note missing or shown before the slider moves");
+    // EF-1 (intake #112): the note shows the published total with its range and method version on load, not a what-if.
+    const loadNote = async () => {
+      if (!(await noteShown())) return "missing or hidden";
+      const t = await text("#whatif-note");
+      return /range/.test(t) && /Method v\d/.test(t) && !/What[- ]if/.test(t) ? null : `says "${t}"`;
+    };
+    const onLoad = await loadNote();
+    if (onLoad) problems.push(`WI-3: #whatif-note on load ${onLoad} (want the total with range and Method v, not a what-if)`);
     await page.$eval("#whatif-cache", (s: HTMLInputElement) => {
       s.value = s.max;
       s.dispatchEvent(new Event("input", { bubbles: true }));
@@ -219,14 +228,16 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     const words = noteText.split(/\s+/).filter(Boolean).length;
     if (words > 30) problems.push(`WI-R4: #whatif-note is ${words} words (want 30 or fewer): "${noteText}"`);
     if (!noteText.startsWith("What-if at 25%")) problems.push(`WI-R4: #whatif-note should start "What-if at 25%", got "${noteText.slice(0, 40)}"`);
-    if (!noteText.includes("Published:")) problems.push("WI-R4: #whatif-note lacks \"Published:\"");
+    // UX-R71 (intake #112 review): "Published 10%:" replaces "Published:".
+    if (!/Published( \d+%)?:/.test(noteText)) problems.push("WI-R4: #whatif-note lacks \"Published 10%:\"");
     if (!noteText.includes("Method v")) problems.push("WI-R4: #whatif-note lacks \"Method v\"");
     // WI-R5: the hero flag names the setting.
     const flag = await page.$eval(".whatif-flag", (f) => f.textContent ?? "").catch(() => "");
     if (!flag.includes("what-if: cache reads 25%")) problems.push(`WI-R5: hero flag says "${flag}", want "what-if: cache reads 25%"`);
     await page.click("#whatif-reset");
     if ((await text("#hero-big")) !== heroBefore) problems.push("WI-3: Reset did not restore the hero total");
-    if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note still shown after Reset");
+    const afterReset = await loadNote();
+    if (afterReset) problems.push(`WI-3: #whatif-note after Reset ${afterReset} (want the load text back)`);
     // WI-R2: Reset hides itself, so focus goes back to the slider (click and Enter).
     const focused = () => page.evaluate(() => document.activeElement?.id ?? null);
     if ((await focused()) !== "whatif-cache") problems.push(`WI-R2: after clicking Reset focus is on #${await focused()}, want #whatif-cache`);
@@ -742,9 +753,9 @@ for (const p of await showcaseCheck({
   url: pathToFileURL(page_).href,
   browser,
   viewports: [{ width: 1280, height: 900 }, { width: 390, height: 844 }],
-  tapTargets: "button, label.btn", // RR-9
-  // RR-5. Not the pickers (QA-R5): they sit in Your logs, so the RR-5 loop above opens it via #ov-logs first.
-  keyboardReach: ["tab-overview", "ov-logs"],
+  tapTargets: "button, label.btn, a.btn", // RR-9 (a.btn: the Overview CTA)
+  // RR-5. Not the pickers (QA-R5): they sit in Your logs, so the RR-5 loop above opens it via #ov-cta first.
+  keyboardReach: ["tab-overview", "ov-cta"],
   tabPresses: 12,
   // 12px: the studio demo bar's badge (exempt, QA-R9; DEMO-BANNER standard). The kit can't exempt one
   // region, so the 17px STUDIO-DS floor for the rest of the page is design-system.test.ts DS-3.

@@ -126,6 +126,8 @@ function renderHero(e: Estimate, label: string) {
   const fixed = whatIfActive() ? `, with cache reads fixed at ${pct(viewParams.params[CACHE_ID]!.value)} and every other assumption at its bounds.` : ", from the bounds on every assumption.";
   renderRangeBar(e, t, fixed);
   $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
+  // FOCUS-3: the same line under the Overview number.
+  $("ov-compare").textContent = $("hero-compare").textContent;
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   // One span per item, kept whole, so a phone wraps between items and never inside a date.
   const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [e.span.from === e.span.to ? e.span.from : `${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
@@ -271,7 +273,6 @@ function localToday(): string {
 }
 
 const LATE = clockHour(params.pace.late_night.start_hour);
-const PACE_PILL: Record<typeof pace.source, string> = { sample: "Sample data", history: "Your history", files: "Your files" };
 let paceShown: PaceWeek[] = [];
 
 /** The Pace section: this week in words, four weeks as bars, a hidden table for screen readers. */
@@ -283,10 +284,6 @@ function renderPace() {
   const weeks = days && days.length ? paceWeeks(days, today, 4) : [];
   const any = weeks.some((w) => w.activeHours.high > 0 || w.agentHours.high > 0);
   paceShown = any ? weeks : [];
-  const pill = $("pace-pill");
-  pill.hidden = off;
-  pill.textContent = PACE_PILL[pace.source];
-  pill.classList.toggle("sample", pace.source === "sample");
   // PS-R12/R13: pace.jsonl skipped (--path, --no-history) or unreadable gets its own note, not "Pace is off".
   $("pace-optin").hidden = !off || Boolean(pace.off);
   $("pace-skipped").hidden = !off || pace.off !== "skipped";
@@ -302,19 +299,25 @@ function renderPace() {
   if (!any) {
     $("pace-chart").innerHTML = "";
     $("pace-table").innerHTML = "";
-    renderPaceOverview(null, off ? $("pace-optin").textContent ?? "" : empty.textContent);
     return;
   }
   // UX-R40/R41: same lead as the CLI. Early in a week it describes the last full week, and this week
   // moves to the quieter "so far" line; the agents line follows the week the lead describes.
   const line = paceLead(weeks, params);
-  $("pace-lead").innerHTML = `<b>${esc(keep(line.lead))}</b>, ${esc(keep(line.rest))}`;
-  $("pace-sofar").textContent = line.soFar ? keep(line.soFar) : "";
+  // EF-CC-5: one number (with its range) above the chart; the rest of the week's figures go below it.
+  $("pace-lead").innerHTML = `<b>${keepHtml(line.lead)}</b>`;
+  $("pace-rest").innerHTML = keepHtml(line.rest);
+  // QA-R2: the so-far hours carry their range here, like every other hour figure on the page.
+  const now = weeks[0]!;
+  const soFar =
+    line.soFar && now.activeHours.central > 0
+      ? `This week so far: about ${paceHours(now.activeHours.central)} hours (range ${paceHoursRange(now.activeHours)}) in ${now.daysCounted} day${now.daysCounted === 1 ? "" : "s"}.`
+      : line.soFar;
+  $("pace-sofar").innerHTML = soFar ? keepHtml(soFar) : "";
   $("pace-sofar").hidden = !line.soFar;
-  $("pace-agents").textContent = line.agents ? keep(line.agents) : "";
+  $("pace-agents").innerHTML = line.agents ? keepHtml(line.agents) : "";
   $("pace-agents").hidden = !line.agents;
   renderPaceChart(weeks);
-  renderPaceOverview({ week: weeks[line.focus]!, current: line.focus === 0 }, "");
   const rows = weeks
     .map(
       (w, i) =>
@@ -324,22 +327,11 @@ function renderPace() {
   $("pace-table").innerHTML = `<caption>Pace by week, newest first</caption><thead><tr><th>Week of</th><th>Active (h)</th><th>Past ${esc(LATE)}</th><th>Longest</th><th>Days off</th><th>Agent-only (h)</th></tr></thead><tbody>${rows}</tbody>`;
 }
 
-/** The Overview's Pace row: the same week and numbers as the Pace lead, or why there is none. */
-function renderPaceOverview(shown: { week: PaceWeek; current: boolean } | null, why: string) {
-  if (!shown) {
-    $("ov-pace-title").textContent = "Pace";
-    $("ov-pace-text").textContent = pace.days === null ? "Pace is off. Open to see how to turn it on." : why;
-    $("ov-pace-detail").textContent = "";
-    return;
-  }
-  const { week, current } = shown;
-  $("ov-pace-title").textContent = `Pace · ${current ? "this week so far" : `week of ${monthDay(week.start)}`}`;
-  $("ov-pace-text").textContent = `About ${paceHours(week.activeHours.central)} active hours`;
-  $("ov-pace-detail").textContent = keep(`range ${paceHoursRange(week.activeHours)} hours`);
-}
 
 /** Never break inside "2h 51m" or "12 – 14" when the line wraps. */
 const keep = (text: string) => text.replace(/(\d+h) (\d+m)/g, "$1\u00a0$2").replace(/(\d) – (\d)/g, "$1\u00a0–\u00a0$2");
+// UX-R72: a no-break space still lets a line break after "–", so each "a – b" range sits in a nowrap span.
+const keepHtml = (text: string) => esc(keep(text)).replace(/\d+(?:\.\d+)?\u00a0–\u00a0\d+(?:\.\d+)?/g, (m) => `<span class="nw">${m}</span>`);
 
 // The newest week always holds today, still in progress even on a Sunday (QA-R4).
 const weekLabel = (w: PaceWeek, i: number) => (i === 0 ? `${monthDay(w.start)} (so far)` : monthDay(w.start));
@@ -423,13 +415,16 @@ function renderShare(e: Estimate, label: string) {
   currentPost = linkedInPost(input);
   const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(currentSvg)}`;
   ($("card") as HTMLImageElement).src = src;
-  ($("ov-share-thumb") as HTMLImageElement).src = src;
   // "Open full size" opens the same card from memory (a blob: URL): nothing is fetched.
   if (fullSizeUrl) URL.revokeObjectURL(fullSizeUrl);
   fullSizeUrl = URL.createObjectURL(new Blob([currentSvg], { type: "image/svg+xml" }));
   ($("card-full") as HTMLAnchorElement).href = fullSizeUrl;
   $("post").textContent = currentPost;
-  $("share-status").textContent = state.source === "sample" ? "This card shows sample data. Load your own logs to make yours." : "";
+  $("card-sample").hidden = state.source !== "sample";
+  // UX-R68: the label names the card's own figures (the published estimate), at body size.
+  const t = formatEnergy(e.total);
+  $("card-sample").textContent = e.responses ? `Sample data · ${t.central} (range ${t.range} ${t.unit}) · method v${params.version}` : `Sample data · method v${params.version}`;
+  $("share-status").textContent = "";
 }
 
 /** "theclimatebrink.com" from a source URL, so each link names where it goes. */
@@ -447,7 +442,7 @@ function renderMethod() {
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>
-        `<tr><td data-label="Parameter"><code>${esc(id)}</code><div class="note">${esc(p.note)}</div></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
+        `<tr><td data-label="Parameter"><code>${esc(id)}</code></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a><details class="fine"><summary class="disclose">About this value</summary><div class="note">${esc(p.note)}</div></details></td></tr>`,
     )
     .join("");
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
@@ -498,13 +493,18 @@ function renderWhatIf(e: Estimate, published: Estimate) {
   slider.setAttribute("aria-valuetext", `${pct(value)} of fresh input`);
   $("whatif-value").textContent = pct(value);
   const note = $("whatif-note");
-  note.hidden = !whatIfActive();
   $("whatif-reset").hidden = !whatIfActive();
-  if (!whatIfActive()) return void (note.textContent = "");
   const t = formatEnergy(e.total);
+  // EF-CC-1: the result sits beside the slider from the start, so the number is in view while dragging.
+  // UX-R71: at rest one line naming the published total; after a move, the what-if line then the published one.
   const pub = formatEnergy(published.total);
-  const totals = e.responses ? ` ${t.central} (range ${t.range} ${t.unit}). Published: ${pub.central} (range ${pub.range} ${pub.unit}).` : " Not the published estimate.";
-  note.textContent = `What-if at ${pct(value)}:${totals} The share card keeps ${pct(publishedCache)}. Method v${params.version}.`;
+  const nw = (s: string) => `<span class="nw">${esc(s)}</span>`;
+  const pubLine = (unit: string) => `Published ${pct(publishedCache)}: ${nw(pub.central)} (range ${nw(`${pub.range}${unit}`)})`;
+  if (!whatIfActive())
+    return void (note.innerHTML = e.responses ? `<span class="wl">${pubLine(` ${pub.unit}`)} · Method v${esc(params.version)}</span>` : `Load some usage to see the total move. Method v${esc(params.version)}.`);
+  const first = e.responses ? `What-if at ${pct(value)}: ${nw(t.central)} (range ${nw(t.range)})` : `What-if at ${pct(value)}: not the published estimate.`;
+  const second = e.responses ? `${pubLine("")} · share card keeps ${pct(publishedCache)} · Method v${esc(params.version)}` : `Share card keeps ${pct(publishedCache)} · Method v${esc(params.version)}`;
+  note.innerHTML = `<span class="wl">${first}</span><span class="wl">${second}</span>`;
 }
 
 function setWhatIf(value: number) {
@@ -656,7 +656,7 @@ function wire() {
 
   if (payload.mode === "playground") {
     const drop = $("drop");
-    $("ov-logs").hidden = false;
+    $("ov-cta-wrap").hidden = false; // the one CTA; the dashboard already shows the person's own logs
     placeCloud();
     $("copy-cloud").addEventListener("click", () => void copyCloud());
     $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
@@ -802,14 +802,14 @@ function wireTabs() {
     tab.focus({ preventScroll: true });
   });
   // Overview rows: each is one link into its detail.
-  for (const id of ["ov-energy", "ov-pace", "ov-share", "ov-logs", "drop-back"]) {
+  for (const id of ["ov-energy", "ov-cta", "drop-back"]) {
     const a = $<HTMLAnchorElement>(id);
     a.addEventListener("click", (ev) => {
       ev.preventDefault();
       go(id === "drop-back" ? "" : (a.getAttribute("href") ?? ""));
       toViewTop();
       // The row just hid with its list, so keep keyboard focus nearby: the way back, the row, or the tab.
-      const next = id === "ov-logs" ? $("drop-back") : id === "drop-back" ? $("ov-logs") : allTabs().find((t) => t.getAttribute("aria-selected") === "true");
+      const next = id === "ov-cta" ? $("drop-back") : id === "drop-back" ? $("ov-cta") : allTabs().find((t) => t.getAttribute("aria-selected") === "true");
       next?.focus({ preventScroll: true });
     });
   }
@@ -820,7 +820,11 @@ function wireTabs() {
     $("tab-electricity").focus({ preventScroll: true });
   });
   window.addEventListener("popstate", route);
-  window.addEventListener("hashchange", route);
+  // A link followed in the page (#share from a scrolled Overview): start the view below the sticky tabs (FOCUS-4).
+  window.addEventListener("hashchange", () => {
+    route();
+    toViewTop();
+  });
 }
 
 /** Light / Dark / System (studio principle 10). Kept in memory for this visit only (PS-R1): a reload goes back to System. */

@@ -18,7 +18,7 @@ import { DATA_MARKER, injectData, readSample, type PagePayload } from "../src/in
 //    zone, timestamps or other fields a caller might pass by mistake).
 //  - The playground build embeds sample pace at build time in
 //    <script id="ccwatts-sample-pace" type="application/json">: samplePaceDays(<last sample date>).
-//  - The section is <section id="pace"> with a SAMPLE pill #pace-pill (class "pill sample"),
+//  - The section is <section id="pace"> (the #pace-pill was removed by EF-CC-5, intake #112),
 //    and an opt-in note #pace-optin that names `ccwatts pace` (shown in dashboard mode with no pace).
 //  - read.ts: readLogFiles(files, timeZone?) and readPaste(text, timeZone?) add `pace: PaceDay[]`
 //    to an ok result when a zone is given (claudeCodeAdapter.activity + paceDays with
@@ -59,13 +59,15 @@ describe("CCW-M4.5 payload (PACE-WEB1)", () => {
 describe("CCW-M4.5 playground build (PACE-WEB2)", () => {
   const json = /<script id="ccwatts-sample-pace" type="application\/json">([\s\S]*?)<\/script>/.exec(html)?.[1];
 
-  it("PACE-WEB2 has a Pace section with a SAMPLE pill", () => {
+  it("PACE-WEB2 has a Pace section, with no pill of its own (EF-CC-5: the demo bar says Sample data)", () => {
     const section = paceSection(html);
     expect(section, "no <section id=\"pace\">").not.toBe("");
     expect(section).toMatch(/<h2[^>]*>Pace<\/h2>/);
-    expect(section).toContain("Your work rhythm · opt-in · stays local"); // UX-R44
+    // UX-R69 (intake #112 review) supersedes the UX-R44 eyebrow pin: no eyebrow; "opt-in" and "stays local" sit in "How Pace is counted".
+    expect(section).not.toMatch(/class="[^"]*\beyebrow\b/);
+    expect(/<details[^>]*id="pace-how"[\s\S]*?<\/details>/.exec(section)?.[0] ?? "").toMatch(/opt-in[\s\S]*stays local|stays local[\s\S]*opt-in/);
     expect(section).not.toContain("stays on your device");
-    expect(section).toMatch(/<[a-z]+[^>]*id="pace-pill"[^>]*class="[^"]*pill sample[^"]*"|<[a-z]+[^>]*class="[^"]*pill sample[^"]*"[^>]*id="pace-pill"/);
+    expect(section).not.toContain('id="pace-pill"');
   });
 
   it("PACE-WEB2 embeds the synthetic sample pace, ending on the energy sample's last day", () => {

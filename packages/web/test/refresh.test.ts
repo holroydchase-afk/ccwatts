@@ -60,8 +60,8 @@ async function open({ width, height = 900, colorScheme = "light" }: Opts): Promi
   return page;
 }
 
-/** AC-T1 tab names, in order (STUDIO-DS, Nov 21). "Your logs" (#drop) is no longer a tab: the Overview row #ov-logs opens it. */
-const TABS = ["Overview", "Electricity", "Pace", "Share", "Method"] as const;
+/** AC-T1 tab names, in order (STUDIO-DS, Nov 21; Pace last since M4.8.1, FOCUS-5). "Your logs" (#drop) is no longer a tab: the Overview CTA #ov-cta opens it. */
+const TABS = ["Overview", "Electricity", "Share", "Method", "Pace"] as const;
 /** Click the [role=tab] with this exact name; false (no wait) when the page has no such tab. */
 async function selectTab(page: Page, name: string): Promise<boolean> {
   const tab = page.getByRole("tab", { name, exact: true });
@@ -344,7 +344,7 @@ withBrowser("VISUAL-REFRESH AC-T1 tabs at the top, Overview first (STUDIO-DS)", 
     expect(order.listInPanel, "the tablist must not sit inside a panel").toBe(false);
   });
 
-  it("AC-T1 panels hold the right content: Overview #ov-energy, Electricity #chart #hero-range #whatif-cache, Pace #pace-chart, Share #save-png, Method #params", async () => {
+  it("AC-T1 panels hold the right content: Overview #ov-energy #ov-cta, Electricity #chart #hero-range #whatif-cache, Pace #pace-chart, Share #save-png, Method #params", async () => {
     const page = await open({ width: 1280 });
     const r = await page.evaluate(() => {
       const tabs = [...document.querySelectorAll("[role=tablist] [role=tab]")];
@@ -353,7 +353,7 @@ withBrowser("VISUAL-REFRESH AC-T1 tabs at the top, Overview first (STUDIO-DS)", 
         return t ? document.getElementById(t.getAttribute("aria-controls") ?? "") : null;
       };
       const has = (name: string, ...ids: string[]) => { const p = panelOf(name); return !!p && ids.every((id) => p.id === id || !!p.querySelector(`#${id}`)); };
-      return { Overview: has("Overview", "ov-energy", "ov-pace"), Electricity: has("Electricity", "chart", "hero-range", "whatif-cache"), Pace: has("Pace", "pace-chart"), Share: has("Share", "save-png"), Method: has("Method", "params") };
+      return { Overview: has("Overview", "ov-energy", "ov-cta"), Electricity: has("Electricity", "chart", "hero-range", "whatif-cache"), Pace: has("Pace", "pace-chart"), Share: has("Share", "save-png"), Method: has("Method", "params") };
     });
     await page.close();
     expect(r).toEqual({ Overview: true, Electricity: true, Pace: true, Share: true, Method: true });
@@ -409,9 +409,9 @@ withBrowser("VISUAL-REFRESH AC-T1 tabs at the top, Overview first (STUDIO-DS)", 
     await page.close();
   });
 
-  it("AC-T1 clicking #ov-logs shows #drop inside the Overview (still the one selected tab) with a way back", async () => {
+  it("AC-T1 clicking the #ov-cta button shows #drop inside the Overview (still the one selected tab) with a way back", async () => {
     const page = await open({ width: 1280 });
-    await page.locator("#ov-logs").click();
+    await page.locator("#ov-cta").click();
     await page.waitForTimeout(100);
     const s = await tabState(page);
     const dropShown = await page.locator("#drop").isVisible();
@@ -440,13 +440,14 @@ async function perTab<T>(page: Page, measure: () => Promise<T>): Promise<Record<
 }
 
 withBrowser("VISUAL-REFRESH AC-T2 short views", () => {
-  for (const [width, height, limit] of [[1280, 800, 1900], [390, 844, 3200]] as const) {
+  // 1280 budget 1900 -> 1920 (intake #112): EF-CC-1 adds one always-visible What-if result line (22px + gap).
+  for (const [width, height, limit] of [[1280, 800, 1920], [390, 844, 3200]] as const) {
     it(`AC-T2 at ${width}x${height} each tab's view is at most ${limit}px tall (Your logs excluded, PR #101)`, async () => {
       const page = await open({ width, height });
       const paramsOpen = await page.evaluate(() => (document.getElementById("params-box") as HTMLDetailsElement | null)?.open ?? null);
       const heights = await perTab(page, () => page.evaluate(() => document.scrollingElement!.scrollHeight));
       await page.close();
-      expect(paramsOpen, "the params table starts closed").toBe(false);
+      expect(paramsOpen, "the params table starts open (EF-CC-6, intake #112)").toBe(true);
       for (const [name, h] of Object.entries(heights)) expect(h, `${name} at ${width}px: ${h}px`).toBeLessThanOrEqual(limit);
     });
   }
@@ -479,12 +480,13 @@ withBrowser("VISUAL-REFRESH AC-T3 less chunky text", () => {
     });
   }
 
-  it("AC-T3 #pace-lead is 17px or smaller", async () => {
+  // UX-R69 (intake #112 review) supersedes the old "17px or smaller" pin: the answer is 22px, as big as the h2.
+  it("AC-T3 #pace-lead is 22px (UX-R69)", async () => {
     const page = await open({ width: 1280 });
     await selectTab(page, "Pace");
     const size = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById("pace-lead")!).fontSize));
     await page.close();
-    expect(size).toBeLessThanOrEqual(17);
+    expect(size).toBe(22);
   });
 });
 
