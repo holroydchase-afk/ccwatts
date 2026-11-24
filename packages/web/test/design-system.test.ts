@@ -531,7 +531,7 @@ async function helpers(page: Page) {
   await page.evaluate(HELPERS);
 }
 
-/** Visit every visible tab (and the Your logs panel via the #ov-cta button when there is one), run `fn` there. */
+/** Visit every visible tab and the Your logs panel (via the #ov-cta button, which must exist), run `fn` there. */
 async function eachView<T>(page: Page, fn: (view: string) => Promise<T>): Promise<Record<string, T>> {
   await helpers(page);
   const out: Record<string, T> = {};
@@ -540,12 +540,14 @@ async function eachView<T>(page: Page, fn: (view: string) => Promise<T>): Promis
     await page.evaluate("window.__ds.openDetails()");
     out[name] = await fn(name);
   }
-  if ((await page.locator("#ov-cta").count()) === 1 && (await selectTab(page, "Overview"))) {
-    await page.locator("#ov-cta").click();
-    await page.waitForTimeout(50);
-    await page.evaluate("window.__ds.openDetails()");
-    out["Your logs (#ov-cta)"] = await fn("Your logs");
-  }
+  // QA-R3: every eachView caller opens the playground, which always has the CTA. A missing CTA (or
+  // Overview tab) must fail the check, not skip the Your logs view silently.
+  if ((await page.locator("#ov-cta").count()) !== 1) throw new Error("eachView: no #ov-cta button, so the Your logs view can't be checked");
+  if (!(await selectTab(page, "Overview"))) throw new Error("eachView: no Overview tab to reach #ov-cta from");
+  await page.locator("#ov-cta").click();
+  await page.waitForTimeout(50);
+  await page.evaluate("window.__ds.openDetails()");
+  out["Your logs (#ov-cta)"] = await fn("Your logs");
   return out;
 }
 const nonEmpty = <T>(r: Record<string, T[]>) => Object.fromEntries(Object.entries(r).filter(([, v]) => v.length));
@@ -594,6 +596,22 @@ withBrowser("DS-2 the font loads with no network", () => {
     expect(got.family).toMatch(/^["']?Atkinson Hyperlegible Next["']?\s*,\s*system-ui\s*,\s*sans-serif$/);
     expect(got.loaded, "FontFace status for Atkinson Hyperlegible Next").toContain("loaded");
     expect(got.check).toBe(true);
+  });
+});
+
+withBrowser("QA-R3 eachView must visit the Your logs view (harness self-check)", () => {
+  it("QA-R3 eachView visits Your logs (#ov-cta) on the playground", async () => {
+    const page = await open({ width: 390, height: 844 });
+    const views = await eachView(page, async () => true);
+    await page.close();
+    expect(Object.keys(views), "Your logs view not visited").toContain("Your logs (#ov-cta)");
+  });
+  it("QA-R3 eachView fails, instead of skipping silently, when the #ov-cta button is missing", async () => {
+    const page = await open({ width: 390, height: 844 });
+    await page.evaluate(() => document.getElementById("ov-cta")?.remove()); // simulate a lost CTA in this page only
+    const outcome = await eachView(page, async () => true).then((v) => `resolved with views ${JSON.stringify(Object.keys(v))}`, () => "rejected");
+    await page.close();
+    expect(outcome, "eachView skipped Your logs silently").toBe("rejected");
   });
 });
 

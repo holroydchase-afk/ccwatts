@@ -64,6 +64,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .intro{display:flex;flex-direction:column;gap:8px}
 h1{font-size:22px;line-height:28px;font-weight:600;text-wrap:balance}
 .lede{max-width:60ch;color:var(--ink)}
+.lede-short{display:none;max-width:60ch;color:var(--ink)}
 .privacy{display:flex;gap:8px;align-items:flex-start}
 .privacy svg{flex:none;width:16px;height:16px;margin-top:4px;color:var(--ink)}
 .privacy b{font-weight:600}
@@ -122,7 +123,7 @@ main button.primary:hover,.btn.primary:hover{box-shadow:none;text-decoration:und
 .row .range-track{margin:8px 0 4px;max-width:360px}
 .chev{flex:none;width:12px;height:12px;color:var(--accent)}
 /* Overview hero (M4.8.1): the EV line sits under the number card, then the one CTA (48px, filled). */
-.ov-compare{padding:0 16px}
+.ov-compare{padding:0}
 .ov-cta{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .ov-cta .btn{text-decoration:none}
 .back{display:inline-flex;align-items:center;gap:8px;min-height:48px;min-width:48px;align-self:flex-start;font-weight:600;text-decoration:none}
@@ -280,8 +281,10 @@ footer p{max-width:65ch}
 .demo-bar__actions a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-weight:600;text-underline-offset:3px}
 @media (max-width:719px){.range-scale{display:none}}
 @media (max-width:599px){
-  /* On a phone the lede and the privacy detail step aside so the tabs start above the fold. */
+  /* On a phone the long lede and the privacy detail step aside so the tabs start above the fold;
+     a one-sentence lede still says what the tool does (EF-CC-2). */
   .lede,.privacy-more{display:none}
+  .lede-short{display:block}
   .wrap{gap:16px;padding-top:16px}
 }
 </style>
@@ -311,6 +314,7 @@ footer p{max-width:65ch}
   <div class="intro">
     <h1>How much electricity does your AI coding use?</h1>
     <p class="lede" id="lede">Electricity estimates for Claude Code, the AI coding agent, from its local logs. Try it on your own logs below.</p>
+    <p class="lede-short" id="lede-short">Electricity estimates for Claude Code, from its local logs.</p>
   </div>
 
   <div class="privacy" id="privacy"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><div><b>Your logs never leave this browser.</b><span class="privacy-more"> No network requests; it reads token counts only.</span></div></div>

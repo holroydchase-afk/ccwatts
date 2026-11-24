@@ -188,6 +188,54 @@ withBrowser("M4.8.1 playground, sample data (browser)", () => {
       await page.close();
     });
 
+    // EF-CC-2 (issue #112, P1): a recruiter on a phone must be able to tell what the tool is.
+    it(`FOCUS-6 EF-CC-2 a visible sentence in the first viewport says it estimates Claude Code electricity from its logs, and "${CTA}" stays in view (${at})`, async () => {
+      const page = await open(vp);
+      // The smallest visible element (outside the studio demo bar) whose text names Claude Code,
+      // electricity and logs together, and that sits above the tabs or inside Overview.
+      const found = await page.evaluate(() => {
+        const tabsTop = document.querySelector("#tabs")!.getBoundingClientRect().top;
+        const hits = [...document.querySelectorAll<HTMLElement>("body *")]
+          .filter((el) => !el.closest("#demo-bar") && !["SCRIPT", "STYLE", "TEMPLATE"].includes(el.tagName))
+          // One sentence must carry all three words (innerText splits blocks onto new lines), so the
+          // Overview panel's "Electricity" row + "Claude Code" note + "logs" button don't add up to a pass.
+          .filter((el) => (el.innerText ?? "").split(/(?<=[.!?])\s+|\n+/).some((t) => /Claude Code/.test(t) && /electricity/i.test(t) && /logs/.test(t)))
+          .filter((el) => el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true }))
+          .map((el) => ({ el, r: el.getBoundingClientRect() }))
+          .filter(({ el, r }) => r.width > 1 && r.height > 1 && (r.bottom <= tabsTop + 0.5 || !!el.closest("#p-overview")))
+          .sort((a, b) => a.r.width * a.r.height - b.r.width * b.r.height);
+        const best = hits[0];
+        if (!best) return null;
+        const { r } = best;
+        return { text: (best.el.innerText ?? "").replace(/\s+/g, " ").trim(), x: r.x, y: r.y, w: r.width, h: r.height };
+      });
+      expect(found, "no visible sentence naming Claude Code + electricity + logs above the tabs or in Overview").not.toBeNull();
+      const v = page.viewportSize()!;
+      const inside = found!.x >= 0 && found!.y >= 0 && found!.x + found!.w <= v.width + 0.5 && found!.y + found!.h <= v.height + 0.5;
+      expect(inside, `"${found!.text}" at ${Math.round(found!.x)},${Math.round(found!.y)} ${Math.round(found!.w)}x${Math.round(found!.h)} not fully inside ${at}`).toBe(true);
+      expect(await fullyInView(page, cta(page)), "CTA position after the explainer").toBe("inside");
+      await page.close();
+    });
+
+    // UX-R8 (P2): the EV line under the number lines up with the CTA's left edge.
+    it(`FOCUS-7 UX-R8 the Overview EV line's left text edge matches the "${CTA}" left edge, within 1px (${at})`, async () => {
+      const page = await open(vp);
+      const compare = ((await page.textContent("#hero-compare")) ?? "").trim();
+      const line = overview(page).getByText(compare, { exact: true });
+      expect(await line.count(), `Overview has no line "${compare}"`).toBe(1);
+      // Left edge of the rendered text itself (not the box, which may include padding).
+      const textLeft = await line.evaluate((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const rects = [...range.getClientRects()].filter((r) => r.width > 0);
+        return rects.length ? Math.min(...rects.map((r) => r.left)) : NaN;
+      });
+      const btn = await cta(page).first().boundingBox();
+      expect(btn, "CTA not rendered").not.toBeNull();
+      expect(Math.abs(textLeft - btn!.x), `EV text starts at x ${textLeft.toFixed(1)}, CTA at x ${btn!.x.toFixed(1)}`).toBeLessThanOrEqual(1);
+      await page.close();
+    });
+
     it(`FOCUS-5 tabs read Overview, Electricity, Share, Method, Pace (${at})`, async () => {
       const page = await open(vp);
       expect(await tabNames(page)).toEqual([...TABS]);
