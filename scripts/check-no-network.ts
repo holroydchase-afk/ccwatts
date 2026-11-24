@@ -88,13 +88,15 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // Method table: no sideways scroll inside it on a phone, distinct source links 48px tall (RR-10, RR-11).
   // Closed <details> content takes no space now, so open the Method tab and the parameter table first.
   await tab(page, "Method");
-  await page.click("#params-box > summary");
+  // EF-12 (intake #112): #params-box starts open, so only click it open if it is closed.
+  const paramsWasOpen = await page.$eval("#params-box", (d) => (d as HTMLDetailsElement).open);
+  if (!paramsWasOpen) await page.click("#params-box > summary");
   const table = await page.$eval(".tablewrap", (t) => ({ over: t.scrollWidth - t.clientWidth }));
   if (table.over > 1) problems.push(`method table scrolls sideways by ${table.over}px at ${viewport.width}px`);
   const links = await page.$$eval("#params a", (as) => as.map((a) => ({ t: (a.textContent ?? "").trim(), h: a.getBoundingClientRect().height })));
   if (links.some((l) => l.t === "source")) problems.push("source links don't name their source");
   if (links.some((l) => l.h < 48)) problems.push(`source links under 48px at ${viewport.width}px`);
-  await page.click("#params-box > summary");
+  if (!paramsWasOpen) await page.click("#params-box > summary");
   // Phones get a hint that logs live on a computer (RR-13).
   await openLogs(page);
   const hint = await page.$eval("#phone-hint", (h) => h.getBoundingClientRect().height > 0).catch(() => null);
@@ -189,7 +191,14 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     if (box < 48) problems.push(`WI-R7: slider is ${box.toFixed(1)}px tall at ${viewport.width}px (want 48+)`);
     const scalePx = await page.$eval(".whatif-scale", (s) => parseFloat(getComputedStyle(s).fontSize)).catch(() => 0);
     if (scalePx < 17) problems.push(`WI-R6: .whatif-scale is ${scalePx}px at ${viewport.width}px (want 17+)`);
-    if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note missing or shown before the slider moves");
+    // EF-1 (intake #112): the note shows the published total with its range and method version on load, not a what-if.
+    const loadNote = async () => {
+      if (!(await noteShown())) return "missing or hidden";
+      const t = await text("#whatif-note");
+      return /range/.test(t) && /Method v\d/.test(t) && !/What[- ]if/.test(t) ? null : `says "${t}"`;
+    };
+    const onLoad = await loadNote();
+    if (onLoad) problems.push(`WI-3: #whatif-note on load ${onLoad} (want the total with range and Method v, not a what-if)`);
     await page.$eval("#whatif-cache", (s: HTMLInputElement) => {
       s.value = s.max;
       s.dispatchEvent(new Event("input", { bubbles: true }));
@@ -226,7 +235,8 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     if (!flag.includes("what-if: cache reads 25%")) problems.push(`WI-R5: hero flag says "${flag}", want "what-if: cache reads 25%"`);
     await page.click("#whatif-reset");
     if ((await text("#hero-big")) !== heroBefore) problems.push("WI-3: Reset did not restore the hero total");
-    if ((await noteShown()) !== false) problems.push("WI-3: #whatif-note still shown after Reset");
+    const afterReset = await loadNote();
+    if (afterReset) problems.push(`WI-3: #whatif-note after Reset ${afterReset} (want the load text back)`);
     // WI-R2: Reset hides itself, so focus goes back to the slider (click and Enter).
     const focused = () => page.evaluate(() => document.activeElement?.id ?? null);
     if ((await focused()) !== "whatif-cache") problems.push(`WI-R2: after clicking Reset focus is on #${await focused()}, want #whatif-cache`);
