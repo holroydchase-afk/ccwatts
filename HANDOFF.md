@@ -26,6 +26,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-24: M4.8.2 HEADER TRIM (UX-R2, CCW-DEC-17 recommendations): the playground drops the standalone "ccwatts" line above the h1 and shows the name in the demo bar; the demo bar stops repeating "nothing leaves this browser" (the lock line is the one promise); phone tab bar starts at 223px (was 271). Dashboard keeps its header. FOCUS-8..10. Merge waits on Chase's go (live demo). Next: M4.8.3 ranges on every number (UX-R6).
 - 2026-11-24: Intake #117: portfolio sample numbers pinned (PORT-1 to PORT-3); command recorded under Portfolio.
 - 2026-11-24: Intake #122 (privacy sweep): the one claude.ai artifact link in docs/history/HANDOFF-archive.md is gone (title kept). Repo now has no artifact links. Docs only.
 - 2026-11-24: QA-R1 (CLOUDP/FOCUS): the Overview phone note under "Try it on your logs" now reads "On a phone? It works with Claude Code on the web." (Chase picked it, Nov 24; was "Needs a computer with Claude Code."), pointing phones to the cloud prompt. Tests CLOUDP-12, FOCUS-1; plugin bundles rebuilt.

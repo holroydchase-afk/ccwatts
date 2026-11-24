@@ -858,6 +858,8 @@ function wireDemoBar() {
     }
   });
   bar.hidden = false;
+  // UX-R2: the bar shows "ccwatts", so the header's brand line steps aside (its pill is already hidden here).
+  $("page-top").hidden = true;
 }
 
 wire();
