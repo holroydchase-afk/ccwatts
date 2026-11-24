@@ -195,7 +195,11 @@ describe("EF-CC-4 Share card preview (EF-5, EF-6, static)", () => {
   it("EF-6 the sample card SVG from core is byte-identical to before (pinned hash)", () => {
     const rows = readSample(html);
     const svg = receiptSvg({ estimate: estimate(rollupRecords(rows), defaultParams), params: defaultParams, windowLabel: "EF-6 fixture", sample: true });
-    expect(createHash("sha256").update(svg).digest("hex")).toBe("b9ea1343c9e18d88a34b139df0cfa37040f4131034c51bfb21a9106fa62daf5f");
+    // Re-pinned for M4.8.3 (SPEC-RANGES RANGE-8): the slip's per-type and model rows now carry ranges and the
+    // comparison lines carry (low–high). The EF-6 intent stands: the web preview changes nothing in the card.
+    // Re-pinned for the M4.8.3 fix round (UX-R14, UX-R15): diffed against the old card, the only changes are
+    // "1.3 – 30.5" -> "1.3–30.5" (aria-label, headline, RANGE row) and "(4.4–102)" -> "(4.4–100)".
+    expect(createHash("sha256").update(svg).digest("hex")).toBe("4b8d0512b622138489c4c6878041eca29a2df154c9520db97703eddb9e64a145");
   });
 });
 
@@ -399,7 +403,7 @@ describe("EF no network and no page errors", () => {
 // Review round for intake #112: ux-reviewer findings UX-R68..UX-R73 (390px first).
 // API choices pinned here (for the engineer):
 //  - UX-R68: the sample label stays the sibling of #card (EF-5) and reads
-//    "Sample data · <central> <unit> (range <low> – <high> <unit>) · method v<version>", built from the
+//    "Sample data · <central> <unit> (range <low>–<high> <unit>) · method v<version>", built from the
 //    published estimate the card shows (not hard-coded in template.html). In sample mode no other visible
 //    text in #p-share says "sample data" (the "This card shows sample data…" status line goes).
 //  - UX-R69: no `.eyebrow` in #pace; "opt-in" and "stays local" move into #pace-how. #pace-lead is
@@ -467,7 +471,7 @@ withBrowser("UXR-68..73 review round (in a browser)", () => {
     expect(r.shown).toBe(true);
     expect(r.size).toBeGreaterThanOrEqual(17);
     expect(r.text).toMatch(
-      new RegExp(`^Sample data · ${reEsc(hero.central)} ${hero.unit} \\(range ${reEsc(hero.low)} – ${reEsc(hero.high)} k?Wh\\) · method v${ver}$`),
+      new RegExp(`^Sample data · ${reEsc(hero.central)} ${hero.unit} \\(range ${reEsc(hero.low)}–${reEsc(hero.high)} k?Wh\\) · method v${ver}$`),
     );
   });
 
@@ -550,7 +554,7 @@ withBrowser("UXR-68..73 review round (in a browser)", () => {
     const t = await page.evaluate(() => (document.getElementById("whatif-note") as HTMLElement).innerText.replace(/[ \t ]+/g, " ").trim());
     await page.close();
     expect(t).toMatch(
-      new RegExp(`^Published ${pct(publishedCache)}: ${reEsc(hero.central)} ${hero.unit} \\(range ${reEsc(hero.low)} – ${reEsc(hero.high)} k?Wh\\) · Method v${ver}$`),
+      new RegExp(`^Published ${pct(publishedCache)}: ${reEsc(hero.central)} ${hero.unit} \\(range ${reEsc(hero.low)}–${reEsc(hero.high)} k?Wh\\) · Method v${ver}$`),
     );
   });
 
@@ -567,9 +571,9 @@ withBrowser("UXR-68..73 review round (in a browser)", () => {
     });
     await page.close();
     expect(r.lines, r.lines.join(" / ")).toHaveLength(2);
-    expect(r.lines[0]).toMatch(new RegExp(`^What-if at 15%: ${reEsc(whatIf.central)} ${whatIf.unit} \\(range ${num} – ${num}( k?Wh)?\\)$`));
+    expect(r.lines[0]).toMatch(new RegExp(`^What-if at 15%: ${reEsc(whatIf.central)} ${whatIf.unit} \\(range ${num}–${num}( k?Wh)?\\)$`));
     expect(r.lines[1]).toMatch(
-      new RegExp(`^Published ${pct(publishedCache)}: ${reEsc(published.central)} ${published.unit} \\(range ${reEsc(published.low)} – ${reEsc(published.high)}( k?Wh)?\\) · share card keeps ${pct(publishedCache)} · Method v${ver}$`),
+      new RegExp(`^Published ${pct(publishedCache)}: ${reEsc(published.central)} ${published.unit} \\(range ${reEsc(published.low)}–${reEsc(published.high)}( k?Wh)?\\) · share card keeps ${pct(publishedCache)} · Method v${ver}$`),
     );
     expect(r.rows, "rendered rows at 390px").toBeLessThanOrEqual(4);
   });

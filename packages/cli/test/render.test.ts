@@ -14,7 +14,7 @@ describe("summary", () => {
 
   it("always shows a range and the method version", () => {
     const out = summary(e, params, window);
-    expect(out).toMatch(/range [\d.]+ – [\d.]+/);
+    expect(out).toMatch(/range [\d.]+–[\d.]+/);
     expect(out).toContain(`method v${params.version}`);
   });
 
@@ -55,7 +55,7 @@ describe("method", () => {
 
 describe("formatting", () => {
   it("switches to kWh at 1000 Wh", () => {
-    expect(energy({ low: 400, central: 1200, high: 3000 })).toEqual({ central: "1.2 kWh", range: "0.4 – 3.0", unit: "kWh" });
+    expect(energy({ low: 400, central: 1200, high: 3000 })).toEqual({ central: "1.2 kWh", range: "0.4–3.0", unit: "kWh" });
     expect(num(0.004)).toBe("0.004");
   });
 });
@@ -83,7 +83,7 @@ describe("statusLine", () => {
   it("is one short line with a range and the method version", () => {
     const line = statusLine(e, params);
     expect(line.split("\n")).toHaveLength(1);
-    expect(line).toMatch(/range [\d.]+ – [\d.]+/);
+    expect(line).toMatch(/range [\d.]+–[\d.]+/);
     expect(line).toContain(`method v${params.version}`);
     expect(line.length).toBeLessThan(80);
   });

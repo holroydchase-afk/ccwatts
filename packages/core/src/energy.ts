@@ -201,37 +201,73 @@ export interface ComparisonLine {
   text: string;
 }
 
-/** Phone charges in words: "about half a phone charge" rather than "0.5 times" for small totals. */
-function phoneText(charges: number, round: (n: number) => number): string {
-  if (round(charges) === 1) return "charging a phone about once";
-  if (charges >= 1) return `charging a phone about ${round(charges)} times`;
-  const pct = Math.round(charges * 100);
-  if (pct < 1) return "under 1% of a phone charge";
-  if (pct >= 45 && pct <= 55) return "about half a phone charge";
-  return `about ${Math.round(pct / 10) * 10 || pct}% of a phone charge`;
+/** Rounds a comparison amount: whole numbers from 10 up, else one decimal. */
+const roundAmount = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10);
+
+/**
+ * A range end: 2 significant figures, at most 1 decimal (102 -> 100, 4.44 -> 4.4, 0.93 -> 0.9), so the
+ * ends never claim more precision than the central (UX-R14). Above 0 but rounding to 0 reads "<0.1".
+ */
+function roundEnd(n: number): number {
+  if (n <= 0) return 0;
+  const d = Math.min(1, 1 - Math.floor(Math.log10(n)));
+  return d >= 0 ? Math.round(n * 10 ** d) / 10 ** d : Math.round(n / 10 ** -d) * 10 ** -d;
+}
+const end = (n: number) => (n > 0 && roundEnd(n) === 0 ? "<0.1" : String(roundEnd(n)));
+
+/** "(4.4–100)": both ends of a comparison, from the total's low and high. Nothing when both ends round the same (a point estimate). */
+const span = (low: number, high: number) => (end(low) === end(high) ? "" : ` (${end(low)}–${end(high)})`);
+
+/**
+ * Phone charges in words: "about 30% (10–90%) of a phone charge" rather than "0.3 times" for small
+ * totals, with the range in the same unit as the central. A range whose high end tops one charge never
+ * prints a percent above 100; it reads in charges instead: "about half a phone charge (0.1–1.5 charges)".
+ * A total whose high end is under 1% of a charge reads "under 1% of a phone charge".
+ */
+function phoneText(c: Range): string {
+  if (roundAmount(c.central) >= 1) {
+    const times = roundAmount(c.central) === 1 ? "once" : `${roundAmount(c.central)} times`;
+    return `charging a phone about ${times}${span(c.low, c.high)}`;
+  }
+  if (Math.round(c.high * 100) > 100) {
+    const tenths = Math.round(c.central * 10) / 10;
+    const central = tenths === 0 ? "under a tenth of" : tenths === 0.5 ? "about half" : `about ${tenths} of`;
+    return `${central} a phone charge (${end(c.low)}–${end(c.high)} charges)`;
+  }
+  if (c.high < 0.01) return "under 1% of a phone charge";
+  const pct = (v: number) => (v > 0 && Math.round(v * 100) === 0 ? "<1" : String(Math.round(v * 100)));
+  const central = Math.round(c.central * 100);
+  if (central === 0) return `under 1% (<1–${pct(c.high)}%) of a phone charge`;
+  const shown = central >= 10 ? Math.round(central / 10) * 10 : central;
+  return `about ${shown}% (${pct(c.low)}–${pct(c.high)}%) of a phone charge`;
 }
 
-/** Everyday equivalents for a kWh amount, always from the central value, in display order. */
-export function comparisons(kwh: number, params: Params): ComparisonLine[] {
+/**
+ * Everyday equivalents for an energy total (a Range in Wh), in display order. Each line gives the
+ * central amount and its low–high range; the comparison factors themselves are held at their central
+ * value, so the range is the energy range only. `amount` is the central (MCP JSON reads it).
+ */
+export function comparisons(total: Range, params: Params): ComparisonLine[] {
   const c = params.comparisons;
   const out: ComparisonLine[] = [];
-  const round = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10);
-  const count = (n: number, one: string, many: string) => (round(n) === 1 ? `1 ${one}` : `${round(n)} ${many}`);
+  const per = (kwh: number): Range => ({ low: total.low / 1000 / kwh, central: total.central / 1000 / kwh, high: total.high / 1000 / kwh });
+  const count = (r: Range, one: string, many: string) =>
+    `${roundAmount(r.central) === 1 ? `1 ${one}` : `${roundAmount(r.central)} ${many}`}${span(r.low, r.high)}`;
   if (c.ev_kwh_per_mile) {
-    const miles = kwh / c.ev_kwh_per_mile.value;
-    out.push({ id: "ev", amount: miles, text: `driving an EV about ${count(miles, "mile", "miles")}` });
+    const miles = per(c.ev_kwh_per_mile.value);
+    out.push({ id: "ev", amount: miles.central, text: `driving an EV about ${count(miles, "mile", "miles")}` });
   }
   if (c.fridge_kwh_per_day) {
-    const days = kwh / c.fridge_kwh_per_day.value;
-    out.push({ id: "fridge", amount: days, text: `running a fridge about ${count(days, "day", "days")}` });
+    const days = per(c.fridge_kwh_per_day.value);
+    out.push({ id: "fridge", amount: days.central, text: `running a fridge about ${count(days, "day", "days")}` });
   }
   if (c.phone_charge_kwh) {
-    const charges = kwh / c.phone_charge_kwh.value;
-    out.push({ id: "phone", amount: charges, text: phoneText(charges, round) });
+    const charges = per(c.phone_charge_kwh.value);
+    out.push({ id: "phone", amount: charges.central, text: phoneText(charges) });
   }
   if (c.us_home_kwh_per_day) {
-    const days = kwh / c.us_home_kwh_per_day.value;
-    out.push({ id: "home", amount: days, text: `powering a US home about ${count(days, "day", "days")}` });
+    const days = per(c.us_home_kwh_per_day.value);
+    out.push({ id: "home", amount: days.central, text: `powering a US home about ${count(days, "day", "days")}` });
   }
   return out;
 }

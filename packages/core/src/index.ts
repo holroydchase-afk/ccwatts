@@ -1,6 +1,6 @@
 export { APP_NAME, APP_VERSION, PLAYGROUND_URL, PORTFOLIO_URL, REPO_URL } from "./meta.js";
-export { TYPE_LABELS, int, num, formatEnergy, shortModel } from "./format.js";
-export { shareLine, linkedInPost, receiptSvg, everyday, type ReceiptInput } from "./receipt.js";
+export { TYPE_LABELS, int, num, formatEnergy, formatShare, shareRange, shortModel } from "./format.js";
+export { shareLine, linkedInPost, receiptSvg, everyday, rereadShare, type ReceiptInput } from "./receipt.js";
 export { parseSince, dropFuture, futureNote, FUTURE_SLACK_MS, type Window } from "./window.js";
 export { safeName, NAME_MAX } from "./sanitize.js";
 export * from "./types.js";

@@ -13,6 +13,9 @@ import {
   MIX_GUESSED,
   everyday,
   formatEnergy,
+  formatShare,
+  rereadShare,
+  shareRange,
   hm,
   int,
   monthDay,
@@ -114,9 +117,11 @@ function renderOverviewEnergy(e: Estimate, label: string) {
   bar.hidden = !e.responses;
   bar.innerHTML = e.responses ? `<span class="range-dot" style="left:${(rangeAt(e) * 100).toFixed(1)}%"></span>` : "";
   $("ov-energy-detail").textContent = e.responses ? `range ${t.range} ${t.unit} · method v${params.version}` : `method v${params.version}`;
-  const share = e.total.central ? Math.round(((e.byType.find((b) => b.key === "cacheRead")?.energy.central ?? 0) / e.total.central) * 100) : 0;
-  $("ov-drives-text").textContent = e.responses ? `${share}% comes from re-reading the conversation` : "Load some usage to see what drives it";
+  $("ov-drives-text").innerHTML = e.responses ? keepRanges(`${rereadShare(typeShare(e, "cacheRead")).sentence} comes from re-reading the conversation`) : "Load some usage to see what drives it";
 }
+
+/** Escapes text and keeps each "(low–high)" or "64% (30–72%)" together, so a phone never wraps inside a range. */
+const keepRanges = (text: string) => esc(text).replace(/(?:[<\d.,]+% )?\([^()]*–[^()]*\)/g, (m) => `<span class="nw">${m}</span>`);
 
 function renderHero(e: Estimate, label: string) {
   const t = formatEnergy(e.total);
@@ -125,9 +130,9 @@ function renderHero(e: Estimate, label: string) {
   $("hero-big").innerHTML = e.responses ? `${esc(value ?? "")}<small>${esc(unit ?? "")}</small>` : "–";
   const fixed = whatIfActive() ? `, with cache reads fixed at ${pct(viewParams.params[CACHE_ID]!.value)} and every other assumption at its bounds.` : ", from the bounds on every assumption.";
   renderRangeBar(e, t, fixed);
-  $("hero-compare").textContent = e.responses ? `That's like ${everyday(e.total.central / 1000, params).replace(" · ", ", or ")}.` : "";
+  $("hero-compare").innerHTML = e.responses ? keepRanges(`That's like ${everyday(e.total, params).replace(" · ", ", or ")}.`) : "";
   // FOCUS-3: the same line under the Overview number.
-  $("ov-compare").textContent = $("hero-compare").textContent;
+  $("ov-compare").innerHTML = $("hero-compare").innerHTML;
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   // One span per item, kept whole, so a phone wraps between items and never inside a date.
   const items = [`${int(e.responses)} responses`, `${int(tokens)} tokens`, ...(e.span ? [e.span.from === e.span.to ? e.span.from : `${e.span.from} to ${e.span.to}`] : []), `method v${params.version}`];
@@ -147,7 +152,7 @@ function renderRangeBar(e: Estimate, t: ReturnType<typeof formatEnergy>, fixed: 
     el.innerHTML = `<span class="range-empty">No usage in this window.</span>`;
     return;
   }
-  const [low, high] = t.range.split(" – ");
+  const [low, high] = t.range.split("–");
   const at = rangeAt(e);
   el.setAttribute("aria-label", `Plausible range ${t.range} ${t.unit}, central ${t.central}${fixed}`);
   el.innerHTML =
@@ -193,12 +198,12 @@ function renderChart(e: Estimate) {
     const x = pad.l + i * bw + bw * 0.12;
     const w = Math.max(1, bw * 0.76);
     for (const [type, colour] of SERIES) {
-      const wh = typeShare(d, type);
+      const wh = dayTypeWh(d, type);
       if (wh <= 0) continue;
       const v0 = acc / scale;
       acc += wh;
       const v1 = acc / scale;
-      parts.push(`<rect x="${x.toFixed(1)}" y="${y(v1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.5, y(v0) - y(v1)).toFixed(1)}" fill="var(${colour})"><title>${esc(d.key)} ${esc(TYPE_LABELS[type])} ${num(wh / scale)} ${esc(total.unit)}</title></rect>`);
+      parts.push(`<rect x="${x.toFixed(1)}" y="${y(v1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.5, y(v0) - y(v1)).toFixed(1)}" fill="var(${colour})"><title>${esc(d.key)} ${esc(TYPE_LABELS[type])} ${num(wh / scale)} ${esc(total.unit)} (central)</title></rect>`);
     }
   });
   // Fewer date ticks on a phone, so 17px labels never collide.
@@ -214,7 +219,7 @@ function renderChart(e: Estimate) {
 }
 
 /** Energy of one token type within a day row, from the day's own breakdown. */
-function typeShare(day: Breakdown, type: TokenType): number {
+function dayTypeWh(day: Breakdown, type: TokenType): number {
   // Day rows carry token counts by type but energy only in total, so price the type on its own.
   const dayEstimate = dayTypeCache.get(day.key);
   return dayEstimate?.[type] ?? 0;
@@ -238,31 +243,34 @@ function niceStep(raw: number): number {
   return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
 }
 
-function renderRank(id: string, rows: Breakdown[], label: (k: string) => string, e: Estimate) {
+function renderRank(id: string, rows: Breakdown[], label: (k: string) => string) {
   const max = Math.max(...rows.map((r) => r.energy.central), 1e-9);
   const list = rows.slice(0, 6);
   $(id).innerHTML = list.length
     ? list
         .map((r) => {
           const t = formatEnergy(r.energy);
-          const pct = e.total.central ? Math.round((r.energy.central / e.total.central) * 100) : 0;
-          return `<li><span class="name" title="${esc(label(r.key))}">${esc(label(r.key))}</span><span class="val"><b>${esc(t.central)}</b> · ${pct}%</span><span class="bar"><span style="width:${((r.energy.central / max) * 100).toFixed(1)}%"></span></span><span class="rng">range ${esc(t.range)} ${esc(t.unit)}</span></li>`;
+          // RANGE-6: no share here; the bar and the kWh range carry it (shares move only a few points).
+          return `<li><span class="name" title="${esc(label(r.key))}">${esc(label(r.key))}</span> <span class="val"><b>${esc(t.central)}</b></span> <span class="bar"><span style="width:${((r.energy.central / max) * 100).toFixed(1)}%"></span></span> <span class="rng">range ${esc(t.range)} ${esc(t.unit)}</span></li>`;
         })
         .join("")
     : `<li><span class="name">No usage in this window</span></li>`;
 }
 
+/** A token type's share of the electricity, as a low/central/high fraction (RANGE-1). */
+const typeShare = (e: Estimate, k: TokenType) => shareRange(e.byType.find((b) => b.key === k)?.energy ?? { low: 0, central: 0, high: 0 }, e.total);
+
 function renderExplain(e: Estimate) {
-  const share = (k: TokenType) => (e.total.central ? Math.round(((e.byType.find((b) => b.key === k)?.energy.central ?? 0) / e.total.central) * 100) : 0);
+  const share = (k: TokenType) => formatShare(typeShare(e, k));
   const tokens = TOKEN_TYPES.reduce((s, k) => s + e.tokens[k], 0);
   const readTokens = tokens ? Math.round((e.tokens.cacheRead / tokens) * 100) : 0;
   // A two-sentence lead; the longer why sits behind "Why this happens" (AC-R56).
-  $("explain").textContent = e.responses
-    ? `Most of the electricity comes from re-reading the conversation so far (${share("cacheRead")}% here). A fresh session per task is the simplest way to lower it.`
+  $("explain").innerHTML = e.responses
+    ? keepRanges(`${rereadShare(typeShare(e, "cacheRead")).sentence} of the electricity comes from re-reading the conversation so far. A fresh session per task is the simplest way to lower it.`)
     : "Load some usage to see what drives it.";
   $("explain-box").hidden = !e.responses;
-  $("explain-more").textContent = e.responses
-    ? `Each time Claude Code takes a step, it re-reads the conversation so far. Most of that comes from a cache, which is cheap per token but happens constantly. Here, cache reads were ${readTokens}% of tokens and about ${share("cacheRead")}% of the electricity. Writing new context into the cache was ${share("cacheWrite")}%, and the text the model wrote back was ${share("output")}%. Long sessions grow the context the agent re-reads, so starting fresh sessions for new tasks is the simplest way to lower your number.`
+  $("explain-more").innerHTML = e.responses
+    ? keepRanges(`Each time Claude Code takes a step, it re-reads the conversation so far. Most of that comes from a cache, which is cheap per token but happens constantly. Here, cache reads were ${readTokens}% of tokens and about ${share("cacheRead")} of the electricity. Writing new context into the cache was ${share("cacheWrite")}, and the text the model wrote back was ${share("output")}. Long sessions grow the context the agent re-reads, so starting fresh sessions for new tasks is the simplest way to lower your number.`)
     : "";
 }
 
@@ -478,8 +486,8 @@ function render(share = true) {
   renderHero(e, label);
   renderOverviewEnergy(e, label);
   renderChart(e);
-  renderRank("by-model", e.byModel, shortModel, e);
-  renderRank("by-project", e.byProject, projectName, e);
+  renderRank("by-model", e.byModel, shortModel);
+  renderRank("by-project", e.byProject, projectName);
   renderExplain(e);
   renderWhatIf(e, published);
   // The share card already says "(Sample data)" and keeps its own wording (core receipt.ts).
@@ -525,10 +533,11 @@ function renderManual() {
   if (tokens === null) return void (out.textContent = "Couldn't read that as a token count. Try 88.8M, 1.2k or 88800000.");
   const r = estimateFromTotal({ tokens, model: $<HTMLSelectElement>("manual-model").value }, params);
   const t = formatEnergy(r.total);
-  // Same comparison line as `ccwatts estimate` prints (UX-R29), and the same note on the guessed mix (UX-R28).
+  // Same comparison lines as `ccwatts estimate` prints, one per line with its range (UX-R29, RANGE-10),
+  // and the same note on the guessed mix (UX-R28).
   out.innerHTML = [
     `<span class="manual-kwh">≈ <b>${esc(t.central)}</b> (range ${esc(t.range)})</span>`,
-    `<span class="manual-compare">≈ ${esc(everyday(r.total.central / 1000, params))}</span>`,
+    ...everyday(r.total, params).split(" · ").map((c) => `<span class="manual-compare">≈ ${esc(c)}</span>`),
     `<span class="meta">Method v${esc(r.methodVersion)} · typical Claude Code mix assumed</span>`,
     `<span class="meta">${esc(MIX_GUESSED)}</span>`,
   ].join("");

@@ -122,27 +122,35 @@ describe("sanity checks", () => {
 });
 
 describe("comparisons", () => {
-  it("uses the central value", () => {
-    const [ev] = comparisons(3, params);
+  // M4.8.3 (SPEC-RANGES RANGE-3): comparisons take the total Range in Wh and carry a (low–high) range.
+  const wh = (kwh: number) => ({ low: kwh * 1000, central: kwh * 1000, high: kwh * 1000 });
+  const spread = (kwh: number) => ({ low: kwh * 500, central: kwh * 1000, high: kwh * 2000 });
+
+  it("uses the central value for amount", () => {
+    const [ev] = comparisons(spread(3), params);
     expect(ev?.amount).toBeCloseTo(10, 5);
+    expect(ev?.text).toBe("driving an EV about 10 miles (5–20)");
   });
 
-  // CCW-RR-20: tiny totals read "charging a phone about 0.5 times".
+  // CCW-RR-20: tiny totals read "charging a phone about 0.5 times". Fractions stay in words (a percent of a
+  // charge, with its range), never "0.5 times".
   it("says a fraction of a phone charge in words, not '0.5 times'", () => {
-    const phone = (kwh: number) => comparisons(kwh, params).find((c) => c.id === "phone")?.text;
-    expect(phone(0.0095)).toBe("about half a phone charge");
-    expect(phone(0.0057)).toBe("about 30% of a phone charge");
-    expect(phone(0.00005)).toBe("under 1% of a phone charge");
-    expect(phone(0.019)).toBe("charging a phone about once");
-    expect(phone(0.038)).toBe("charging a phone about 2 times");
+    const phone = (kwh: number) => comparisons(spread(kwh), params).find((c) => c.id === "phone")?.text;
+    expect(phone(0.0095)).toBe("about 50% (25–100%) of a phone charge");
+    expect(phone(0.0057)).toBe("about 30% (15–60%) of a phone charge");
+    expect(phone(0.00005)).toBe("under 1% of a phone charge"); // QA-R1: restored to the original CCW-RR-20 input
+    expect(phone(0.019)).toBe("charging a phone about once (0.5–2)");
+    expect(phone(0.038)).toBe("charging a phone about 2 times (1–4)");
+    for (const kwh of [0.0095, 0.0057, 0.019, 0.038]) expect(phone(kwh)).not.toMatch(/\d\.\d times/);
   });
 
+  // A point total (low = high) has no range to show, so the line is the central alone.
   it("uses the singular for exactly one mile or day", () => {
-    const all = comparisons(0.3, params);
+    const all = comparisons(wh(0.3), params);
     const ev = params.comparisons.ev_kwh_per_mile!.value;
-    expect(comparisons(ev, params).find((c) => c.id === "ev")?.text).toBe("driving an EV about 1 mile");
+    expect(comparisons(wh(ev), params).find((c) => c.id === "ev")?.text).toBe("driving an EV about 1 mile");
     const fridge = params.comparisons.fridge_kwh_per_day!.value;
-    expect(comparisons(fridge, params).find((c) => c.id === "fridge")?.text).toBe("running a fridge about 1 day");
+    expect(comparisons(wh(fridge), params).find((c) => c.id === "fridge")?.text).toBe("running a fridge about 1 day");
     for (const c of all) expect(c.text).not.toMatch(/\b1 (miles|days|times)\b/);
   });
 });
