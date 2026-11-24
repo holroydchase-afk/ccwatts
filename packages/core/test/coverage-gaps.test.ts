@@ -86,8 +86,30 @@ describe("COV-3 project: projectRef never stores a full path", () => {
     expect(projectRef("///").name).toBe("(root)");
   });
 
-  it("COV-3b a Windows drive root keeps the drive letter as its name (current behavior, see QA-R1)", () => {
-    expect(projectRef("C:\\").name).toBe("C:");
+  // QA-R1 (Chase's call): a Windows drive root is named (root), like POSIX "/".
+  it("COV-3b QA-R1 a Windows drive root is named (root), in any separator, case or bare form", () => {
+    for (const cwd of ["C:\\", "C:/", "c:\\", "D:", "D:\\"]) {
+      expect.soft(projectRef(cwd).name, cwd).toBe("(root)");
+    }
+  });
+
+  it("COV-3b2 QA-R1 drive roots keep distinct ids: per drive, and apart from POSIX /", () => {
+    expect(projectRef("C:\\").id).not.toBe(projectRef("D:\\").id);
+    expect(projectRef("C:").id).not.toBe(projectRef("D:").id);
+    expect(projectRef("C:\\").id).not.toBe(projectRef("/").id);
+    expect(projectRef("C:\\").id).toMatch(/^[0-9a-f]{16}$/);
+    // A trailing separator still doesn't change the id (COV-3d), so C:\ and C:/ stay one project.
+    expect(projectRef("C:/").id).toBe(projectRef("C:\\").id);
+  });
+
+  it("COV-3b3 QA-R1 guard: only a bare drive root is renamed; deeper paths, a folder named like C: and UNC shares are unchanged", () => {
+    expect(projectRef("C:\\code\\alpha").name).toBe("alpha");
+    expect(projectRef("C:/code/alpha/").name).toBe("alpha");
+    expect(projectRef("/mnt/C:").name).toBe("C:");
+    expect(projectRef("C:\\code\\C:").name).toBe("C:");
+    expect(projectRef("\\\\server\\share").name).toBe("share");
+    expect(projectRef("\\\\server\\share\\alpha\\").name).toBe("alpha");
+    expect(projectRef("//server/share/alpha").name).toBe("alpha");
   });
 
   it("COV-3c a basename of only control characters is named (unnamed)", () => {
