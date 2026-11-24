@@ -6,7 +6,6 @@ milestone: CCW-M4
 now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me"). Method v0.1.1 PR open; working the stable-demo plan (/mnt/project-files/ccwatts-reviews/2026-11-13-stable-demo-plan.md), a few pushes a day
 next: 0.2.0 is on npm (Nov 16); post the v0.2.0 GitHub Release and send the portfolio INTAKE; later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
-  - Go to merge the dark elevation PR (changes the live playground); OK to fork dark tokens from hearth (UX-R66)
   - Go on M4.7 Leverage (proposed in docs/internal/IDEAS.md)
   - Repo settings: turn on secret scanning and push protection; add the npm-publish environment
   - Repo settings (#113): About gear: description, topics, website (exact text in docs/product/SPEC-REPO-STANDARDS.md); Settings > Code security: turn on Private vulnerability reporting (SECURITY.md depends on it)
