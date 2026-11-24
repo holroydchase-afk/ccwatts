@@ -35,6 +35,7 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 ## In progress
 
 ## Exact next step
+- Eval findings PR (#112): merge waits on Chase's go (live playground). Merge after PR #116 (demo focus); whichever lands second merges main and rebuilds plugin bundles. Follow-up UX-R74 (P2): keep "share card keeps 10%" and "Method v0.1.2" unbroken in the moved What-if line (span.nw).
 0. Second PR: the cloud-session prompt (Claude runs `npx -y ccwatts@latest` and replies in three lines; staff-pm scope + ux-reviewer copy UX-R20 to R27, in the thread "Measure cloud sessions and pasted token counts") on the playground and README. Then check a fresh ccwatts thread saved its counts to /mnt/project-files/ccwatts-usage/.
 1. Chase merges #89, then this PR.
 2. Done Nov 16: 0.2.0 published. Remaining: GitHub Release v0.2.0, close issue #38, portfolio INTAKE (box C in the stable-demo plan).
