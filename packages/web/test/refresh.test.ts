@@ -440,13 +440,14 @@ async function perTab<T>(page: Page, measure: () => Promise<T>): Promise<Record<
 }
 
 withBrowser("VISUAL-REFRESH AC-T2 short views", () => {
-  for (const [width, height, limit] of [[1280, 800, 1900], [390, 844, 3200]] as const) {
+  // 1280 budget 1900 -> 1920 (intake #112): EF-CC-1 adds one always-visible What-if result line (22px + gap).
+  for (const [width, height, limit] of [[1280, 800, 1920], [390, 844, 3200]] as const) {
     it(`AC-T2 at ${width}x${height} each tab's view is at most ${limit}px tall (Your logs excluded, PR #101)`, async () => {
       const page = await open({ width, height });
       const paramsOpen = await page.evaluate(() => (document.getElementById("params-box") as HTMLDetailsElement | null)?.open ?? null);
       const heights = await perTab(page, () => page.evaluate(() => document.scrollingElement!.scrollHeight));
       await page.close();
-      expect(paramsOpen, "the params table starts closed").toBe(false);
+      expect(paramsOpen, "the params table starts open (EF-CC-6, intake #112)").toBe(true);
       for (const [name, h] of Object.entries(heights)) expect(h, `${name} at ${width}px: ${h}px`).toBeLessThanOrEqual(limit);
     });
   }

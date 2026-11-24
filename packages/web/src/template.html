@@ -415,7 +415,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
           </div>
           <input type="range" id="whatif-cache" min="__WHATIF_MIN__" max="__WHATIF_MAX__" step="0.01" value="__WHATIF_VALUE__" aria-valuetext="__WHATIF_PCT__ of fresh input" autocomplete="off">
           <div class="whatif-scale" aria-hidden="true"><span>__WHATIF_LOW_PCT__</span><span class="mark" style="left:__WHATIF_MARK__">published __WHATIF_PCT__</span><span>__WHATIF_HIGH_PCT__</span></div>
-          <p class="whatif-note" id="whatif-note" role="status" hidden></p>
+          <p class="whatif-note" id="whatif-note" role="status"></p>
           <details class="fine" id="whatif-why">
             <summary class="disclose">Why this assumption?</summary>
             <p class="note">Cache reads are most of your tokens, and their cost is the least certain assumption. The method uses __WHATIF_PCT__ of the cost of fresh input and tests __WHATIF_LOW_PCT__ to __WHATIF_HIGH_PCT__. Drag to see your number move.</p>
@@ -450,16 +450,16 @@ Leave out everything else, especially message content. Save the lines as ccwatts
       <span class="eyebrow">Your work rhythm · opt-in · stays local</span>
       <div class="pace-head">
         <h2 id="pace-h">Pace</h2>
-        <span class="pill sample" id="pace-pill">Sample data</span>
       </div>
     </div>
     <div id="pace-body">
       <p class="pace-lead" id="pace-lead"></p>
-      <p class="pace-sofar" id="pace-sofar" hidden></p>
-      <p class="pace-agents" id="pace-agents"></p>
       <div class="legend" id="pace-legend" aria-hidden="true"><span><i style="background:var(--c1)"></i>Active hours</span><span><i style="background:var(--c2)"></i>Past __PACE_LATE__ (part of active)</span><span><i class="agent"></i>Agent-only</span><span><i class="sofar"></i>This week, so far</span><span><i class="whisker"></i>Low – high range</span></div>
       <svg class="chart" id="pace-chart" viewBox="0 0 720 260" role="img" aria-label="Active and agent-only hours per week, last 4 weeks"></svg>
       <table class="vh" id="pace-table"></table>
+      <p class="pace-rest" id="pace-rest"></p>
+      <p class="pace-sofar" id="pace-sofar" hidden></p>
+      <p class="pace-agents" id="pace-agents"></p>
       <details class="fine" id="pace-how">
         <summary class="disclose">How Pace is counted</summary>
         <p class="note pace-foot" id="pace-foot">__PACE_NOTES__</p>
@@ -474,6 +474,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
   <section id="p-share" role="tabpanel" aria-labelledby="tab-share" hidden>
     <div class="block">
       <h2>Share it</h2>
+      <p class="card-sample" id="card-sample">Sample data: this card shows the sample, not your logs.</p>
       <img class="card" id="card" alt="Electricity receipt card" width="1200" height="627">
       <a class="phone-only full-size" id="card-full" href="#" target="_blank" rel="noopener noreferrer">Open full size</a>
       <div class="controls">
@@ -498,7 +499,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
         <summary class="disclose">More on the method</summary>
         <p class="explain" id="method-more"></p>
       </details>
-      <details id="params-box">
+      <details id="params-box" open>
         <summary class="disclose">Show all parameters and sources</summary>
         <div class="tablewrap"><table id="params"></table></div>
       </details>

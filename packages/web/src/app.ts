@@ -271,7 +271,6 @@ function localToday(): string {
 }
 
 const LATE = clockHour(params.pace.late_night.start_hour);
-const PACE_PILL: Record<typeof pace.source, string> = { sample: "Sample data", history: "Your history", files: "Your files" };
 let paceShown: PaceWeek[] = [];
 
 /** The Pace section: this week in words, four weeks as bars, a hidden table for screen readers. */
@@ -283,10 +282,6 @@ function renderPace() {
   const weeks = days && days.length ? paceWeeks(days, today, 4) : [];
   const any = weeks.some((w) => w.activeHours.high > 0 || w.agentHours.high > 0);
   paceShown = any ? weeks : [];
-  const pill = $("pace-pill");
-  pill.hidden = off;
-  pill.textContent = PACE_PILL[pace.source];
-  pill.classList.toggle("sample", pace.source === "sample");
   // PS-R12/R13: pace.jsonl skipped (--path, --no-history) or unreadable gets its own note, not "Pace is off".
   $("pace-optin").hidden = !off || Boolean(pace.off);
   $("pace-skipped").hidden = !off || pace.off !== "skipped";
@@ -308,8 +303,16 @@ function renderPace() {
   // UX-R40/R41: same lead as the CLI. Early in a week it describes the last full week, and this week
   // moves to the quieter "so far" line; the agents line follows the week the lead describes.
   const line = paceLead(weeks, params);
-  $("pace-lead").innerHTML = `<b>${esc(keep(line.lead))}</b>, ${esc(keep(line.rest))}`;
-  $("pace-sofar").textContent = line.soFar ? keep(line.soFar) : "";
+  // EF-CC-5: one number (with its range) above the chart; the rest of the week's figures go below it.
+  $("pace-lead").innerHTML = `<b>${esc(keep(line.lead))}</b>`;
+  $("pace-rest").textContent = keep(line.rest);
+  // QA-R2: the so-far hours carry their range here, like every other hour figure on the page.
+  const now = weeks[0]!;
+  const soFar =
+    line.soFar && now.activeHours.central > 0
+      ? `This week so far: about ${paceHours(now.activeHours.central)} hours (range ${paceHoursRange(now.activeHours)}) in ${now.daysCounted} day${now.daysCounted === 1 ? "" : "s"}.`
+      : line.soFar;
+  $("pace-sofar").textContent = soFar ? keep(soFar) : "";
   $("pace-sofar").hidden = !line.soFar;
   $("pace-agents").textContent = line.agents ? keep(line.agents) : "";
   $("pace-agents").hidden = !line.agents;
@@ -429,6 +432,7 @@ function renderShare(e: Estimate, label: string) {
   fullSizeUrl = URL.createObjectURL(new Blob([currentSvg], { type: "image/svg+xml" }));
   ($("card-full") as HTMLAnchorElement).href = fullSizeUrl;
   $("post").textContent = currentPost;
+  $("card-sample").hidden = state.source !== "sample";
   $("share-status").textContent = state.source === "sample" ? "This card shows sample data. Load your own logs to make yours." : "";
 }
 
@@ -447,7 +451,7 @@ function renderMethod() {
   const rows = Object.entries(params.params)
     .map(
       ([id, p]) =>
-        `<tr><td data-label="Parameter"><code>${esc(id)}</code><div class="note">${esc(p.note)}</div></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
+        `<tr><td data-label="Parameter"><code>${esc(id)}</code><details class="fine"><summary class="disclose">About this value</summary><div class="note">${esc(p.note)}</div></details></td><td class="num" data-label="Value">${p.value}</td><td class="num" data-label="Range">${p.low} – ${p.high}</td><td data-label="Unit">${esc(p.unit)}</td><td data-label="Label"><span class="label">${esc(p.label)}</span></td><td data-label="Source"><a class="src" href="${esc(p.source)}" rel="noopener noreferrer">${esc(sourceName(p.source))}</a></td></tr>`,
     )
     .join("");
   $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>Range</th><th>Unit</th><th>Label</th><th>Source</th></tr></thead><tbody>${rows}</tbody>`;
@@ -498,10 +502,13 @@ function renderWhatIf(e: Estimate, published: Estimate) {
   slider.setAttribute("aria-valuetext", `${pct(value)} of fresh input`);
   $("whatif-value").textContent = pct(value);
   const note = $("whatif-note");
-  note.hidden = !whatIfActive();
   $("whatif-reset").hidden = !whatIfActive();
-  if (!whatIfActive()) return void (note.textContent = "");
   const t = formatEnergy(e.total);
+  // EF-CC-1: the result sits beside the slider from the start, so the number is in view while dragging.
+  if (!whatIfActive())
+    return void (note.textContent = e.responses
+      ? `Total: ${t.central} (range ${t.range} ${t.unit}) · Method v${params.version}`
+      : `Load some usage to see the total move. Method v${params.version}.`);
   const pub = formatEnergy(published.total);
   const totals = e.responses ? ` ${t.central} (range ${t.range} ${t.unit}). Published: ${pub.central} (range ${pub.range} ${pub.unit}).` : " Not the published estimate.";
   note.textContent = `What-if at ${pct(value)}:${totals} The share card keeps ${pct(publishedCache)}. Method v${params.version}.`;

@@ -258,8 +258,9 @@ describe("WI-2 What if? cache-read slider is on the page (CCW-M2.6.5)", () => {
     expect(html).toMatch(/<button[^>]*id="whatif-reset"[^>]*>\s*Reset\s*<\/button>/);
   });
 
-  it("WI-2: has a #whatif-note, hidden until the slider moves", () => {
-    expect(html).toMatch(/<[a-z]+[^>]*id="whatif-note"[^>]*\shidden[\s>]/);
+  it("WI-2: has a #whatif-note, shown on load (EF-CC-1, intake #112)", () => {
+    expect(html).toMatch(/<[a-z]+[^>]*id="whatif-note"/);
+    expect(html).not.toMatch(/<[a-z]+[^>]*id="whatif-note"[^>]*\shidden[\s>]/);
   });
 });
 
