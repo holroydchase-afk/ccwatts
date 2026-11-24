@@ -654,6 +654,99 @@ for (const colorScheme of ["light", "dark"] as const) {
   await page.close();
 }
 
+// CLOUDP-1, 5, 6, 7 (SPEC-CLOUDP): the "Use Claude Code on the web? Ask it." disclosure in Your logs.
+// On a phone it comes before the folder pickers and is open; on a wide screen it is closed and below
+// them. The prompt is in the reading font at 17px or more, nothing scrolls sideways at 320px, the
+// Copy button reads "Copied" for about 2 s, and nothing is requested or stored. Light and dark.
+// Your logs opens via the #drop hash, and once (390px light) through the Overview row.
+{
+  const SUMMARY = "Use Claude Code on the web? Ask it.";
+  const views = [
+    { viewport: { width: 390, height: 844 }, open: true, first: true },
+    { viewport: { width: 320, height: 640 }, open: true, first: true },
+    { viewport: { width: 1280, height: 800 }, open: false, first: false },
+  ];
+  for (const colorScheme of ["light", "dark"] as const) {
+    for (const v of views) {
+      const at = `at ${v.viewport.width}px ${colorScheme}`;
+      const page = await browser.newPage({ viewport: v.viewport, colorScheme });
+      page.on("request", (r) => {
+        if (!/^(file|data|blob):/.test(r.url())) problems.push(`CLOUDP-7: network request ${r.url()} ${at}`);
+      });
+      page.on("pageerror", (e) => problems.push(`CLOUDP: page error ${e} ${at}`));
+      // A clipboard that works on file://: keeps what was written in a page variable (not storage).
+      // A string, not a callback: tsx names object-literal functions with a __name() helper the page lacks.
+      await page.addInitScript({ content: 'Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: (t) => { window.__copied = t; return Promise.resolve(); } } });' });
+      const viaRow = v.viewport.width === 390 && colorScheme === "light";
+      if (viaRow) {
+        await page.goto(pathToFileURL(page_).href);
+        await openLogs(page);
+      } else {
+        await page.goto(pathToFileURL(page_).href + "#drop");
+      }
+      const cloud = page.locator("#drop details#cloud");
+      if ((await cloud.count()) !== 1 || !(await page.locator("#drop").isVisible())) {
+        problems.push(`CLOUDP-1: no <details id="cloud"> in a visible Your logs ${at}${viaRow ? " (opened via #ov-logs)" : " (opened via #drop)"}`);
+        await page.close();
+        continue;
+      }
+      const summary = ((await cloud.locator("> summary").textContent()) ?? "").replace(/\s+/g, " ").trim();
+      if (summary !== SUMMARY) problems.push(`CLOUDP-1: summary reads "${summary}", want "${SUMMARY}" ${at}`);
+      // CLOUDP-5: open on a phone, closed on a wide screen; before / below the folder pickers.
+      const open = await cloud.evaluate((d) => (d as HTMLDetailsElement).open);
+      if (open !== v.open) problems.push(`CLOUDP-5: #cloud is ${open ? "open" : "closed"} ${at}, want ${v.open ? "open" : "closed"}`);
+      const tops = await page.evaluate(() => {
+        const c = document.querySelector("#cloud")?.getBoundingClientRect();
+        const p = document.querySelector('label[for="pick-folder"]')?.getBoundingClientRect();
+        return c && p ? { cloud: c.top, cloudBottom: c.bottom, picker: p.top, pickerBottom: p.bottom } : null;
+      });
+      if (!tops) problems.push(`CLOUDP-5: can't measure #cloud or the Choose folder picker ${at}`);
+      else if (v.first && !(tops.cloudBottom <= tops.picker)) problems.push(`CLOUDP-5: #cloud (top ${tops.cloud}) isn't above the folder pickers (top ${tops.picker}) ${at}`);
+      else if (!v.first && !(tops.cloud >= tops.pickerBottom)) problems.push(`CLOUDP-5: #cloud (top ${tops.cloud}) isn't below the folder pickers (bottom ${tops.pickerBottom}) ${at}`);
+      const oldSummary = ((await page.locator("#export > summary").textContent()) ?? "").replace(/\s+/g, " ").trim();
+      if (oldSummary !== "Can't find the folder?") problems.push(`CLOUDP-5: old disclosure's summary reads "${oldSummary}" ${at}`);
+      // Open it everywhere for the remaining checks.
+      if (!open) await cloud.locator("> summary").click();
+      // CLOUDP-6: reading font, 17px or more; no sideways scroll.
+      const prompt = cloud.locator("#cloud-prompt");
+      if ((await prompt.count()) !== 1 || !(await prompt.isVisible())) problems.push(`CLOUDP-1: #cloud-prompt missing or hidden in the open disclosure ${at}`);
+      else {
+        const f = await prompt.evaluate((el) => ({ family: getComputedStyle(el).fontFamily, size: parseFloat(getComputedStyle(el).fontSize) }));
+        if (MONO.test(f.family)) problems.push(`CLOUDP-6: the prompt is monospace (${f.family}) ${at}`);
+        if (!(f.size >= 17)) problems.push(`CLOUDP-6: the prompt is ${f.size}px, want 17px or more ${at}`);
+      }
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (over > 0) problems.push(`CLOUDP-6: page scrolls sideways by ${over}px with #cloud open ${at}`);
+      // CLOUDP-1: "Copy prompt" reads "Copied" after a tap, then goes back after about 2 s.
+      const btn = cloud.getByRole("button", { name: "Copy prompt", exact: true });
+      if ((await btn.count()) !== 1) problems.push(`CLOUDP-1: no "Copy prompt" button in #cloud ${at}`);
+      else {
+        const startUrl = page.url();
+        await btn.click();
+        const now = ((await page.locator("#copy-cloud").textContent()) ?? "").trim();
+        if (now !== "Copied") problems.push(`CLOUDP-1: #copy-cloud reads "${now}" right after a tap, want "Copied" ${at}`);
+        const copied = await page.evaluate(() => (window as unknown as { __copied?: string }).__copied ?? null);
+        const want = await prompt.textContent().catch(() => null);
+        if (copied === null || copied !== want) problems.push(`CLOUDP-1: Copy prompt didn't copy the prompt text ${at}`);
+        await page.waitForTimeout(1200);
+        const mid = ((await page.locator("#copy-cloud").textContent()) ?? "").trim();
+        if (mid !== "Copied") problems.push(`CLOUDP-1: #copy-cloud went back after only ~1.2 s ("${mid}") ${at}`);
+        await page.waitForTimeout(1800);
+        const after = ((await page.locator("#copy-cloud").textContent()) ?? "").trim();
+        if (after !== "Copy prompt") problems.push(`CLOUDP-1: #copy-cloud still reads "${after}" ~3 s after a tap ${at}`);
+        if (page.url() !== startUrl) problems.push(`CLOUDP-7: copying changed the URL (${page.url()}) ${at}`);
+      }
+      // CLOUDP-7: no em-dash in the disclosure or the phone hint; nothing stored.
+      const words = (await cloud.textContent()) ?? "";
+      if (words.includes("—")) problems.push(`CLOUDP-7: em-dash in #cloud ${at}`);
+      if (((await page.locator("#phone-hint").textContent()) ?? "").includes("—")) problems.push(`CLOUDP-7: em-dash in #phone-hint ${at}`);
+      const stored = await page.evaluate(() => { try { return localStorage.length + sessionStorage.length + document.cookie.length; } catch { return 0; } });
+      if (stored) problems.push(`CLOUDP-7: something was stored (${stored}) ${at}`);
+      await page.close();
+    }
+  }
+}
+
 // Generic checks from the showcase kit (unfinished text, broken images, tiny text, plus light and
 // dark mode), on the same browser. Everything above is specific to this page.
 for (const p of await showcaseCheck({

@@ -209,6 +209,8 @@ details>*+*{margin-top:8px}
 .full-size{display:inline-flex;align-items:center;min-height:48px;align-self:flex-start}
 .sharetext{background:var(--fill);border-radius:12px;padding:12px;white-space:pre-wrap;font-family:var(--mono);font-size:17px}
 #post{font-family:var(--sans)}
+/* SPEC-CLOUDP: the web prompt is read, not edited, so it is set in the reading font (CLOUDP-6). */
+.prompt-text{font-family:var(--sans)}
 .status{min-height:22px}
 .status:empty{display:none}
 .status.error{color:var(--danger);border-left:4px solid;padding-left:12px}
@@ -355,6 +357,7 @@ footer p{max-width:65ch}
   <section class="drop" id="drop" aria-label="Your logs" hidden>
     <h2>Try it on your own logs</h2>
     <p>Claude Code saves logs in <code>~/.claude/projects</code>. Pick that folder, or drop any <code>.jsonl</code> files here. Files are read by this page on your device and never uploaded. On a Mac the folder is hidden: in the picker, press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>.</kbd> to show it.</p>
+    <p class="phone-only" id="phone-hint">On a phone? Your logs live where Claude Code runs.</p>
     <div class="controls">
       <input type="file" class="vh" id="pick-folder" webkitdirectory multiple>
       <label class="btn primary" for="pick-folder">Choose folder</label>
@@ -363,9 +366,23 @@ footer p{max-width:65ch}
       <button type="button" id="use-sample">Use sample data</button>
     </div>
     <p id="cli-line">Prefer the terminal? Run <code id="cli-cmd">npx ccwatts</code> with Node 22+. Same numbers, plus a history that outlasts Claude Code's log cleanup.</p>
-    <p class="phone-only" id="phone-hint">On a phone? Claude Code keeps its logs on the computer it runs on. Open this page there, or use the prompt below if you run Claude Code on the web.</p>
+    <details class="export" id="cloud">
+      <summary class="disclose">Use Claude Code on the web? Ask it.</summary>
+      <p>Paste this into a Claude Code session at claude.ai/code. Claude runs ccwatts there and replies with that session's electricity, from token counts only. Each web session keeps only its own log. Plain claude.ai chats keep none; use the token count box instead.</p>
+      <pre class="sharetext prompt-text" id="cloud-prompt">Estimate the electricity this Claude Code session has used, with ccwatts.
+
+1. Run: npx -y ccwatts@latest
+2. Reply in three short lines: the energy range exactly as ccwatts shows it, the method version, and the one comparison it prints.
+3. If I ask for a breakdown, run: npx -y ccwatts@latest --by day
+
+Rules: ccwatts reads token counts only. Don't open, read, search or quote the log files or anything from our conversation yourself. Use only what ccwatts prints. If the command fails, tell me the error in one line. Don't guess a number.</pre>
+      <div class="controls">
+        <button type="button" id="copy-cloud">Copy prompt</button>
+      </div>
+      <p>Claude says npm is blocked? Some sessions can't download tools. If your app shows a token total for the session, type it in the "<a href="#electricity">Have a token count?</a>" box on the Electricity tab. Otherwise, run the prompt on a computer with Claude Code.</p>
+    </details>
     <details class="export" id="export">
-      <summary class="disclose">Use Claude Code on the web, or can't find the folder?</summary>
+      <summary class="disclose">Can't find the folder?</summary>
       <p>Paste this prompt into a Claude Code session. It writes a copy of that machine's usage with token counts only, and no prompts or code. Then drop the file here, or paste what it prints into the box below.</p>
       <pre class="sharetext" id="export-prompt">Make a counts-only copy of my Claude Code usage for ccwatts.
 

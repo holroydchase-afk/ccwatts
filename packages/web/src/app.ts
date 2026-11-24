@@ -582,12 +582,13 @@ function download(name: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-async function copy(text: string, what: string, statusId = "share-status", fallbackId = "post") {
+async function copy(text: string, what: string, statusId = "share-status", fallbackId = "post"): Promise<boolean> {
   const status = $(statusId);
   status.classList.remove("error");
   try {
     await navigator.clipboard.writeText(text);
     status.textContent = `Copied the ${what}.`;
+    return true;
   } catch {
     const box = $(fallbackId).closest("details");
     if (box) box.open = true;
@@ -596,7 +597,37 @@ async function copy(text: string, what: string, statusId = "share-status", fallb
     getSelection()?.removeAllRanges();
     getSelection()?.addRange(range);
     status.textContent = `Couldn't reach the clipboard. The ${fallbackId === "post" ? "post text" : what} is selected so you can copy it.`;
+    return false;
   }
+}
+
+/**
+ * SPEC-CLOUDP (CLOUDP-5): on a phone there is no local log folder to pick, so the Claude Code on the
+ * web prompt opens first, above the folder pickers. On a wide screen it starts closed, below them.
+ * The element is moved in the DOM (not CSS order) so focus order matches what is seen.
+ */
+function placeCloud() {
+  const phone = window.matchMedia("(max-width:600px)");
+  const cloud = $<HTMLDetailsElement>("cloud");
+  const pickers = $("pick-folder").closest(".controls")!;
+  const exportBox = $("export");
+  const place = () => {
+    if (phone.matches) pickers.before(cloud);
+    else exportBox.before(cloud);
+  };
+  place();
+  cloud.open = phone.matches;
+  phone.addEventListener("change", place);
+}
+
+let cloudTimer = 0;
+async function copyCloud() {
+  const btn = $("copy-cloud");
+  if (!(await copy($("cloud-prompt").textContent ?? "", "prompt", "drop-status", "cloud-prompt"))) return;
+  // The button's own label confirms the copy for about 2 s (CLOUDP-1); the status line says it too.
+  btn.textContent = "Copied";
+  clearTimeout(cloudTimer);
+  cloudTimer = window.setTimeout(() => (btn.textContent = "Copy prompt"), 2000);
 }
 
 function savePng() {
@@ -626,6 +657,8 @@ function wire() {
   if (payload.mode === "playground") {
     const drop = $("drop");
     $("ov-cta-wrap").hidden = false; // the one CTA; the dashboard already shows the person's own logs
+    placeCloud();
+    $("copy-cloud").addEventListener("click", () => void copyCloud());
     $("copy-prompt").addEventListener("click", () => void copy($("export-prompt").textContent ?? "", "prompt", "drop-status", "export-prompt"));
     $("read-paste").addEventListener("click", () => {
       // Pasted from a chat, the lines may sit inside a ``` code fence; the adapter skips those lines.
