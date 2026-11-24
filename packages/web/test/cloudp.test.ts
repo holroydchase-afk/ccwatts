@@ -192,7 +192,7 @@ describe("CLOUDP-11 UX-R69 the phone hint is one short line", () => {
 describe("CLOUDP-12 QA-R1 the Overview phone note points to Claude Code on the web", () => {
   // The #cloud prompt in Your logs (first and open on phones) works from a phone, so the note under
   // "Try it on your logs" must not say a computer is needed.
-  const NOTE = "On a phone? Use Claude Code on the web.";
+  const NOTE = "On a phone? It works with Claude Code on the web.";
   const NBSP = / |&nbsp;|&#160;|&#x0*a0;/i;
   for (const [name, src] of [["template", template], ["built page", html]] as const) {
     const raw = /<p[^>]*id="ov-cta-note"[^>]*>([\s\S]*?)<\/p>/.exec(src)?.[1];

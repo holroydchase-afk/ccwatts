@@ -19,7 +19,7 @@ import { launch } from "../../../tools/showcase-check/check.ts";
 //    filled while Overview is showing (the studio demo bar is exempt: it isn't part of the page).
 //  - Clicking the CTA shows the Your logs view (#drop), as #ov-logs does today.
 //  - Phone note (#ov-cta-note, QA-R1): at 390px a visible line right under the CTA reads
-//    "On a phone? Use Claude Code on the web." (the #cloud prompt in Your logs works from a phone).
+//    "On a phone? It works with Claude Code on the web." (the #cloud prompt in Your logs works from a phone).
 //    At 1280px it isn't shown.
 //  - FOCUS-3: the Overview panel shows a visible line with the same text as #hero-compare, below
 //    the number (#ov-energy-value).
@@ -35,7 +35,7 @@ const htmlPath = fileURLToPath(new URL("../dist/ccwatts.html", import.meta.url))
 const url = pathToFileURL(htmlPath).href;
 const html = readFileSync(htmlPath, "utf8");
 const CTA = "Try it on your logs";
-const NOTE = "On a phone? Use Claude Code on the web.";
+const NOTE = "On a phone? It works with Claude Code on the web.";
 const TABS = ["Overview", "Electricity", "Share", "Method", "Pace"] as const;
 const PHONE = { width: 390, height: 844 };
 const LAPTOP = { width: 1280, height: 800 };
