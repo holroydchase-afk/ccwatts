@@ -349,15 +349,16 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       const h = (await bar.boundingBox())?.height ?? 0;
       if (!(h > 0 && h <= 48)) problems.push(`DEMO-BAR-1: collapsed bar is ${h}px tall ${at} (want 1-48)`);
       if ((await toggle.getAttribute("aria-expanded")) !== "false") problems.push(`DEMO-BAR-1: toggle not collapsed on load ${at}`);
-      // DEMO-UX-R1: the bar row spans the page column: the back link lines up with the brand, and the
-      // toggle (with "Details") runs to the row's right edge instead of sitting mid-bar.
+      // DEMO-UX-R1: the bar row spans the page column: the back link lines up with the page's text
+      // (the h1, since UX-R2 moved the brand into the bar), and the toggle (with "Details") runs to
+      // the row's right edge instead of sitting mid-bar.
       const align = await page.evaluate(() => {
-        const [home, brand, tog, row, wrap] = ["#demo-home", ".brand", "#demo-toggle", ".demo-bar__row", "main.wrap"].map((sel) => document.querySelector(sel)?.getBoundingClientRect());
+        const [home, brand, tog, row, wrap] = ["#demo-home", "main.wrap h1", "#demo-toggle", ".demo-bar__row", "main.wrap"].map((sel) => document.querySelector(sel)?.getBoundingClientRect());
         return home && brand && tog && row && wrap ? { home: home.left, brand: brand.left, togRight: tog.right, rowRight: row.right, wrapRight: wrap.right } : null;
       });
       if (!align) problems.push(`DEMO-UX-R1: bar parts missing ${at}`);
       else {
-        if (Math.abs(align.home - align.brand) > 1) problems.push(`DEMO-UX-R1: "← Portfolio" at x=${align.home.toFixed(0)}, brand at x=${align.brand.toFixed(0)} ${at}`);
+        if (Math.abs(align.home - align.brand) > 1) problems.push(`DEMO-UX-R1: "← Portfolio" at x=${align.home.toFixed(0)}, h1 at x=${align.brand.toFixed(0)} ${at}`);
         if (Math.abs(align.togRight - align.rowRight) > 1) problems.push(`DEMO-UX-R1: toggle ends at x=${align.togRight.toFixed(0)}, row at x=${align.rowRight.toFixed(0)} ${at}`);
         if (Math.abs(align.rowRight - align.wrapRight) > 1) problems.push(`DEMO-UX-R1: bar row ends at x=${align.rowRight.toFixed(0)}, page column at x=${align.wrapRight.toFixed(0)} ${at}`);
       }
@@ -370,10 +371,11 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       const builtBy = await page.getAttribute("#built-by", "href");
       if (!(await home.isVisible().catch(() => false))) problems.push(`DEMO-BAR-2: "← Portfolio" link not visible on the collapsed bar ${at}`);
       else if ((await home.getAttribute("href")) !== builtBy) problems.push(`DEMO-BAR-2: "← Portfolio" goes to ${await home.getAttribute("href")}, want ${builtBy}`);
-      // DEMO-BAR-3: middle text. Phone: "Sample data"; from 600px the long form too.
+      // DEMO-BAR-3: middle text "Sample data" at every width. UX-R2 (M4.8.2): the lock line is the one
+      // privacy promise, so the bar no longer adds "· nothing leaves this browser" from 600px.
       const mid = await toggle.evaluate((t) => (t as HTMLElement).innerText);
       if (!mid.includes("Sample data")) problems.push(`DEMO-BAR-3: bar doesn't say "Sample data" ${at} ("${mid}")`);
-      if (mid.includes("nothing leaves this browser") !== viewport.width >= 600) problems.push(`DEMO-BAR-3: "· nothing leaves this browser" ${viewport.width >= 600 ? "missing" : "shown"} ${at}`);
+      if (mid.includes("nothing leaves this browser")) problems.push(`DEMO-BAR-3: "· nothing leaves this browser" repeats the lock line ${at}`);
       if (!/Details/.test(mid)) problems.push(`DEMO-BAR-3: toggle has no "Details" label ${at}`);
       // DEMO-BAR-4: font and surface are the page's own; the badge is never --accent or --sample.
       const look = await page.evaluate(({ barSel, togSel }) => {

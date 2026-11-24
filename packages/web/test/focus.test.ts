@@ -266,6 +266,86 @@ withBrowser("M4.8.1 playground, sample data (browser)", () => {
     });
   }
 
+  // -------------------------------------------------------------------------------------------
+  // M4.8.2 "header trim" (UX-R2, P1, review 2026-11-22 demo focus): the brand line, two-line h1,
+  // lede, lock line and tabs fill ~300 of 844px on a phone, and a laptop states the privacy
+  // promise twice (demo bar + lock line). Fix: "ccwatts" moves into the demo bar; only the lock
+  // line keeps the promise.
+  // -------------------------------------------------------------------------------------------
+  for (const vp of [PHONE, LAPTOP]) {
+    const at = `${vp.width}x${vp.height}`;
+
+    it(`FOCUS-8 UX-R2 no standalone "ccwatts" brand line above the h1; the name shows in the demo bar instead (${at})`, async () => {
+      const page = await open(vp);
+      const h1 = page.getByRole("heading", { level: 1 });
+      const h1Top = (await h1.boundingBox())?.y ?? NaN;
+      // Visible elements outside the demo bar whose whole text is just the name, sitting above the h1.
+      const brandLines = await page.evaluate((top) =>
+        [...document.querySelectorAll<HTMLElement>("body *")]
+          .filter((el) => !el.closest("#demo-bar") && !["SCRIPT", "STYLE", "TEMPLATE", "TITLE"].includes(el.tagName))
+          .filter((el) => (el.innerText ?? "").trim().toLowerCase() === "ccwatts")
+          .filter((el) => el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true }))
+          .filter((el, _i, all) => !all.some((o) => o !== el && el.contains(o))) // innermost only
+          .map((el) => ({ tag: el.tagName.toLowerCase(), cls: el.className, r: el.getBoundingClientRect() }))
+          .filter(({ r }) => r.width > 1 && r.height > 1 && r.bottom <= top + 0.5)
+          .map(({ tag, cls, r }) => `<${tag} class="${cls}"> at y ${Math.round(r.y)}`), h1Top);
+      expect(brandLines, `standalone brand line(s) above the h1 (h1 top ${Math.round(h1Top)})`).toEqual([]);
+      const inBar = page.locator("#demo-bar").getByText(/\bccwatts\b/i);
+      const shown = (await inBar.count()) > 0 && (await inBar.first().isVisible());
+      expect(shown, 'the demo bar shows no visible "ccwatts"').toBe(true);
+      expect(await fullyInView(page, inBar.first()), '"ccwatts" in the demo bar position').toBe("inside");
+      await page.close();
+    });
+
+    it(`FOCUS-9 UX-R2 the "never leaves this browser" promise is visible exactly once in the first viewport, in the lock line (${at})`, async () => {
+      const page = await open(vp);
+      // Smallest visible element carrying the promise in any wording ("never leave(s)", "nothing
+      // leaves" ... "this browser"), counted if any of it shows in the first viewport.
+      const hits = await page.evaluate(() => {
+        const promise = /\b(never|nothing)\b[^.]*\bleaves?\b[^.]*\bbrowser\b/i;
+        const vh = window.innerHeight;
+        const all = [...document.querySelectorAll<HTMLElement>("body *")]
+          .filter((el) => !["SCRIPT", "STYLE", "TEMPLATE", "TITLE", "META"].includes(el.tagName))
+          .filter((el) => el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true }))
+          .filter((el) => promise.test(el.innerText ?? ""));
+        return all
+          .filter((el) => !all.some((o) => o !== el && el.contains(o)))
+          .map((el) => ({ el, r: el.getBoundingClientRect() }))
+          .filter(({ r }) => r.width > 1 && r.height > 1 && r.top < vh && r.bottom > 0)
+          .map(({ el, r }) => ({ text: (el.innerText ?? "").replace(/\s+/g, " ").trim(), y: Math.round(r.y), inLock: !!el.closest("#privacy") }));
+      });
+      expect(hits.length, `privacy promise shown in the first viewport: ${JSON.stringify(hits.map((h) => `${h.text} @y${h.y}`))}`).toBe(1);
+      expect(hits[0]!.inLock, `the one promise isn't the lock line: "${hits[0]!.text}"`).toBe(true);
+      await page.close();
+    });
+  }
+
+  it("FOCUS-10 UX-R2 at 390x844 the tab bar starts at y <= 240, the CTA and EV line stay fully in view, and the EF-CC-2 lede stays visible", async () => {
+    const page = await open(PHONE);
+    const tabs = await page.locator("#tabs").boundingBox();
+    expect(tabs, "#tabs not rendered").not.toBeNull();
+    // Logged so the red run records today's value (~295).
+    console.log(`FOCUS-10 measured tab bar top at 390x844: ${tabs!.y.toFixed(1)}px`);
+    expect(tabs!.y, `tab bar top at ${tabs!.y.toFixed(1)}px`).toBeLessThanOrEqual(240);
+    expect(await fullyInView(page, cta(page)), "CTA position").toBe("inside");
+    const compare = ((await page.textContent("#hero-compare")) ?? "").trim();
+    const ev = overview(page).getByText(compare, { exact: true });
+    expect(await ev.count(), `Overview has no line "${compare}"`).toBe(1);
+    expect(await fullyInView(page, ev), "EV line position").toBe("inside");
+    // EF-CC-2 (FOCUS-6): the one-sentence phone lede naming Claude Code and its logs, above the tabs.
+    const lede = await page.evaluate(() => {
+      const tabsTop = document.querySelector("#tabs")!.getBoundingClientRect().top;
+      return [...document.querySelectorAll<HTMLElement>("body *")]
+        .filter((el) => !el.closest("#demo-bar") && !["SCRIPT", "STYLE", "TEMPLATE"].includes(el.tagName))
+        .filter((el) => (el.innerText ?? "").split(/(?<=[.!?])\s+|\n+/).some((t) => /Claude Code/.test(t) && /electricity/i.test(t) && /logs/.test(t)))
+        .filter((el) => el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true }))
+        .map((el) => el.getBoundingClientRect())
+        .some((r) => r.width > 1 && r.height > 1 && r.top >= 0 && r.bottom <= tabsTop + 0.5);
+    });
+    expect(lede, "no visible Claude Code + electricity + logs sentence above the tabs").toBe(true);
+    await page.close();
+  });
+
   it("FOCUS no network requests or page errors while checking", () => {
     expect(problems).toEqual([]);
   });
@@ -291,6 +371,21 @@ withBrowser("M4.8.1 ccwatts dashboard (browser)", () => {
       for (const id of ["ov-pace", "ov-share", "ov-logs"]) expect(await page.locator(`#${id}`).count(), `#${id}`).toBe(0);
       expect(await overview(page).getByRole("link", { name: /What drives it/ }).isVisible()).toBe(true);
       expect(await tabNames(page)).toEqual([...TABS]);
+      await page.close();
+    });
+
+    // Dashboard has no demo bar, so the name must still show in the page header (above the tabs).
+    it(`FOCUS-8 UX-R2 dashboard (no demo bar) still shows "ccwatts" in the header above the tabs (${at})`, async () => {
+      const page = await open(vp, "", dashUrl);
+      expect(await page.locator("#demo-bar").isVisible(), "dashboard shows the demo bar").toBe(false);
+      const tabsTop = (await page.locator("#tabs").boundingBox())!.y;
+      const name = page.getByText(/\bccwatts\b/i);
+      const visibleAbove = await name.evaluateAll((els, top) =>
+        els.some((el) => {
+          const r = el.getBoundingClientRect();
+          return (el as HTMLElement).checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true }) && r.width > 1 && r.height > 1 && r.top >= 0 && r.bottom <= top + 0.5;
+        }), tabsTop);
+      expect(visibleAbove, `no visible "ccwatts" above the tabs (tabs top ${Math.round(tabsTop)})`).toBe(true);
       await page.close();
     });
   }

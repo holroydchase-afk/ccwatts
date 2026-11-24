@@ -312,7 +312,9 @@ describe("DEMO-BAR studio demo bar (static)", () => {
   });
 
   it("DEMO-BAR-3: the middle text has the sample and own-files wording", () => {
-    for (const s of ["Sample data", " · nothing leaves this browser", "Your files", " · read in this browser only"]) expect(html, s).toContain(s);
+    for (const s of ["Sample data", "Your files", " · read in this browser only"]) expect(html, s).toContain(s);
+    // UX-R2 (M4.8.2): the lock line (#privacy) is the one privacy promise; the bar no longer repeats it.
+    expect(html).not.toContain(" · nothing leaves this browser");
   });
 
   it("DEMO-BAR-4: the old notices are gone (no #back-link, no 'You're looking at sample data' lede)", () => {
