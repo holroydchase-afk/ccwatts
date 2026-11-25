@@ -87,4 +87,15 @@ describe("SITEHDR Part A: the site header (static)", () => {
     expect(html).not.toContain("← Portfolio");
     expect(app).not.toContain("demo-home");
   });
+
+  it("SITEHDR UX-R1 the back link's arrow sits in its own <i aria-hidden=\"true\"> so it can take the accent colour", () => {
+    const back = /<a[^>]*aria-label="Chase Holroyd, back to the portfolio"[^>]*>([\s\S]*?)<\/a>/.exec(header);
+    expect(back, "back link with aria-label").not.toBeNull();
+    expect(back![1], "arrow wrapped in <i aria-hidden>").toMatch(/<i\b[^>]*\saria-hidden="true"[^>]*>\s*(←|&larr;)\s*<\/i>/);
+    expect(text(back![1]!)).toBe("← Chase Holroyd");
+  });
+
+  it("SITEHDR QA-R1 the built playground page stays under the 150,000-byte budget (scripts/check-live.ts MAX_BYTES)", () => {
+    expect(Buffer.byteLength(html, "utf8")).toBeLessThan(150_000);
+  });
 });

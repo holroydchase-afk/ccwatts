@@ -416,6 +416,24 @@ const headerColours = (page: Pw) => page.evaluate(() => {
       const want = colorScheme === "light" ? HDR_LIGHT : HDR_DARK;
       const got = await headerColours(page);
       if (JSON.stringify(got) !== JSON.stringify(want)) problems.push(`SITEHDR-3: header bg/ink/accent ${JSON.stringify(got)}, want ${JSON.stringify(want)} (System, OS ${colorScheme}) ${at}`);
+      // SITEHDR UX-R1 (ux-reviewer, P1): the name is bold (700) and its arrow is an <i aria-hidden> in the header accent.
+      const nm = await h.back.evaluate((b) => {
+        const i = b.querySelector("i[aria-hidden='true']");
+        return { weight: getComputedStyle(b).fontWeight, arrow: i ? (i.textContent ?? "").trim() : null, arrowColour: i ? getComputedStyle(i).color : null };
+      }).catch(() => null);
+      if (!nm || nm.weight !== "700") problems.push(`SITEHDR UX-R1: back link "Chase Holroyd" is weight ${nm?.weight}, want 700 ${at}`);
+      if (!nm || nm.arrow !== "←" || nm.arrowColour !== want.accent) problems.push(`SITEHDR UX-R1: back link arrow is ${nm?.arrow === null ? "not in an <i aria-hidden=\"true\">" : `"${nm?.arrow}" in ${nm?.arrowColour}`}, want "←" in the accent ${want.accent} ${at}`);
+      // SITEHDR UX-R2 (ux-reviewer): at 1280 the text "Chase Holroyd" and "Building" sit at least 18px apart (links padded 0 6px).
+      if (viewport.width === 1280) {
+        const gap = await page.evaluate(() => {
+          // No named helper here: tsx would wrap it in __name(), which the page doesn't have.
+          const els = [document.querySelector("#site-bar a[aria-label='Chase Holroyd, back to the portfolio']"), [...document.querySelectorAll("#site-bar nav a")].find((a) => a.textContent?.trim() === "Building")];
+          if (!els[0] || !els[1]) return null;
+          const [back, building] = els.map((el) => { const r = document.createRange(); r.selectNodeContents(el!); return r.getBoundingClientRect(); });
+          return building!.left - back!.right;
+        });
+        if (gap === null || gap < 18) problems.push(`SITEHDR UX-R2: "Chase Holroyd" to "Building" text gap is ${gap?.toFixed(1)}px, want >= 18 ${at}`);
+      }
       // SITEHDR-4: font, 44px targets.
       const font = await h.bar.evaluate((b) => { const cs = getComputedStyle(b); return { family: cs.fontFamily, size: cs.fontSize, weight: cs.fontWeight }; });
       if (!/^"?Atkinson Hyperlegible Next"?,\s*system-ui/.test(font.family) || font.size !== "15px" || font.weight !== "500") problems.push(`SITEHDR-4: header font is ${JSON.stringify(font)}, want "Atkinson Hyperlegible Next", system-ui at 15px weight 500 ${at}`);
@@ -590,6 +608,27 @@ const headerColours = (page: Pw) => page.evaluate(() => {
         return el ? { inPage: !!el.closest("main"), root: el === document.body || el === document.documentElement, tag: el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") } : null;
       }, pt);
       if (!scrim || scrim.inPage || scrim.root) problems.push(`SITEHDR-13: no scrim over the page at (${pt.x}, ${pt.y}): hit ${scrim?.tag} ${at}`);
+      // SITEHDR UX-R4 (ux-reviewer): in dark the scrim is at least rgba(0,0,0,.6)-strength (alpha >= 0.55).
+      if (colorScheme === "dark") {
+        const alpha = await page.evaluate(({ x, y }) => {
+          const el = document.elementFromPoint(x, y) as HTMLElement | null;
+          if (!el) return null;
+          const m = /rgba?\(([^)]+)\)/.exec(getComputedStyle(el).backgroundColor);
+          const parts = m ? m[1]!.split(/[ ,/]+/).filter(Boolean) : [];
+          return (parts.length > 3 ? Number(parts[3]) : parts.length === 3 ? 1 : 0) * Number(getComputedStyle(el).opacity);
+        }, pt);
+        if (alpha === null || alpha < 0.55) problems.push(`SITEHDR UX-R4: dark scrim alpha is ${alpha}, want >= 0.55 (rgba(0,0,0,.6)-strength) ${at}`);
+      }
+      // SITEHDR UX-R3 (ux-reviewer): with the drawer open, a 400px wheel over the scrim or the drawer leaves the page where it was.
+      for (const [where, p] of [["scrim", pt], ["drawer", { x: Math.round(box.left + box.width / 2), y: Math.round(Math.max(box.top, 60) + 20) }]] as const) {
+        const y0 = await page.evaluate(() => window.scrollY);
+        await page.mouse.move(p.x, p.y);
+        await page.mouse.wheel(0, 400);
+        await page.waitForTimeout(300);
+        const y1 = await page.evaluate(() => window.scrollY);
+        if (y1 !== y0) problems.push(`SITEHDR UX-R3: a 400px wheel over the open ${where} scrolled the page (scrollY ${y0} -> ${y1}) ${at}`);
+        if (y1 !== y0) await page.evaluate((y) => window.scrollTo(0, y), y0);
+      }
       const after = await page.evaluate(() => ({ h1: document.querySelector("h1")!.getBoundingClientRect().top, y: window.scrollY }));
       if (Math.abs(after.h1 - before.h1) > 0.5 || after.y !== before.y) problems.push(`SITEHDR-13: opening moved the page (h1 ${before.h1} -> ${after.h1}, scrollY ${before.y} -> ${after.y}) ${at}`);
       if ((await sideways(page)) > 0) problems.push(`SITEHDR-7/13: open drawer scrolls sideways by ${await sideways(page)}px ${at}`);
@@ -637,6 +676,16 @@ const headerColours = (page: Pw) => page.evaluate(() => {
       const pt2 = await scrimPoint(page, dialogId);
       await page.mouse.click(pt2.x, pt2.y);
       await closed("a scrim tap");
+      // SITEHDR UX-R3: once closed, the same wheel scrolls the page as normal.
+      {
+        await page.mouse.move(Math.round(viewport.width / 2), Math.round(viewport.height / 2));
+        const y0 = await page.evaluate(() => window.scrollY);
+        await page.mouse.wheel(0, 400);
+        await page.waitForTimeout(300);
+        const y1 = await page.evaluate(() => window.scrollY);
+        if (!(y1 > y0)) problems.push(`SITEHDR UX-R3: after closing, a 400px wheel didn't scroll the page (scrollY ${y0} -> ${y1}) ${at}`);
+        await page.evaluate(() => window.scrollTo(0, 0));
+      }
       // SITEHDR-14: after a file loads the dialog shows the own-files copy; Use sample data switches back;
       // a file with no usage keeps the sample copy (was DEMO-BAR-9, DEMO-BAR-10).
       if (viewport.width !== 320 && colorScheme === "light") {
