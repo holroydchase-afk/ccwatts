@@ -56,4 +56,4 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - M2.1 local run needs Chase to use Claude Code on his Mac (parser already verified on real cloud logs, Oct 23). Not blocking.
 
 ## Repo best-practices pass (2026-11-25)
-- Done: SUPPORT.md README-AI-line codeql(actions, javascript-typescript). Added from the GitHub, Linux Foundation and Syracuse checklists (studio-agents docs/repo-standards.md). Left for this project to review: CHANGELOG.md, THIRD_PARTY_NOTICES, wording of the README AI-use line against the claims register, repo description and topics.
+- Done: SUPPORT.md README-AI-line. Added from the GitHub, Linux Foundation and Syracuse checklists (studio-agents docs/repo-standards.md). Left for this project to review: a SHA-pinned CodeQL workflow (RB-4a requires 40-char SHAs and this session could not look one up), CHANGELOG.md, THIRD_PARTY_NOTICES, wording of the README AI-use line against the claims register, repo description and topics.
