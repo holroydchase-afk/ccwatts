@@ -181,3 +181,7 @@ Code: MIT ([LICENSE](LICENSE)). Methodology and parameters (`METHODOLOGY.md`, `m
 Built by [Chase Holroyd](https://chaseholroyd.com), with Claude Code.
 
 ccwatts is an independent project and is not affiliated with or endorsed by Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.
+
+## How this is built
+
+Built with Claude Code (AI-assisted code, tests and docs). The maintainer directs the work and decides what ships. Tests and CI run on every pull request; the current state is in HANDOFF.md.
