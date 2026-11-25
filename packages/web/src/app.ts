@@ -871,6 +871,8 @@ function wireSiteBar() {
   const setOpen = (open: boolean) => {
     toggle.setAttribute("aria-expanded", String(open));
     drawer.hidden = scrim.hidden = !open;
+    // UX-R3: the page behind the open drawer doesn't scroll.
+    document.documentElement.classList.toggle("dr-open", open);
     (open ? $("demo-close") : toggle).focus();
   };
   toggle.addEventListener("click", () => setOpen(true));

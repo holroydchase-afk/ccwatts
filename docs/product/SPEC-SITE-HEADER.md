@@ -15,7 +15,7 @@ Look copied from the portfolio's demo-bar.js/.css (the look, not the code):
 - `<header id="site-bar">`, fixed to the top, 52px tall, z-index above the sticky tabs, flex, gap 8px, padding `0 max(16px, env(safe-area-inset-left))`, 1px bottom rule in the header's line colour.
 - In order: link "← Chase Holroyd" (class `nm`, aria-label "Chase Holroyd, back to the portfolio"); `<nav aria-label="Site">` with "Building" and "Agents"; a flex spacer; the label "ccwatts demo"; link "Case study" (accent colour, bold). Below 560px, hide the nav and "Case study".
 - Light: bg #fff, ink #14161A, muted #5B6068, line #E4E6E2, accent #0B7A4B. Dark: bg #131210, ink #F2F0EA, muted #A8A49A, line #2C2A26, accent #4CC38A.
-- Font: 500 15px, the page's bundled "Atkinson Hyperlegible Next", system-ui. Links: min-height 44px, muted, no underline, ink on hover, 2px accent outline on focus-visible.
+- Font: 500 15px, the page's bundled "Atkinson Hyperlegible Next", system-ui; the name link "Chase Holroyd" is 700, with its arrow in `<i aria-hidden="true">` in the accent colour, 6px from the name (UX-R1, as on chaseholroyd.com's demo-bar.css). Links: min-height 44px, padding 0 6px, radius 6px, muted, no underline, ink on hover, 2px accent outline (offset 0) on focus-visible (UX-R2).
 - Theme: follow the playground's own picker (`data-theme` light/dark, or the OS when System) in CSS, the same way the page tokens do. No separate storage key and no "dk" class set from JS.
 - Links: absolute, built from the origin of `PORTFOLIO_URL` in `packages/core/src/meta.ts`: `/`, `/building.html` and `/agents.html` on that origin; "Case study" is `PORTFOLIO_URL` itself. They then work from a local copy of dist too.
 - Playground only. The `ccwatts --html` dashboard has no header and no 52px offset. Render the header at build or first paint, not after a delay that shifts the page.
@@ -26,7 +26,7 @@ Part A without Part B: keep the `#demo-bar` strip under the header, minus its "�
 
 ## Part B: the strip becomes an info button and drawer (pending Chase)
 - Remove the `#demo-bar` strip. Right of "ccwatts demo" in the header, add a 44px icon button (`#demo-toggle`, aria-label "About this demo", `aria-expanded`, `aria-controls` = the drawer id). It's always visible, including at 320px.
-- The drawer is a dialog (`role="dialog"`, `aria-modal="true"`, labelled by its title) over a scrim. At 700px and wider it's a 360px panel on the right; under 700px it's a bottom sheet. It doesn't push the page down.
+- The drawer is a dialog (`role="dialog"`, `aria-modal="true"`, labelled by its title) over a scrim. At 700px and wider it's a 360px panel on the right; under 700px it's a bottom sheet. It doesn't push the page down. While it's open the page behind doesn't scroll (UX-R3), and the scrim is rgba(0,0,0,.6) in dark (UX-R4).
 - Contents: a "Demo" pill, a title, the line the strip shows today (`#demo-copy-sample` / `#demo-copy-files`, still switched by app.ts when files load or "Use sample data" is tapped), and links: back to the portfolio (`#demo-back`), Code on GitHub (`#demo-code`, `REPO_URL`), and Case study.
 - Closing: the close button, Esc, and a tap on the scrim all close it, and focus goes back to `#demo-toggle`. On open, focus moves into the drawer. Under reduced motion it doesn't slide.
 - `#page-top` stays hidden in the playground, as today.
@@ -36,7 +36,7 @@ Part A:
 - SITEHDR-1 (auto): Given the playground at 320, 390 and 1280px, then `#site-bar` is the first visible element, 52px tall, fixed at top 0, and holds in order "← Chase Holroyd" (aria-label as above), nav "Site", "ccwatts demo" and "Case study". At 320 and 390 the nav and "Case study" are hidden; at 1280 they're visible.
 - SITEHDR-2 (auto): The hrefs are exactly `https://chaseholroyd.com/`, `…/building.html`, `…/agents.html` and `PORTFOLIO_URL`, and the code derives them from `PORTFOLIO_URL` (a static test fails if a second hard-coded origin appears in app.ts or template.html).
 - SITEHDR-3 (auto): With the OS light and the picker on Light or System, the header's computed bg/ink/accent are #fff/#14161A/#0B7A4B. With Dark picked, or System with the OS dark, they're #131210/#F2F0EA/#4CC38A. It switches with no reload, and the page writes no localStorage key.
-- SITEHDR-4 (auto): The header font is "Atkinson Hyperlegible Next" at 15px weight 500. Every header link is 44px or taller and shows a 2px outline on keyboard focus.
+- SITEHDR-4 (auto): The header font is "Atkinson Hyperlegible Next" at 15px weight 500 (the name link is 700, UX-R1). Every header link is 44px or taller and shows a 2px outline on keyboard focus.
 - SITEHDR-5 (auto): In playground light, body and `.tabs` compute to rgb(255,255,255). `var(--bg)` still resolves to #F7F7F4, and cards keep their 1px `--line` ring.
 - SITEHDR-6 (auto): Scrolled down, the sticky tabs sit at 52px (not under the header). Opening `#pace` directly puts the panel's h2 fully below the header and tabs.
 - SITEHDR-7 (auto): The built page has no horizontal scroll (`scrollWidth <= innerWidth`) at 320, 390 and 1280px, light and dark.
