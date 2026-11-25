@@ -475,12 +475,10 @@ function render(share = true) {
   const pill = $("source-pill");
   pill.textContent = state.source === "sample" ? "Sample data" : state.source === "history" ? "Your history" : "Your files";
   pill.classList.toggle("sample", state.source === "sample");
-  // DEMO-BAR: in the playground the demo bar says which data is on screen, so the pill steps aside.
+  // SITEHDR-14: in the playground the "About this demo" drawer says which data is on screen, so the pill steps aside.
   pill.hidden = payload.mode === "playground";
   const own = state.source !== "sample";
-  $("demo-sum-sample").hidden = own;
   $("demo-copy-sample").hidden = own;
-  $("demo-sum-files").hidden = !own;
   $("demo-copy-files").hidden = !own;
   $("lede").textContent = LEDE[state.source];
   renderHero(e, label);
@@ -731,7 +729,7 @@ function wire() {
   ($("repo-link") as HTMLAnchorElement).href = REPO_URL;
   $("cli-cmd").textContent = `npx ${APP_NAME}`;
   ($("built-by") as HTMLAnchorElement).href = PORTFOLIO_URL;
-  if (payload.mode === "playground") wireDemoBar();
+  if (payload.mode === "playground") wireSiteBar();
   route();
   const when = payload.generatedAt ? ` · written ${payload.generatedAt.slice(0, 16).replace("T", " ")} UTC` : "";
   $("footer-version").textContent = `${APP_NAME} v${APP_VERSION} · method v${params.version}${when}. Electricity only, not carbon or water.`;
@@ -788,7 +786,8 @@ function go(hash: string, replace = false) {
 
 /** The tabs are sticky: once the page is scrolled past where they start, go back there for the new view. */
 function toViewTop() {
-  const start = $("privacy").getBoundingClientRect().bottom + window.scrollY;
+  // In the playground the fixed site header (52px) sits over the top of the page (SITEHDR-6).
+  const start = $("privacy").getBoundingClientRect().bottom + window.scrollY - (payload.mode === "playground" ? 52 : 0);
   if (window.scrollY > start) window.scrollTo({ top: start });
 }
 
@@ -848,26 +847,53 @@ function wireTheme() {
   for (const b of document.querySelectorAll<HTMLElement>("[data-theme-pick]")) b.addEventListener("click", () => applyTheme(b.dataset.themePick ?? "system"));
 }
 
-/** The studio demo bar (DEMO-BAR): a disclosure button over a push-down drawer; Esc closes it. */
-function wireDemoBar() {
-  const bar = $("demo-bar");
+/**
+ * The portfolio's site header and its "About this demo" drawer (SPEC-SITE-HEADER), playground only.
+ * Every href comes from PORTFOLIO_URL's origin, so a local copy of dist links to the same pages. The
+ * theme follows the page's picker in CSS; nothing is stored. The drawer is a modal dialog: focus goes
+ * in on open, Tab stays inside, and the close button, Esc or a scrim tap close it and return focus.
+ */
+function wireSiteBar() {
+  const origin = new URL(PORTFOLIO_URL).origin;
+  const hrefs: [string, string][] = [
+    ["sb-home", `${origin}/`],
+    ["sb-building", `${origin}/building.html`],
+    ["sb-agents", `${origin}/agents.html`],
+    ["sb-case", PORTFOLIO_URL],
+    ["demo-back", PORTFOLIO_URL],
+    ["demo-code", REPO_URL],
+    ["demo-case", PORTFOLIO_URL],
+  ];
+  for (const [id, href] of hrefs) $<HTMLAnchorElement>(id).href = href;
   const toggle = $<HTMLButtonElement>("demo-toggle");
-  const panel = $("demo-panel");
-  for (const id of ["demo-home", "demo-back"]) $<HTMLAnchorElement>(id).href = PORTFOLIO_URL;
-  $<HTMLAnchorElement>("demo-code").href = REPO_URL;
+  const drawer = $("demo-drawer");
+  const scrim = $("demo-scrim");
   const setOpen = (open: boolean) => {
     toggle.setAttribute("aria-expanded", String(open));
-    panel.hidden = !open;
+    drawer.hidden = scrim.hidden = !open;
+    (open ? $("demo-close") : toggle).focus();
   };
-  toggle.addEventListener("click", () => setOpen(panel.hidden));
-  bar.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !panel.hidden) {
+  toggle.addEventListener("click", () => setOpen(true));
+  $("demo-close").addEventListener("click", () => setOpen(false));
+  scrim.addEventListener("click", () => setOpen(false));
+  document.addEventListener("keydown", (e) => {
+    if (drawer.hidden) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
       setOpen(false);
-      toggle.focus();
+    } else if (e.key === "Tab") {
+      const stops = [...drawer.querySelectorAll<HTMLElement>("a, button")];
+      const at = stops.indexOf(document.activeElement as HTMLElement);
+      const next = e.shiftKey ? (at <= 0 ? stops.length - 1 : -1) : at === stops.length - 1 || at < 0 ? 0 : -1;
+      if (next >= 0) {
+        e.preventDefault();
+        stops[next]!.focus();
+      }
     }
   });
-  bar.hidden = false;
-  // UX-R2: the bar shows "ccwatts", so the header's brand line steps aside (its pill is already hidden here).
+  document.documentElement.classList.add("pg");
+  $("site-bar").hidden = false;
+  // UX-R2: the header shows "ccwatts demo", so the page's own brand line steps aside (its pill is already hidden here).
   $("page-top").hidden = true;
 }
 

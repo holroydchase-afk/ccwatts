@@ -3,7 +3,7 @@
 stage: beta
 goal: portfolio
 milestone: CCW-M4
-now: GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me"). Method v0.1.1 PR open; working the stable-demo plan (/mnt/project-files/ccwatts-reviews/2026-11-13-stable-demo-plan.md), a few pushes a day
+now: SITEHDR site header + info drawer built (intake #127), pending qa-tdd 3x and ux-reviewer. GitHub hold lifted (Chase, Nov 13: "do whatever you need to do without me"). Method v0.1.1 PR open; working the stable-demo plan (/mnt/project-files/ccwatts-reviews/2026-11-13-stable-demo-plan.md), a few pushes a day
 next: 0.2.0 is on npm (Nov 16); post the v0.2.0 GitHub Release and send the portfolio INTAKE; later majors TS 7, tsup 9, zod 4
 waiting_on_chase:
   - Go on M4.7 Leverage (proposed in docs/internal/IDEAS.md)
@@ -15,9 +15,8 @@ blockers: []
 Live status for whoever picks up the build next (human or Claude). Updated every push. Keep this file under 8 KB: dated history goes to `docs/history/HANDOFF-archive.md` (Done log, old decisions, planning-ID map), and `git log` has the rest.
 
 ## Portfolio / public presence
-- 2026-11-24 (intake #117): the portfolio's "8.5 kWh over 30 days, range 1.3 to 30.5" comes from `npx ccwatts --demo` (method v0.1.2, sample 2026-09-21 to 2026-10-20; JSON wh 1315 / 8507 / 30489). Unchanged; pinned by PORT-1 to PORT-3 in packages/cli/test/portfolio-numbers.test.ts, which fails if params or the fixture move it.
-- 2026-11-24: the playground's Your logs gains "Use Claude Code on the web? Ask it." (a prompt to paste into a cloud session). Merged on Chase's go (Nov 24); live after Pages deploys, since it changes the live playground.
 - 2026-11-24: Intake #112 (eval findings at 390px): What if? shows its total beside the slider on load; a Sample data label sits above the share card preview (saved PNG/SVG unchanged); Pace leads with one number, details below the chart; Method shows the parameters table open. Live once Chase gives the go and Pages deploys.
+- 2026-11-25 (intake #127): the playground wears the portfolio's site header (fixed 52px: "← Chase Holroyd", Building, Agents, "ccwatts demo", an "About this demo" button, Case study) and paints white in light mode; the "Demo" strip is gone, its copy and links now sit in the drawer behind that button. Live on the next Pages deploy. Portfolio thread: the header is built into the page, not demo-bar.js/.css, so a look change there needs a PR here.
 - **Portfolio page:** https://chaseholroyd.com/ccwatts.html (source: `tools/build.py` in `holroydchase-afk.github.io`). It links the playground and this repo.
 - **Live playground:** https://chaseholroyd.com/ccwatts/, deployed from this repo's `main` by `.github/workflows/pages.yml`. Deploys have succeeded since Oct 21, so CCW-M1.9 is live.
 - **Demo data:** the playground opens on labeled synthetic sample data. Visitors can pick their own `.jsonl` files, which are parsed in the browser and never uploaded.
@@ -26,21 +25,19 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 - Older lines: `docs/history/HANDOFF-archive.md`.
 
 ## Done (latest only; full log in the archive)
+- 2026-11-25: SITEHDR (intake #127, spec docs/product/SPEC-SITE-HEADER.md, Part A + Part B on Chase's yes): the playground gets the site header (`#site-bar` in template.html; app.ts builds every href from `PORTFOLIO_URL`'s origin, no new request, CSP byte-identical), the light page and sticky tabs paint white (`--pg`; `--bg` stays #F7F7F4 for DS-1), the tabs stick at 52px and deep links clear the header, and the `#demo-bar` strip becomes `#demo-toggle` + the `#demo-drawer` dialog (right panel at 700px+, bottom sheet below; close button, Esc and scrim close it and return focus; no motion under reduced motion). `ccwatts --html` keeps no header and Paper grey. Tests SITEHDR-1..16 (site-header.test.ts, site-header-drawer.test.ts, the SITEHDR blocks in check-no-network.ts). Tabs, panels and footer now sit in one `.views` column that fills the window under the header, so the sticky row can reach it. QA-R1: build.ts ships the page without stylesheet comments or line indentation, so dist is 149,524 bytes, under check-live's 150,000 (was 153,157). Plugin bundles rebuilt.
 - 2026-11-24: M4.8.3 RANGES (spec docs/product/SPEC-RANGES.md, UX-R6): every share and comparison shown now carries a range. Core `shareRange`/`formatShare` ("64% (30–72%)"), `comparisons`/`everyday` take the total Range ("about 28 miles (4.4–102)"); headline wording lives in core `rereadShare` ("About 64% (30–72%)", no "Most"; "The surprise:" only when the low end is >= 50%; pending Chase, one-line change). Playground: Overview and Electricity get a "How we got this range" link to #method; by-model/project rows drop the %; chart tooltips say "(central)". Card slip rows and post carry ranges, post names the method version. CLI: one comparison per line, By model/type list what fits 80 columns plus a "Full split" `--by` hint; `--by` share column ranged (QA-R1); estimate's assumed mix on its own line and "Know the split?" shortened to fit 80 cols. METHODOLOGY "Ranges on shares and comparisons" (RANGE-14). Next: qa-tdd green 3x, ux-reviewer RANGE-13 (390 and 1280), then PR.
 - 2026-11-24: M4.8.2 HEADER TRIM (UX-R2, CCW-DEC-17 recommendations): the playground drops the standalone "ccwatts" line above the h1 and shows the name in the demo bar; the demo bar stops repeating "nothing leaves this browser" (the lock line is the one promise); phone tab bar starts at 223px (was 271). Dashboard keeps its header. FOCUS-8..10. Merge waits on Chase's go (live demo). Next: M4.8.3 ranges on every number (UX-R6).
-- 2026-11-24: Intake #117: portfolio sample numbers pinned (PORT-1 to PORT-3); command recorded under Portfolio.
-- 2026-11-24: Intake #122 (privacy sweep): the one claude.ai artifact link in docs/history/HANDOFF-archive.md is gone (title kept). Repo now has no artifact links. Docs only.
-- 2026-11-24: QA-R1 (CLOUDP/FOCUS): the Overview phone note under "Try it on your logs" now reads "On a phone? It works with Claude Code on the web." (Chase picked it, Nov 24; was "Needs a computer with Claude Code."), pointing phones to the cloud prompt. Tests CLOUDP-12, FOCUS-1; plugin bundles rebuilt.
-- 2026-11-24: CLOUDP (spec docs/product/SPEC-CLOUDP.md): a cloud-session prompt in Your logs ("Use Claude Code on the web? Ask it.": Claude runs `npx -y ccwatts@latest` and replies in three lines, token counts only) and the same prompt byte for byte in the README. CLOUDP-1 to CLOUDP-11 test-first (packages/web/test/cloudp.test.ts, plus the browser block in check-no-network.ts). ux-reviewer UX-R69 (one-line phone hint) and UX-R70 (fallback points to the "Have a token count?" box on the Electricity tab, now a link to #electricity) fixed; UX-R68 left as P2. Save hook verified Nov 23: 6 sessions saved since Nov 22.
 
 ## In progress
 - M4.8.3 ranges on every number: built on `claude/project-thread-g2k1g8`. Fix round done (Nov 24): QA-R1 tiny phone totals read "under 1% of a phone charge" again and a phone range topping one charge reads in charges ("about half a phone charge (0.1–1.5 charges)", never >100%); UX-R13 #ov-how text lines up with #ov-compare, 12px clear; UX-R14 comparison ends at 2 significant figures ("(4.4–100)"); UX-R15 tight en dash for kWh ranges ("1.3–30.5"; Pace hours and the Method params table keep "a – b"). EF-6 card hash re-pinned (diff is dash/rounding only). Next: qa-tdd green 3x, ux-reviewer recheck, then the PR.
 
 ## Exact next step
-0. Chase: the manual CLOUDP-8 check (paste the cloud prompt into a fresh claude.ai/code thread and a plain chat; neither should invent a number).
-1. Chase merges #89, then this PR.
-2. Done Nov 16: 0.2.0 published. Remaining: GitHub Release v0.2.0, close issue #38, portfolio INTAKE (box C in the stable-demo plan).
-3. Then only on Chase's go: M4.7 Leverage (docs/internal/IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
+0. SITEHDR (intake #127): qa-tdd green 3x and ux-reviewer on the header and drawer at 320/390/1280, then the PR; it changes the live playground, so it merges on Chase's standing go and goes live on the next Pages deploy. Run `npm run check:live` after that deploy (SITEHDR-11 is Chase's manual check next to chaseholroyd.com/building.html).
+1. Chase: the manual CLOUDP-8 check (paste the cloud prompt into a fresh claude.ai/code thread and a plain chat; neither should invent a number).
+2. Chase merges #89, then this PR.
+3. Done Nov 16: 0.2.0 published. Remaining: GitHub Release v0.2.0, close issue #38, portfolio INTAKE (box C in the stable-demo plan).
+4. Then only on Chase's go: M4.7 Leverage (docs/internal/IDEAS.md); held majors TS 7, tsup 9, zod 4 (one planned task each).
 - The old, longer next-step list is in the archive; most of it shipped.
 
 ## Decisions to review (open only; settled ones are in the archive)
