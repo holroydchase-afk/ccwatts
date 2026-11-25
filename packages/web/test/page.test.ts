@@ -50,10 +50,11 @@ describe("first screen (recruiter-ready RR-1, RR-3)", () => {
     expect(html).toMatch(/id="lede"[^>]*>[^<]*AI coding agent/);
   });
 
-  it("links back to the portfolio, from the demo bar and the footer", () => {
+  it("links back to the portfolio, from the site header and the footer", () => {
     expect(PORTFOLIO_URL).toBe("https://chaseholroyd.com/ccwatts.html");
-    // DEMO-BAR: the old standalone #back-link is replaced by the demo bar's "← Portfolio" link.
-    expect(html).toContain("← Portfolio");
+    // SITEHDR-1/10 (SPEC-SITE-HEADER): the site header's "← Chase Holroyd" replaces the demo bar's "← Portfolio".
+    expect(html).toContain('aria-label="Chase Holroyd, back to the portfolio"');
+    expect(html).not.toContain("← Portfolio");
     expect(html).toContain('id="built-by"');
     // The href is set by the script (like the repo link), so the page source holds no absolute URLs outside meta tags.
     expect(html).toContain(PORTFOLIO_URL);
@@ -289,18 +290,16 @@ describe("WI-R6 what-if scale is readable", () => {
 });
 
 // DEMO-BAR (studio demo bar standard, docs/DEMO-BANNER.md in pm-tools; intake #73). Static checks
-// on the built page. Layout, focus, colors and state changes are checked in a real browser in
-// scripts/check-no-network.ts (npm run check:browser).
+// on the built page. SPEC-SITE-HEADER Part B (Chase, Nov 25) removed the #demo-bar strip: its
+// toggle, middle text and --demo-* tokens (DEMO-BAR-1, -3, -5, -6) retired in favour of SITEHDR-12..16
+// (site-header-drawer.test.ts). The drawer copy and the old-notice checks below still hold.
 describe("DEMO-BAR studio demo bar (static)", () => {
   const css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n");
   const app = readFileSync(new URL("../src/app.ts", import.meta.url), "utf8");
 
-  it("DEMO-BAR-1: a named Demo region with one toggle button (aria-expanded=false, aria-controls, 'Demo details')", () => {
-    expect(html).toMatch(/<section[^>]*aria-label="Demo"/);
-    const toggle = /<button[^>]*aria-label="Demo details"[^>]*>/.exec(html)?.[0] ?? "";
-    expect(toggle, "toggle button").not.toBe("");
-    expect(toggle).toContain('aria-expanded="false"');
-    expect(toggle).toMatch(/aria-controls="[^"]+"/);
+  it("DEMO-BAR-5 (SITEHDR-12): the strip's --demo-* tokens and .demo-bar styles went with it", () => {
+    expect(css).not.toMatch(/--demo-(bg|fg|muted|line|font)\b/);
+    expect(css).not.toMatch(/\.demo-bar\b/);
   });
 
   it("DEMO-BAR-2: carries the standard drawer copy for sample data and for the visitor's own files", () => {
@@ -310,12 +309,6 @@ describe("DEMO-BAR studio demo bar (static)", () => {
     expect(html).toContain("Code on GitHub");
     // ccwatts keeps no state, so there is no Reset demo button.
     expect(html).not.toContain("Reset demo");
-  });
-
-  it("DEMO-BAR-3: the middle text has the sample and own-files wording", () => {
-    for (const s of ["Sample data", "Your files", " · read in this browser only"]) expect(html, s).toContain(s);
-    // UX-R2 (M4.8.2): the lock line (#privacy) is the one privacy promise; the bar no longer repeats it.
-    expect(html).not.toContain(" · nothing leaves this browser");
   });
 
   it("DEMO-BAR-4: the old notices are gone (no #back-link, no 'You're looking at sample data' lede)", () => {
@@ -330,17 +323,5 @@ describe("DEMO-BAR studio demo bar (static)", () => {
     expect(files, "files lede").not.toBe("");
     expect(files).toMatch(/You're looking at the files you loaded\.$/);
     expect(files).not.toMatch(/upload/i);
-  });
-
-  it("DEMO-BAR-5: bar tokens map to the page's own --surface, --ink, --muted, --line and --sans", () => {
-    for (const [bar, page] of [["--demo-bg", "--surface"], ["--demo-fg", "--ink"], ["--demo-muted", "--muted"], ["--demo-line", "--line"], ["--demo-font", "--sans"]]) {
-      expect(css, `${bar} reads ${page}`).toMatch(new RegExp(`${bar}[^;}]*var\\(${page}\\b`));
-    }
-  });
-
-  it("DEMO-BAR-6: hrefs on the bar are set by script (no absolute URL in the bar markup)", () => {
-    const bar = /<section[^>]*aria-label="Demo"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
-    expect(bar, "bar markup").not.toBe("");
-    expect(bar).not.toMatch(/href="https?:/);
   });
 });

@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { loadChromium, showcaseCheck } from "../tools/showcase-check/check.ts";
+import { PORTFOLIO_URL, REPO_URL } from "../packages/core/src/meta.ts";
 
 const chromium = await loadChromium();
 const page_ = fileURLToPath(new URL("../packages/web/dist/ccwatts.html", import.meta.url));
@@ -54,13 +55,18 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   await page.goto(pathToFileURL(page_).href);
   // An element missing from the page reads as "", so the check below reports it instead of crashing.
   const text = async (sel: string) => (await page.textContent(sel)) ?? "";
-  // DEMO-BAR: the demo bar's toggle says which data is on screen (it replaced #source-pill and the
-  // lede's sample-data clause). innerText, so text hidden at this width doesn't count.
-  const barText = () => page.evaluate(() => (document.querySelector('section[aria-label="Demo"] button[aria-label="Demo details"]') as HTMLElement | null)?.innerText ?? "");
-  const waitBar = (want: string, why: string) => page.waitForFunction((w) => ((document.querySelector('section[aria-label="Demo"] button[aria-label="Demo details"]') as HTMLElement | null)?.innerText ?? "").includes(w), want, { timeout: 8000 })
-    .then(() => true, () => { problems.push(`${why}: demo bar never said "${want}" at ${viewport.width}px`); return false; });
+  // SITEHDR-14 (was DEMO-BAR): the "About this demo" drawer's copy says which data is on screen;
+  // app.ts shows #demo-copy-sample or #demo-copy-files. "Sample data" / "Your files" name that state.
+  const barText = () => page.evaluate(() => ["demo-copy-sample", "demo-copy-files"]
+    .filter((id) => { const el = document.getElementById(id); return !!el && !el.hidden; })
+    .map((id) => (id === "demo-copy-sample" ? "Sample data" : "Your files")).join(" + ") || "(no demo copy shown)");
+  const waitBar = (want: string, why: string) => page.waitForFunction((w) => {
+    const el = document.getElementById(w === "Your files" ? "demo-copy-files" : "demo-copy-sample");
+    return !!el && !el.hidden;
+  }, want, { timeout: 8000 })
+    .then(() => true, () => { problems.push(`${why}: the demo drawer copy never switched to "${want}" at ${viewport.width}px`); return false; });
 
-  if (!(await barText()).includes("Sample data")) problems.push(`DEMO-BAR: did not open on sample data (bar says "${await barText()}")`);
+  if ((await barText()) !== "Sample data") problems.push(`DEMO-BAR: did not open on sample data (drawer copy: "${await barText()}")`);
 
   // Keyboard: Tab reaches the tabs and the Overview CTA "Try it on your logs" (#ov-cta); Enter on it opens
   // Your logs, and Tab then reaches both file pickers (recruiter-ready RR-5, now through #ov-cta, M4.8.1).
@@ -290,8 +296,6 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   // DEMO-BAR (was RR-16 on the lede and the pill): the bar follows the data source.
   await waitBar("Your files", "DEMO-BAR after loading a file");
   if ((await barText()).includes("Sample data")) problems.push(`DEMO-BAR: bar still says Sample data after loading a file ("${await barText()}")`);
-  const wantFilesLong = viewport.width >= 600;
-  if ((await barText()).includes("read in this browser only") !== wantFilesLong) problems.push(`DEMO-BAR: "· read in this browser only" ${wantFilesLong ? "missing" : "shown"} at ${viewport.width}px ("${await barText()}")`);
   await tab(page, "Electricity");
   await page.click("#w-7d");
   await openLogs(page);
@@ -331,176 +335,357 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   if (width > viewport.width) problems.push(`horizontal scroll at ${viewport.width}px (${width}px wide)`);
   await page.close();
 }
-// DEMO-BAR (studio demo bar standard, docs/DEMO-BANNER.md in pm-tools; intake #73). The playground
-// opens with a slim "Demo" bar whose Details button opens a push-down drawer. Every check names its ID.
+// SITEHDR Part A (docs/product/SPEC-SITE-HEADER.md): the portfolio's site header on the playground.
+// The old DEMO-BAR-1..12 strip checks retired with Part B (Chase, Nov 25); the static half of these
+// checks is packages/web/test/site-header.test.ts. Selected by role and label. Every check names its ID.
+type Pw = import("playwright-core").Page;
+const sideways = (page: Pw) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+const SITE_ORIGIN = new URL(PORTFOLIO_URL).origin;
+const HDR_LIGHT = { bg: "rgb(255, 255, 255)", ink: "rgb(20, 22, 26)", accent: "rgb(11, 122, 75)" };
+const HDR_DARK = { bg: "rgb(19, 18, 16)", ink: "rgb(242, 240, 234)", accent: "rgb(76, 195, 138)" };
+/** The header's parts, by role and label. includeHidden, so "hidden at this width" is a visibility check, not a missing element. */
+const headerParts = (page: Pw) => {
+  const bar = page.locator("#site-bar");
+  const nav = bar.getByRole("navigation", { name: "Site", exact: true, includeHidden: true });
+  return {
+    bar,
+    back: bar.getByRole("link", { name: "Chase Holroyd, back to the portfolio", exact: true, includeHidden: true }),
+    nav,
+    building: nav.getByRole("link", { name: "Building", exact: true, includeHidden: true }),
+    agents: nav.getByRole("link", { name: "Agents", exact: true, includeHidden: true }),
+    label: bar.getByText("ccwatts demo", { exact: true }),
+    caseStudy: bar.getByRole("link", { name: "Case study", exact: true, includeHidden: true }),
+    toggle: bar.getByRole("button", { name: "About this demo", exact: true, includeHidden: true }),
+  };
+};
+const headerColours = (page: Pw) => page.evaluate(() => {
+  const bar = document.querySelector("#site-bar");
+  const cs = [...document.querySelectorAll("#site-bar a")].find((a) => (a.textContent ?? "").trim() === "Case study");
+  return bar ? { bg: getComputedStyle(bar).backgroundColor, ink: getComputedStyle(bar).color, accent: cs ? getComputedStyle(cs).color : "(no Case study link)" } : null;
+});
 {
-  const BAR = 'section[aria-label="Demo"]';
-  const TOGGLE = `${BAR} button[aria-label="Demo details"]`;
-  const SAMPLE_COPY = "This is the real ccwatts, running on made-up sample data. Nothing you do is saved or sent anywhere; reload to start over.";
-  const FILES_COPY = "This is the real ccwatts, now showing the files you picked. They were read in this browser and never uploaded; nothing is saved, so reload to start over.";
-  const sideways = (page: import("playwright-core").Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  const views = [{ width: 320, height: 640 }, { width: 390, height: 844 }, { width: 1280, height: 800 }];
   for (const colorScheme of ["light", "dark"] as const) {
-    for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+    for (const viewport of views) {
       const at = `at ${viewport.width}px ${colorScheme}`;
+      const wide = viewport.width >= 560;
       const page = await browser.newPage({ viewport, colorScheme });
-      page.on("request", (r) => { if (!/^(file|data|blob):/.test(r.url())) problems.push(`DEMO-BAR network request: ${r.url()}`); });
-      page.on("pageerror", (e) => problems.push(`DEMO-BAR page error: ${e}`));
+      page.on("request", (r) => { if (!/^(file|data|blob):/.test(r.url())) problems.push(`SITEHDR-9: network request ${r.url()} ${at}`); });
+      page.on("pageerror", (e) => problems.push(`SITEHDR page error: ${e} ${at}`));
       await page.goto(pathToFileURL(page_).href);
-      const bar = page.locator(BAR);
-      if ((await bar.count()) !== 1) { problems.push(`DEMO-BAR-1: no single <section aria-label="Demo"> ${at}`); await page.close(); continue; }
-      const toggle = page.locator(TOGGLE);
-      if ((await toggle.count()) !== 1) { problems.push(`DEMO-BAR-1: no "Demo details" toggle button in the bar ${at}`); await page.close(); continue; }
-      // DEMO-BAR-1: first thing on the page, collapsed on load, at most 48px tall.
-      const first = await page.evaluate((sel) => {
-        const b = document.querySelector(sel)!.getBoundingClientRect();
-        const others = [...document.querySelectorAll("main *, body > *")].filter((el) => !el.closest(sel) && !el.contains(document.querySelector(sel)) && el.getBoundingClientRect().height > 0);
-        return others.every((el) => el.getBoundingClientRect().top >= b.bottom - 1);
-      }, BAR);
-      if (!first) problems.push(`DEMO-BAR-1: something on the page sits above or beside the demo bar ${at}`);
-      const h = (await bar.boundingBox())?.height ?? 0;
-      if (!(h > 0 && h <= 48)) problems.push(`DEMO-BAR-1: collapsed bar is ${h}px tall ${at} (want 1-48)`);
-      if ((await toggle.getAttribute("aria-expanded")) !== "false") problems.push(`DEMO-BAR-1: toggle not collapsed on load ${at}`);
-      // DEMO-UX-R1: the bar row spans the page column: the back link lines up with the page's text
-      // (the h1, since UX-R2 moved the brand into the bar), and the toggle (with "Details") runs to
-      // the row's right edge instead of sitting mid-bar.
-      const align = await page.evaluate(() => {
-        const [home, brand, tog, row, wrap] = ["#demo-home", "main.wrap h1", "#demo-toggle", ".demo-bar__row", "main.wrap"].map((sel) => document.querySelector(sel)?.getBoundingClientRect());
-        return home && brand && tog && row && wrap ? { home: home.left, brand: brand.left, togRight: tog.right, rowRight: row.right, wrapRight: wrap.right } : null;
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      const h = headerParts(page);
+      if ((await h.bar.count()) !== 1) { problems.push(`SITEHDR-1: no single #site-bar ${at}`); await page.close(); continue; }
+      // SITEHDR-1: the first visible element, 52px tall, fixed at top 0.
+      const geo = await h.bar.evaluate((b) => {
+        const r = b.getBoundingClientRect();
+        const cs = getComputedStyle(b);
+        const above = [...document.querySelectorAll("body *")]
+          .filter((el) => !b.contains(el) && !el.contains(b) && el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true }))
+          .filter((el) => { const q = el.getBoundingClientRect(); return q.width > 1 && q.height > 1 && q.top < r.bottom - 1; })
+          .map((el) => el.id || el.tagName.toLowerCase());
+        return { tag: b.tagName, top: r.top, height: r.height, position: cs.position, above };
       });
-      if (!align) problems.push(`DEMO-UX-R1: bar parts missing ${at}`);
+      if (geo.tag !== "HEADER") problems.push(`SITEHDR-1: #site-bar is a <${geo.tag.toLowerCase()}>, want <header> ${at}`);
+      if (geo.position !== "fixed" || Math.abs(geo.top) > 0.5) problems.push(`SITEHDR-1: #site-bar is position ${geo.position} at top ${geo.top}, want fixed at 0 ${at}`);
+      if (Math.abs(geo.height - 52) > 0.5) problems.push(`SITEHDR-1: #site-bar is ${geo.height}px tall, want 52 ${at}`);
+      if (geo.above.length) problems.push(`SITEHDR-1: visible elements sit above or under the header: ${geo.above.slice(0, 6).join(", ")} ${at}`);
+      // SITEHDR-1: in order: back link, nav "Site", "ccwatts demo", "Case study".
+      const parts = [h.back, h.nav, h.label, h.caseStudy];
+      const counts = await Promise.all(parts.map((l) => l.count()));
+      if (counts.some((c) => c !== 1)) problems.push(`SITEHDR-1: header parts back/nav/label/Case study found ${counts.join("/")} times, want 1 each ${at}`);
       else {
-        if (Math.abs(align.home - align.brand) > 1) problems.push(`DEMO-UX-R1: "← Portfolio" at x=${align.home.toFixed(0)}, h1 at x=${align.brand.toFixed(0)} ${at}`);
-        if (Math.abs(align.togRight - align.rowRight) > 1) problems.push(`DEMO-UX-R1: toggle ends at x=${align.togRight.toFixed(0)}, row at x=${align.rowRight.toFixed(0)} ${at}`);
-        if (Math.abs(align.rowRight - align.wrapRight) > 1) problems.push(`DEMO-UX-R1: bar row ends at x=${align.rowRight.toFixed(0)}, page column at x=${align.wrapRight.toFixed(0)} ${at}`);
+        const handles = await Promise.all(parts.map((l) => l.elementHandle()));
+        const inOrder = await page.evaluate((els) => els.every((el, i) => i === 0 || !!(els[i - 1]!.compareDocumentPosition(el!) & Node.DOCUMENT_POSITION_FOLLOWING)), handles);
+        if (!inOrder) problems.push(`SITEHDR-1: header parts are not in the order back link, nav, "ccwatts demo", "Case study" ${at}`);
+        const backText = ((await h.back.textContent()) ?? "").replace(/\s+/g, " ").trim();
+        if (backText !== "← Chase Holroyd") problems.push(`SITEHDR-1: back link reads "${backText}", want "← Chase Holroyd" ${at}`);
+        for (const [name, l] of [["back link", h.back], ['"ccwatts demo"', h.label]] as const) if (!(await l.isVisible())) problems.push(`SITEHDR-1: ${name} hidden ${at}`);
+        for (const [name, l] of [['nav "Site"', h.nav], ['"Case study"', h.caseStudy]] as const) {
+          const vis = await l.isVisible();
+          if (vis !== wide) problems.push(`SITEHDR-1: ${name} is ${vis ? "visible" : "hidden"} ${at}, want ${wide ? "visible" : "hidden"}`);
+        }
       }
-      const panelId = (await toggle.getAttribute("aria-controls")) ?? "";
-      const panel = page.locator(`[id="${panelId}"]`);
-      if (!panelId || (await panel.count()) !== 1) { problems.push(`DEMO-BAR-1: aria-controls "${panelId}" names no element ${at}`); await page.close(); continue; }
-      if (await panel.isVisible()) problems.push(`DEMO-BAR-1: drawer is open on load ${at}`);
-      // DEMO-BAR-2: the way back is visible on the collapsed bar and goes to the portfolio.
-      const home = bar.getByRole("link", { name: "← Portfolio" });
-      const builtBy = await page.getAttribute("#built-by", "href");
-      if (!(await home.isVisible().catch(() => false))) problems.push(`DEMO-BAR-2: "← Portfolio" link not visible on the collapsed bar ${at}`);
-      else if ((await home.getAttribute("href")) !== builtBy) problems.push(`DEMO-BAR-2: "← Portfolio" goes to ${await home.getAttribute("href")}, want ${builtBy}`);
-      // DEMO-BAR-3: middle text "Sample data" at every width. UX-R2 (M4.8.2): the lock line is the one
-      // privacy promise, so the bar no longer adds "· nothing leaves this browser" from 600px.
-      const mid = await toggle.evaluate((t) => (t as HTMLElement).innerText);
-      if (!mid.includes("Sample data")) problems.push(`DEMO-BAR-3: bar doesn't say "Sample data" ${at} ("${mid}")`);
-      if (mid.includes("nothing leaves this browser")) problems.push(`DEMO-BAR-3: "· nothing leaves this browser" repeats the lock line ${at}`);
-      if (!/Details/.test(mid)) problems.push(`DEMO-BAR-3: toggle has no "Details" label ${at}`);
-      // DEMO-BAR-4: font and surface are the page's own; the badge is never --accent or --sample.
-      const look = await page.evaluate(({ barSel, togSel }) => {
+      // SITEHDR-2: absolute hrefs from the PORTFOLIO_URL origin; "Case study" is PORTFOLIO_URL.
+      const hrefs: [string, typeof h.back, string][] = [["back link", h.back, `${SITE_ORIGIN}/`], ["Building", h.building, `${SITE_ORIGIN}/building.html`], ["Agents", h.agents, `${SITE_ORIGIN}/agents.html`], ["Case study", h.caseStudy, PORTFOLIO_URL]];
+      for (const [name, l, want] of hrefs) {
+        const got = (await l.count()) === 1 ? await l.getAttribute("href") : "(missing)";
+        if (got !== want) problems.push(`SITEHDR-2: ${name} href is ${got}, want ${want} ${at}`);
+      }
+      // SITEHDR-3: the header follows the OS when the picker is on System (the default).
+      const want = colorScheme === "light" ? HDR_LIGHT : HDR_DARK;
+      const got = await headerColours(page);
+      if (JSON.stringify(got) !== JSON.stringify(want)) problems.push(`SITEHDR-3: header bg/ink/accent ${JSON.stringify(got)}, want ${JSON.stringify(want)} (System, OS ${colorScheme}) ${at}`);
+      // SITEHDR-4: font, 44px targets.
+      const font = await h.bar.evaluate((b) => { const cs = getComputedStyle(b); return { family: cs.fontFamily, size: cs.fontSize, weight: cs.fontWeight }; });
+      if (!/^"?Atkinson Hyperlegible Next"?,\s*system-ui/.test(font.family) || font.size !== "15px" || font.weight !== "500") problems.push(`SITEHDR-4: header font is ${JSON.stringify(font)}, want "Atkinson Hyperlegible Next", system-ui at 15px weight 500 ${at}`);
+      const small = await page.$$eval("#site-bar a, #site-bar button", (els) => (els as HTMLElement[]).filter((e) => e.checkVisibility() && e.getBoundingClientRect().height < 44).map((e) => `${(e.getAttribute("aria-label") ?? e.textContent ?? "").trim()} ${e.getBoundingClientRect().height.toFixed(0)}px`));
+      if (small.length) problems.push(`SITEHDR-4: header targets under 44px tall: ${small.join(", ")} ${at}`);
+      // SITEHDR-4: a 2px accent outline on keyboard focus, on every visible header link.
+      const rings: Record<string, string> = {};
+      for (let i = 0; i < 10; i++) {
+        await page.keyboard.press("Tab");
+        const r = await page.evaluate(() => {
+          const el = document.activeElement as HTMLElement | null;
+          if (!el || !el.closest("#site-bar") || el.tagName !== "A") return null;
+          const cs = getComputedStyle(el);
+          return { name: (el.getAttribute("aria-label") ?? el.textContent ?? "").trim(), ring: `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}` };
+        });
+        if (r) rings[r.name] = r.ring;
+      }
+      const visibleLinks = await page.$$eval("#site-bar a", (as) => (as as HTMLElement[]).filter((a) => a.checkVisibility()).map((a) => (a.getAttribute("aria-label") ?? a.textContent ?? "").trim()));
+      if (!visibleLinks.length) problems.push(`SITEHDR-4: no visible header links to focus ${at}`);
+      for (const name of visibleLinks) {
+        if (!(name in rings)) problems.push(`SITEHDR-4: Tab never reaches header link "${name}" ${at}`);
+        else if (rings[name] !== `solid 2px ${want.accent}`) problems.push(`SITEHDR-4: header link "${name}" focus ring is "${rings[name]}", want "solid 2px ${want.accent}" ${at}`);
+      }
+      // SITEHDR-5: playground light paints the page and tabs white; --bg stays #F7F7F4; cards keep their ring. Dark unchanged.
+      const paint = await page.evaluate(() => {
         const probe = document.createElement("i");
         document.body.append(probe);
-        probe.style.color = "var(--accent)"; const accent = getComputedStyle(probe).color;
-        probe.style.color = "var(--sample)"; const sample = getComputedStyle(probe).color;
-        probe.style.color = "var(--ink)"; const ink = getComputedStyle(probe).color;
-        probe.style.backgroundColor = "var(--surface)"; const surface = getComputedStyle(probe).backgroundColor;
+        probe.style.color = "var(--bg)"; const bg = getComputedStyle(probe).color;
+        probe.style.color = "var(--line)"; const line = getComputedStyle(probe).color;
         probe.remove();
-        const b = getComputedStyle(document.querySelector(barSel)!);
-        const badge = [...document.querySelector(togSel)!.querySelectorAll("*")].find((el) => el.children.length === 0 && el.textContent?.trim() === "Demo");
-        const bs = badge ? getComputedStyle(badge) : null;
-        return { accent, sample, ink, surface, barFont: b.fontFamily, bodyFont: getComputedStyle(document.body).fontFamily, barBg: b.backgroundColor, barFg: b.color,
-          badge: bs ? { color: bs.color, bg: bs.backgroundColor, border: bs.borderTopColor } : null };
-      }, { barSel: BAR, togSel: TOGGLE });
-      if (look.barFont !== look.bodyFont) problems.push(`DEMO-BAR-4: bar font "${look.barFont}" isn't the page's "${look.bodyFont}" ${at}`);
-      if (look.barBg !== look.surface) problems.push(`DEMO-BAR-4: bar background ${look.barBg} isn't --surface ${look.surface} ${at}`);
-      if (look.barFg !== look.ink) problems.push(`DEMO-BAR-4: bar text ${look.barFg} isn't --ink ${look.ink} ${at}`);
-      if (!look.badge) problems.push(`DEMO-BAR-4: no "Demo" badge inside the toggle ${at}`);
-      else for (const [k, v] of Object.entries(look.badge)) if (v === look.accent || v === look.sample) problems.push(`DEMO-BAR-4: badge ${k} ${v} is --accent/--sample ${at}`);
-      // DEMO-BAR-5: one notice only. #source-pill hidden in the playground, the old #back-link gone,
-      // and the lede no longer says "You're looking at sample data".
-      if (await page.locator("#source-pill").isVisible().catch(() => false)) problems.push(`DEMO-BAR-5: #source-pill still visible in the playground ${at}`);
-      if (await page.$("#back-link")) problems.push(`DEMO-BAR-5: old #back-link still on the page ${at}`);
-      if (((await page.textContent("#lede")) ?? "").includes("You're looking at sample data")) problems.push(`DEMO-BAR-5: lede still says "You're looking at sample data" ${at}`);
-      // DEMO-BAR-6: open pushes the page down and shows the standard copy at 16px/1.5, max 70ch.
-      const contentTop = () => page.evaluate(() => document.querySelector("h1")!.getBoundingClientRect().top);
-      const closedTop = await contentTop();
-      await toggle.click();
-      if ((await toggle.getAttribute("aria-expanded")) !== "true") problems.push(`DEMO-BAR-6: toggle not aria-expanded=true after a click ${at}`);
-      if (!(await panel.isVisible())) problems.push(`DEMO-BAR-6: drawer not shown after a click ${at}`);
-      const panelText = await panel.evaluate((p) => (p as HTMLElement).innerText);
-      if (!panelText.includes(SAMPLE_COPY)) problems.push(`DEMO-BAR-6: drawer copy isn't the standard sample copy ${at} ("${panelText.slice(0, 80)}")`);
-      if (!((await contentTop()) > closedTop)) problems.push(`DEMO-BAR-6: opening the drawer doesn't push the page down ${at}`);
-      const para = await panel.evaluate((p) => {
-        const el = [...p.querySelectorAll("p")].find((x) => x.textContent?.includes("This is the real")) as HTMLElement | undefined;
-        if (!el) return null;
-        const cs = getComputedStyle(el);
-        // getComputedStyle resolves ch to px, so measure 70ch in the paragraph's own font to compare.
-        const probe = document.createElement("span");
-        probe.style.cssText = "position:absolute;visibility:hidden;width:70ch";
-        el.append(probe);
-        const ch70 = probe.getBoundingClientRect().width;
-        probe.remove();
-        return { size: parseFloat(cs.fontSize), lh: parseFloat(cs.lineHeight) / parseFloat(cs.fontSize), maxW: cs.maxWidth, ch70 };
+        const card = document.querySelector(".card");
+        return { body: getComputedStyle(document.body).backgroundColor, tabs: getComputedStyle(document.querySelector(".tabs")!).backgroundColor, bg, line, ring: card ? getComputedStyle(card).boxShadow : "(no .card)" };
       });
-      if (!para || para.size < 16 || Math.abs(para.lh - 1.5) > 0.05) problems.push(`DEMO-BAR-6: drawer text is ${JSON.stringify(para)} ${at} (want 16px, 1.5 line height)`);
-      else if (!/px$/.test(para.maxW) || parseFloat(para.maxW) > para.ch70 + 0.5) problems.push(`DEMO-BAR-6: drawer text max-width ${para.maxW} ${at} (want at most 70ch = ${para.ch70}px)`);
-      // DEMO-BAR-7: drawer actions go to the portfolio and the repo; every bar control is 44px+.
-      const back = panel.getByRole("link", { name: /Chase Holroyd's portfolio/ });
-      const code = panel.getByRole("link", { name: "Code on GitHub" });
-      if ((await back.count()) !== 1 || (await back.getAttribute("href")) !== builtBy) problems.push(`DEMO-BAR-7: drawer's "← Chase Holroyd's portfolio" missing or not ${builtBy} ${at}`);
-      if ((await code.count()) !== 1 || (await code.getAttribute("href")) !== (await page.getAttribute("#repo-link", "href"))) problems.push(`DEMO-BAR-7: drawer's "Code on GitHub" missing or not the repo link ${at}`);
-      const small = await page.$$eval(`${BAR} a, ${BAR} button`, (els) => (els as HTMLElement[]).filter((e) => e.getBoundingClientRect().height > 0 && e.getBoundingClientRect().height < 44).map((e) => `${(e.textContent ?? "").trim()} ${e.getBoundingClientRect().height.toFixed(0)}px`));
-      if (small.length) problems.push(`DEMO-BAR-7: bar controls under 44px ${at}: ${small.join(", ")}`);
-      // DEMO-BAR-8: Esc (from inside the drawer) closes it and puts focus back on the toggle.
-      if (await code.count()) await code.focus(); else await toggle.focus();
-      await page.keyboard.press("Escape");
-      if ((await toggle.getAttribute("aria-expanded")) !== "false" || (await panel.isVisible())) problems.push(`DEMO-BAR-8: Esc didn't close the drawer ${at}`);
-      if (!(await toggle.evaluate((t) => t === document.activeElement))) problems.push(`DEMO-BAR-8: after Esc focus isn't on the toggle ${at}`);
-      if (Math.abs((await contentTop()) - closedTop) > 1) problems.push(`DEMO-BAR-8: page didn't move back up after Esc ${at}`);
-      // DEMO-BAR-9: after loading a file, the bar and drawer say "Your files"; Use sample data restores them.
-      await page.setInputFiles("#pick-files", log);
-      await page.waitForFunction((sel) => ((document.querySelector(sel) as HTMLElement | null)?.innerText ?? "").includes("Your files"), TOGGLE, { timeout: 8000 })
-        .catch(() => problems.push(`DEMO-BAR-9: bar never says "Your files" after loading a file ${at}`));
-      await toggle.click();
-      if (!(await panel.evaluate((p) => (p as HTMLElement).innerText)).includes(FILES_COPY)) problems.push(`DEMO-BAR-9: drawer copy isn't the own-files copy after loading a file ${at}`);
-      await toggle.click();
-      await openLogs(page);
-      await page.click("#use-sample");
-      const back2 = await toggle.evaluate((t) => (t as HTMLElement).innerText);
-      if (!back2.includes("Sample data") || back2.includes("Your files")) problems.push(`DEMO-BAR-9: bar says "${back2}" after Use sample data ${at}`);
-      await toggle.click();
-      if (!(await panel.evaluate((p) => (p as HTMLElement).innerText)).includes(SAMPLE_COPY)) problems.push(`DEMO-BAR-9: drawer copy didn't go back to the sample copy ${at}`);
-      // DEMO-BAR-10: a file with no usage keeps the sample state.
-      await toggle.click();
-      await page.setInputFiles("#pick-files", noUsage);
-      await page.waitForFunction(() => !/Reading/.test(document.querySelector("#drop-status")?.textContent ?? "Reading"));
-      const kept = await toggle.evaluate((t) => (t as HTMLElement).innerText);
-      if (!kept.includes("Sample data") || kept.includes("Your files")) problems.push(`DEMO-BAR-10: bar says "${kept}" after a file with no usage ${at}`);
-      if ((await sideways(page)) > 0) problems.push(`DEMO-BAR: page scrolls sideways ${at}`);
+      if (colorScheme === "light") {
+        if (paint.body !== "rgb(255, 255, 255)" || paint.tabs !== "rgb(255, 255, 255)") problems.push(`SITEHDR-5: playground light body ${paint.body} / tabs ${paint.tabs}, want rgb(255, 255, 255) ${at}`);
+        if (paint.bg !== "rgb(247, 247, 244)") problems.push(`SITEHDR-5: var(--bg) resolves to ${paint.bg}, want #F7F7F4 ${at}`);
+      } else if (paint.body !== paint.bg) problems.push(`SITEHDR-5: dark body ${paint.body} isn't --bg ${paint.bg} (dark is unchanged) ${at}`);
+      if (!(paint.ring.includes(paint.line) && paint.ring.includes("0px 0px 0px 1px"))) problems.push(`SITEHDR-5: .card ring is "${paint.ring}", want 1px --line ${paint.line} ${at}`);
+      // SITEHDR-7: no sideways scroll.
+      if ((await sideways(page)) > 0) problems.push(`SITEHDR-7: page scrolls sideways by ${await sideways(page)}px ${at}`);
+      // Spec Part B: #page-top stays hidden in the playground; SITEHDR-10: #demo-home is gone.
+      if (await page.locator("#page-top").isVisible()) problems.push(`SITEHDR: #page-top visible in the playground ${at}`);
+      if (await page.locator("#demo-home").count()) problems.push(`SITEHDR-10: #demo-home ("← Portfolio") still on the page ${at}`);
+      // SITEHDR-6: scrolled down, the sticky tabs sit at 52px, under the header and not behind it.
+      if (viewport.width !== 320) {
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        const stuck = await page.evaluate(() => {
+          const t = document.querySelector("#tabs")!.getBoundingClientRect();
+          const hit = document.elementFromPoint(window.innerWidth / 2, 26);
+          return { scrolled: window.scrollY, tabsTop: t.top, headerOnTop: !!hit?.closest("#site-bar") };
+        });
+        if (!(stuck.scrolled > 0)) problems.push(`SITEHDR-6: page didn't scroll (scrollY ${stuck.scrolled}) ${at}`);
+        if (Math.abs(stuck.tabsTop - 52) > 0.5) problems.push(`SITEHDR-6: scrolled tabs sit at ${stuck.tabsTop}px, want 52 ${at}`);
+        if (!stuck.headerOnTop) problems.push(`SITEHDR-6: the header isn't on top of the page content when scrolled ${at}`);
+      }
+      // SITEHDR-3: the picker switches the header with no reload (one size, both OS schemes).
+      if (viewport.width === 1280) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.evaluate(() => { (window as unknown as { __mark: number }).__mark = 1; });
+        for (const [pick, wantPick] of [["Dark", HDR_DARK], ["Light", HDR_LIGHT], ["System", want]] as const) {
+          const btn = page.getByRole("button", { name: pick, exact: true });
+          if ((await btn.count()) !== 1) { problems.push(`SITEHDR-3: no "${pick}" theme button ${at}`); break; }
+          await btn.click();
+          const now = await headerColours(page);
+          if (JSON.stringify(now) !== JSON.stringify(wantPick)) problems.push(`SITEHDR-3: after picking ${pick}, header is ${JSON.stringify(now)}, want ${JSON.stringify(wantPick)} ${at}`);
+        }
+        if (!(await page.evaluate(() => (window as unknown as { __mark?: number }).__mark === 1))) problems.push(`SITEHDR-3: switching the theme reloaded the page ${at}`);
+        const stored = await page.evaluate(() => { try { return localStorage.length + sessionStorage.length + document.cookie.length; } catch { return 0; } });
+        if (stored) problems.push(`SITEHDR-3: something was stored (${stored}) ${at}`);
+      }
       await page.close();
     }
   }
-
-  // DEMO-BAR-11: no sideways scroll at 320px (collapsed and open); middle text hidden below 360px.
-  {
-    const page = await browser.newPage({ viewport: { width: 320, height: 640 } });
-    await page.goto(pathToFileURL(page_).href);
-    const toggle = page.locator(TOGGLE);
-    if ((await toggle.count()) !== 1) problems.push("DEMO-BAR-11: no demo bar toggle at 320px");
-    else {
-      if ((await sideways(page)) > 0) problems.push(`DEMO-BAR-11: scrolls sideways by ${await sideways(page)}px at 320px`);
-      if (!(await page.locator(BAR).getByRole("link", { name: "← Portfolio" }).isVisible().catch(() => false))) problems.push("DEMO-BAR-11: back link not visible at 320px");
-      if ((await toggle.evaluate((t) => (t as HTMLElement).innerText)).includes("Sample data")) problems.push("DEMO-BAR-11: middle text shown below 360px");
-      const h = (await page.locator(BAR).boundingBox())?.height ?? 0;
-      if (!(h > 0 && h <= 48)) problems.push(`DEMO-BAR-11: collapsed bar is ${h}px tall at 320px`);
-      await toggle.click();
-      if ((await sideways(page)) > 0) problems.push(`DEMO-BAR-11: open drawer scrolls sideways by ${await sideways(page)}px at 320px`);
+  // SITEHDR-6: a deep link puts the panel's h2 fully below the header and the tabs.
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+    for (const hash of ["#pace", "#electricity", "#share", "#method"]) {
+      const at = `at ${viewport.width}px ${hash}`;
+      const page = await browser.newPage({ viewport });
+      await page.goto(pathToFileURL(page_).href + hash);
+      await page.waitForTimeout(300);
+      const pos = await page.evaluate((hsh) => {
+        const panel = document.getElementById(hsh.slice(1)) ?? document.querySelector(`[role=tabpanel][id="p-${hsh.slice(1)}"]`);
+        const h2 = panel?.querySelector("h2")?.getBoundingClientRect();
+        const tabs = document.querySelector("#tabs")!.getBoundingClientRect();
+        const bar = document.querySelector("#site-bar")?.getBoundingClientRect();
+        return h2 ? { h2: h2.top, tabsBottom: tabs.bottom, barBottom: bar?.bottom ?? 0 } : null;
+      }, hash);
+      if (!pos) problems.push(`SITEHDR-6: no h2 in the ${hash} panel ${at}`);
+      else if (!(pos.barBottom >= 51.5 && pos.h2 >= pos.tabsBottom - 0.5 && pos.h2 >= pos.barBottom - 0.5)) problems.push(`SITEHDR-6: h2 top ${pos.h2.toFixed(1)} is under the header (bottom ${pos.barBottom}) or tabs (bottom ${pos.tabsBottom.toFixed(1)}) ${at}`);
+      await page.close();
     }
-    await page.close();
   }
-
-  // DEMO-BAR-12: under reduced motion the chevron doesn't animate.
+  // SITEHDR-8: the `ccwatts --html` dashboard has no header and no offset, and its light bg is still Paper.
   {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+    const row = { date: "2026-10-01", source: "claude-code", model: "claude-opus-4-6", projectId: "0000000000000000", projectName: "proj", responses: 1, tokens: { input: 10, cacheWrite: 100, cacheRead: 1000, output: 50 } };
+    const json = JSON.stringify({ mode: "dashboard", generatedAt: new Date().toISOString(), rows: [row] }).replace(/</g, "\\u003c");
+    const dash = join(scratch, "sitehdr-dashboard.html");
+    writeFileSync(dash, readFileSync(page_, "utf8").replace(/(<script id="ccwatts-data" type="application\/json">)([\s\S]*?)(<\/script>)/, (_m, open, _old, close) => `${open}${json}${close}`));
+    for (const width of [390, 1280]) {
+      const at = `at ${width}px dashboard`;
+      const page = await browser.newPage({ viewport: { width, height: 800 }, colorScheme: "light" });
+      page.on("request", (r) => { if (!/^(file|data|blob):/.test(r.url())) problems.push(`SITEHDR-9: network request ${r.url()} ${at}`); });
+      await page.goto(pathToFileURL(dash).href);
+      if (await page.locator("#site-bar").isVisible()) problems.push(`SITEHDR-8: #site-bar visible ${at}`);
+      if (await page.getByRole("button", { name: "About this demo" }).isVisible().catch(() => false)) problems.push(`SITEHDR-8: "About this demo" shown ${at}`);
+      const d = await page.evaluate(() => ({ pad: getComputedStyle(document.body).paddingTop, bg: getComputedStyle(document.body).backgroundColor, tabsTop: getComputedStyle(document.querySelector("#tabs")!).top }));
+      if (d.pad !== "0px") problems.push(`SITEHDR-8: dashboard body padding-top ${d.pad}, want 0px ${at}`);
+      if (d.bg !== "rgb(247, 247, 244)") problems.push(`SITEHDR-8: dashboard light bg ${d.bg}, want #F7F7F4 ${at}`);
+      if (d.tabsTop !== "0px") problems.push(`SITEHDR-8: dashboard sticky tabs top ${d.tabsTop}, want 0px ${at}`);
+      await page.close();
+    }
+  }
+}
+
+// SITEHDR Part B (Chase said yes, Nov 25): the #demo-bar strip becomes the header's "About this demo"
+// button (#demo-toggle) and a dialog drawer. Replaces DEMO-BAR-1..12. Selected by role and label.
+{
+  const SAMPLE_COPY = "This is the real ccwatts, running on made-up sample data. Nothing you do is saved or sent anywhere; reload to start over.";
+  const FILES_COPY = "This is the real ccwatts, now showing the files you picked. They were read in this browser and never uploaded; nothing is saved, so reload to start over.";
+  /** A point on the scrim: outside the panel (left of it when wide, above it as a sheet), below the header. */
+  const scrimPoint = (page: Pw, id: string) => page.evaluate((i) => {
+    const r = document.getElementById(i)!.getBoundingClientRect();
+    return window.innerWidth >= 700 ? { x: Math.max(8, r.left / 2), y: Math.round(window.innerHeight / 2) } : { x: Math.round(window.innerWidth / 2), y: Math.round((Math.max(r.top, 60) + 52) / 2) };
+  }, id);
+  const views = [{ width: 320, height: 640 }, { width: 390, height: 844 }, { width: 1280, height: 800 }];
+  for (const colorScheme of ["light", "dark"] as const) {
+    for (const viewport of views) {
+      const at = `at ${viewport.width}px ${colorScheme}`;
+      const page = await browser.newPage({ viewport, colorScheme });
+      page.on("request", (r) => { if (!/^(file|data|blob):/.test(r.url())) problems.push(`SITEHDR-9: network request ${r.url()} ${at}`); });
+      page.on("pageerror", (e) => problems.push(`SITEHDR page error: ${e} ${at}`));
+      await page.goto(pathToFileURL(page_).href);
+      // SITEHDR-12: the strip is gone; the toggle sits in the header right after "ccwatts demo".
+      if (await page.locator("#demo-bar").count()) problems.push(`SITEHDR-12: #demo-bar still on the page ${at}`);
+      const h = headerParts(page);
+      if ((await h.toggle.count()) !== 1) { problems.push(`SITEHDR-12: no "About this demo" button in #site-bar ${at}`); await page.close(); continue; }
+      const toggle = h.toggle;
+      if ((await toggle.getAttribute("id")) !== "demo-toggle") problems.push(`SITEHDR-12: the "About this demo" button isn't #demo-toggle ${at}`);
+      if (!(await toggle.isVisible())) problems.push(`SITEHDR-12: "About this demo" hidden ${at}`);
+      const tb = await toggle.boundingBox();
+      if (!tb || tb.width < 44 || tb.height < 44) problems.push(`SITEHDR-12: toggle is ${tb?.width}x${tb?.height}, want 44x44 or larger ${at}`);
+      if ((await toggle.getAttribute("aria-expanded")) !== "false") problems.push(`SITEHDR-12: toggle not aria-expanded=false on load ${at}`);
+      const next = await page.evaluate(() => {
+        const label = [...document.querySelectorAll("#site-bar *")].find((el) => el.children.length === 0 && el.textContent?.trim() === "ccwatts demo");
+        const tog = document.querySelector("#site-bar #demo-toggle");
+        if (!label || !tog) return null;
+        const [l, t] = [label.getBoundingClientRect(), tog.getBoundingClientRect()];
+        const between = [...document.querySelectorAll("#site-bar a, #site-bar button")].filter((el) => el !== tog && (el as HTMLElement).checkVisibility())
+          .filter((el) => { const r = el.getBoundingClientRect(); const c = r.left + r.width / 2; return c > l.right && c < t.left; });
+        return { right: t.left >= l.right - 0.5, between: between.length };
+      });
+      if (!next || !next.right || next.between) problems.push(`SITEHDR-12: toggle isn't right after "ccwatts demo" (${JSON.stringify(next)}) ${at}`);
+      const dialogId = (await toggle.getAttribute("aria-controls")) ?? "";
+      const dialog = page.locator(`[id="${dialogId}"]`);
+      if (!dialogId || (await dialog.count()) !== 1) { problems.push(`SITEHDR-12: aria-controls "${dialogId}" names no element ${at}`); await page.close(); continue; }
+      const kind = await dialog.evaluate((d) => ({ dialog: d.tagName === "DIALOG" || d.getAttribute("role") === "dialog", modal: d.getAttribute("aria-modal") }));
+      if (!kind.dialog || kind.modal !== "true") problems.push(`SITEHDR-12: #${dialogId} isn't role=dialog aria-modal=true (${JSON.stringify(kind)}) ${at}`);
+      if (await dialog.isVisible()) problems.push(`SITEHDR-12: dialog open on load ${at}`);
+      // SITEHDR-13: a tap opens it, as a 360px right panel (>= 700px) or a full-width bottom sheet; the scrim shows; the page doesn't move.
+      const before = await page.evaluate(() => ({ h1: document.querySelector("h1")!.getBoundingClientRect().top, y: window.scrollY }));
+      await toggle.click();
+      await page.waitForTimeout(400); // let any slide-in finish before measuring
+      if ((await toggle.getAttribute("aria-expanded")) !== "true") problems.push(`SITEHDR-13: toggle not aria-expanded=true after a tap ${at}`);
+      if (!(await dialog.isVisible())) { problems.push(`SITEHDR-13: dialog not shown after a tap ${at}`); await page.close(); continue; }
+      const box = await dialog.evaluate((d) => { const r = d.getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width, bottom: r.bottom, top: r.top, vw: window.innerWidth, vh: window.innerHeight }; });
+      if (viewport.width >= 700) {
+        if (Math.abs(box.width - 360) > 1 || Math.abs(box.right - box.vw) > 1) problems.push(`SITEHDR-13: panel is ${box.width}px wide ending at ${box.right} of ${box.vw}, want 360px on the right ${at}`);
+      } else if (Math.abs(box.width - box.vw) > 1 || Math.abs(box.bottom - box.vh) > 1 || box.left > 1) problems.push(`SITEHDR-13: sheet is ${box.width}px wide, bottom ${box.bottom} of ${box.vh}, want full width at the bottom ${at}`);
+      const pt = await scrimPoint(page, dialogId);
+      const scrim = await page.evaluate(({ x, y }) => {
+        const el = document.elementFromPoint(x, y);
+        return el ? { inPage: !!el.closest("main"), root: el === document.body || el === document.documentElement, tag: el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") } : null;
+      }, pt);
+      if (!scrim || scrim.inPage || scrim.root) problems.push(`SITEHDR-13: no scrim over the page at (${pt.x}, ${pt.y}): hit ${scrim?.tag} ${at}`);
+      const after = await page.evaluate(() => ({ h1: document.querySelector("h1")!.getBoundingClientRect().top, y: window.scrollY }));
+      if (Math.abs(after.h1 - before.h1) > 0.5 || after.y !== before.y) problems.push(`SITEHDR-13: opening moved the page (h1 ${before.h1} -> ${after.h1}, scrollY ${before.y} -> ${after.y}) ${at}`);
+      if ((await sideways(page)) > 0) problems.push(`SITEHDR-7/13: open drawer scrolls sideways by ${await sideways(page)}px ${at}`);
+      // SITEHDR-15: focus moves into the dialog on open.
+      if (!(await dialog.evaluate((d) => d.contains(document.activeElement)))) problems.push(`SITEHDR-15: focus isn't inside the dialog on open ${at}`);
+      // SITEHDR-14: pill, title, sample copy, and the three links.
+      const content = await dialog.evaluate((d, ids) => {
+        const t = d.getAttribute("aria-labelledby");
+        const title = t ? document.getElementById(t) : null;
+        const s = document.getElementById(ids.s);
+        const f = document.getElementById(ids.f);
+        return {
+          pill: [...d.querySelectorAll("*")].some((el) => el.children.length === 0 && el.textContent?.trim() === "Demo" && (el as HTMLElement).checkVisibility()),
+          title: !!title && d.contains(title) && title.checkVisibility() && !!title.textContent?.trim(),
+          sample: !!s && s.checkVisibility() && (s.textContent ?? "").includes(ids.sc),
+          files: !!f && f.checkVisibility(),
+        };
+      }, { s: "demo-copy-sample", f: "demo-copy-files", sc: SAMPLE_COPY });
+      if (!content.pill) problems.push(`SITEHDR-14: no visible "Demo" pill in the dialog ${at}`);
+      if (!content.title) problems.push(`SITEHDR-14: the dialog's aria-labelledby title is missing, empty or hidden ${at}`);
+      if (!content.sample || content.files) problems.push(`SITEHDR-14: dialog doesn't show only the standard sample copy (${JSON.stringify(content)}) ${at}`);
+      for (const [name, l, want] of [
+        ["#demo-back", dialog.locator("#demo-back"), PORTFOLIO_URL],
+        ["#demo-code", dialog.locator("#demo-code"), REPO_URL],
+        ["Case study", dialog.getByRole("link", { name: "Case study", exact: true }), PORTFOLIO_URL],
+      ] as const) {
+        if ((await l.count()) !== 1 || !(await l.isVisible())) problems.push(`SITEHDR-14: ${name} missing or hidden in the dialog ${at}`);
+        else if ((await l.getAttribute("href")) !== want) problems.push(`SITEHDR-14: ${name} goes to ${await l.getAttribute("href")}, want ${want} ${at}`);
+      }
+      const closed = async (how: string) => {
+        await page.waitForTimeout(400);
+        if ((await toggle.getAttribute("aria-expanded")) !== "false" || (await dialog.isVisible())) problems.push(`SITEHDR-15: ${how} didn't close the dialog ${at}`);
+        if (!(await toggle.evaluate((t) => t === document.activeElement))) problems.push(`SITEHDR-15: after ${how}, focus isn't on #demo-toggle ${at}`);
+      };
+      // SITEHDR-15: close button, Esc, scrim tap.
+      const close = dialog.getByRole("button", { name: /close/i });
+      if ((await close.count()) < 1) problems.push(`SITEHDR-15: no close button in the dialog ${at}`);
+      else { await close.first().click(); await closed("the close button"); }
+      await toggle.click();
+      await page.waitForTimeout(400);
+      await page.keyboard.press("Escape");
+      await closed("Esc");
+      await toggle.click();
+      await page.waitForTimeout(400);
+      const pt2 = await scrimPoint(page, dialogId);
+      await page.mouse.click(pt2.x, pt2.y);
+      await closed("a scrim tap");
+      // SITEHDR-14: after a file loads the dialog shows the own-files copy; Use sample data switches back;
+      // a file with no usage keeps the sample copy (was DEMO-BAR-9, DEMO-BAR-10).
+      if (viewport.width !== 320 && colorScheme === "light") {
+        const showing = () => page.evaluate(() => ["demo-copy-sample", "demo-copy-files"].filter((i) => (document.getElementById(i) as HTMLElement | null)?.checkVisibility()).join(","));
+        await openLogs(page);
+        await page.setInputFiles("#pick-files", log);
+        await page.waitForFunction(() => !(document.getElementById("demo-copy-files")?.hidden ?? true), null, { timeout: 8000 }).catch(() => undefined);
+        await toggle.click();
+        if ((await showing()) !== "demo-copy-files") problems.push(`SITEHDR-14: after loading a file the dialog shows "${await showing()}", want demo-copy-files ${at}`);
+        else if (!((await dialog.innerText()).includes(FILES_COPY))) problems.push(`SITEHDR-14: own-files copy isn't the standard text ${at}`);
+        await page.keyboard.press("Escape");
+        await openLogs(page);
+        await page.click("#use-sample");
+        await toggle.click();
+        if ((await showing()) !== "demo-copy-sample") problems.push(`SITEHDR-14: after Use sample data the dialog shows "${await showing()}", want demo-copy-sample ${at}`);
+        await page.keyboard.press("Escape");
+        await page.setInputFiles("#pick-files", noUsage);
+        await page.waitForFunction(() => !/Reading/.test(document.querySelector("#drop-status")?.textContent ?? "Reading"));
+        await toggle.click();
+        if ((await showing()) !== "demo-copy-sample") problems.push(`SITEHDR-14: a file with no usage switched the dialog to "${await showing()}" ${at}`);
+        await page.keyboard.press("Escape");
+      }
+      await page.close();
+    }
+  }
+  // SITEHDR-16: under reduced motion the dialog shows and hides with no transition or animation.
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+    const at = `at ${viewport.width}px reduced motion`;
+    const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
     await page.goto(pathToFileURL(page_).href);
-    const durs = await page.evaluate((sel) => [...(document.querySelector(sel)?.querySelectorAll('[aria-hidden="true"]') ?? [])].map((el) => getComputedStyle(el).transitionDuration), TOGGLE);
-    if (!durs.length) problems.push("DEMO-BAR-12: toggle has no aria-hidden chevron");
-    else if (durs.some((d) => d.split(",").some((x) => parseFloat(x) > 0))) problems.push(`DEMO-BAR-12: chevron still animates under reduced motion (${durs.join(" / ")})`);
+    const toggle = page.locator("#site-bar").getByRole("button", { name: "About this demo", exact: true });
+    const id = (await toggle.count()) === 1 ? await toggle.getAttribute("aria-controls") : null;
+    if (!id) { problems.push(`SITEHDR-16: no "About this demo" button with aria-controls ${at}`); await page.close(); continue; }
+    await toggle.click();
+    const pt = await scrimPoint(page, id);
+    const motion = await page.evaluate(({ i, x, y }) => {
+      const d = document.getElementById(i)!;
+      const els = [d, d.parentElement, document.elementFromPoint(x, y)].filter((el): el is HTMLElement => !!el && el !== document.body && el !== document.documentElement);
+      return els.map((el) => { const cs = getComputedStyle(el); return `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""} t=${cs.transitionDuration} a=${cs.animationDuration}/${cs.animationName}`; });
+    }, { i: id, x: pt.x, y: pt.y });
+    const moving = motion.filter((m) => /t=[^ ]*[1-9]|a=[^/]*[1-9][^/]*\/(?!none)/.test(m));
+    if (moving.length) problems.push(`SITEHDR-16: still animates under reduced motion: ${moving.join("; ")} ${at}`);
     await page.close();
   }
+}
 
+// DEMO-BAR-13 (kept from the retired strip checks): dashboard mode shows no demo chrome and keeps its pill.
+{
+  const BAR = 'section[aria-label="Demo"]';
   // DEMO-BAR-13: dashboard mode (the user's own history) shows no demo bar and keeps its "Your history" pill.
   {
     const row = { date: "2026-10-01", source: "claude-code", model: "claude-opus-4-6", projectId: "0000000000000000", projectName: "proj", responses: 1, tokens: { input: 10, cacheWrite: 100, cacheRead: 1000, output: 50 } };
@@ -514,6 +699,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
       await page.goto(pathToFileURL(dash).href);
       if (await page.locator(BAR).isVisible().catch(() => false)) problems.push(`DEMO-BAR-13: demo bar shown in dashboard mode at ${width}px`);
       if (await page.getByRole("button", { name: "Demo details" }).isVisible().catch(() => false)) problems.push(`DEMO-BAR-13: "Demo details" toggle shown in dashboard mode at ${width}px`);
+      if (await page.getByRole("button", { name: "About this demo" }).isVisible().catch(() => false)) problems.push(`DEMO-BAR-13: "About this demo" shown in dashboard mode at ${width}px`);
       const pill = await page.locator("#source-pill").isVisible().catch(() => false) ? await page.textContent("#source-pill") : null;
       if (pill !== "Your history") problems.push(`DEMO-BAR-13: dashboard #source-pill is ${JSON.stringify(pill)} at ${width}px (want visible "Your history")`);
       await page.close();
@@ -760,7 +946,7 @@ for (const p of await showcaseCheck({
   // RR-5. Not the pickers (QA-R5): they sit in Your logs, so the RR-5 loop above opens it via #ov-cta first.
   keyboardReach: ["tab-overview", "ov-cta"],
   tabPresses: 12,
-  // 12px: the studio demo bar's badge (exempt, QA-R9; DEMO-BANNER standard). The kit can't exempt one
+  // 12px: the "Demo" pill in the About this demo dialog (exempt, QA-R9; SPEC-SITE-HEADER). The kit can't exempt one
   // region, so the 17px STUDIO-DS floor for the rest of the page is design-system.test.ts DS-3.
   minTextPx: 12,
 })) problems.push(`showcase kit: ${p}`);

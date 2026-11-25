@@ -129,7 +129,7 @@ const numberBlocks = (page: Page) =>
     for (let n = walk.nextNode(); n; n = walk.nextNode()) {
       if (!/%|\babout [\d.,]+ (miles?|days?|times)\b/.test(n.textContent ?? "")) continue;
       let el = n.parentElement;
-      if (!el || el.closest("script, style, title, template, #demo-bar")) continue;
+      if (!el || el.closest("script, style, title, template, #demo-bar, #site-bar, [role=dialog], dialog")) continue;
       if (!el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true })) continue;
       while (el.parentElement && getComputedStyle(el).display === "inline") el = el.parentElement;
       if (seen.has(el)) continue;
