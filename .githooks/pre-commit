@@ -4,6 +4,7 @@
 #   1. scripts/check-private.ts --staged: blocks a home path, email, token, key or .env file.
 #   2. eslint on the staged .ts/.tsx files only (skipped when none are staged).
 #   3. npm run typecheck.
+# Steps 2 and 3 read the working copy, not the staged blobs, so after `git add -p` they can see unstaged code; CI is the real gate (ARCH-R1).
 set -e
 
 npx --no-install tsx scripts/check-private.ts --staged
