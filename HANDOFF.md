@@ -14,6 +14,11 @@ blockers: []
 
 Live status for whoever picks up the build next (human or Claude). Updated every push. Keep this file under 8 KB: dated history goes to `docs/history/HANDOFF-archive.md` (Done log, old decisions, planning-ID map), and `git log` has the rest.
 
+## Nov 27: engineering standard (intakes #134 lint, #136 gitleaks, #137 dev-loop gaps)
+- **Done (config only):** studio ESLint gate (`eslint.config.mjs`, `eslint.studio-local.mjs` ignoring the generated plugin bundles, `npm run lint`, `.github/workflows/lint.yml`), warn-only: 29 warnings, 0 errors. `security.yml` (gitleaks over full history and `npm audit --omit=dev` at high; dependency review removed because the dependency graph is off, add it back once it is on), `codeql.yml` (javascript-typescript and actions), all actions SHA-pinned. `.nvmrc` 22.
+- **Next:** clear the 29 warnings in small PRs, then set the repository variable `STUDIO_LINT_STRICT=1`. Then formatter and pre-commit (#135), CHANGELOG.
+- **Verify on the PR:** the new workflows run for the first time there; `dependency-review` needs the dependency graph on (public repo default).
+
 ## Portfolio / public presence
 - 2026-11-24: Intake #112 (eval findings at 390px): What if? shows its total beside the slider on load; a Sample data label sits above the share card preview (saved PNG/SVG unchanged); Pace leads with one number, details below the chart; Method shows the parameters table open. Live once Chase gives the go and Pages deploys.
 - 2026-11-25 (intake #127): the playground wears the portfolio's site header (fixed 52px: "← Chase Holroyd", Building, Agents, "ccwatts demo", an "About this demo" button, Case study) and paints white in light mode; the "Demo" strip is gone, its copy and links now sit in the drawer behind that button. Live on the next Pages deploy. Portfolio thread: the header is built into the page, not demo-bar.js/.css, so a look change there needs a PR here.
@@ -51,3 +56,6 @@ Live status for whoever picks up the build next (human or Claude). Updated every
 
 ## Blockers
 - M2.1 local run needs Chase to use Claude Code on his Mac (parser already verified on real cloud logs, Oct 23). Not blocking.
+
+## Repo best-practices pass (2026-11-25)
+- Done: SUPPORT.md README-AI-line. Added from the GitHub, Linux Foundation and Syracuse checklists (studio-agents docs/repo-standards.md). Left for this project to review: a SHA-pinned CodeQL workflow (RB-4a requires 40-char SHAs and this session could not look one up), CHANGELOG.md, THIRD_PARTY_NOTICES, wording of the README AI-use line against the claims register, repo description and topics.

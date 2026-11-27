@@ -1,5 +1,5 @@
 // TS-1: the whole product is TypeScript. Hand-written code is .ts; the only JavaScript in the
-// repo is the generated plugin bundles, and .gitattributes marks them so GitHub's language bar
+// repo is the generated plugin bundles and the studio lint config, and .gitattributes marks them so GitHub's language bar
 // counts the real source.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -11,10 +11,13 @@ const root = fileURLToPath(new URL("../../../", import.meta.url));
 const read = (p: string) => readFileSync(join(root, p), "utf8");
 const tracked = spawnSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).stdout.split("\n").filter(Boolean);
 const GENERATED = ["plugins/ccwatts/bin/ccwatts.js", "plugins/ccwatts/bin/mcp.js"];
+// The studio ESLint config is managed by studio-sync (flat config, .mjs) and is not product code; the
+// local file beside it only lists ignores. These two are the only hand-kept JavaScript.
+const LINT_CONFIG = ["eslint.config.mjs", "eslint.studio-local.mjs"];
 
 describe("TypeScript only (TS-1)", () => {
   it("TS-1a has no hand-written .js, .mjs or .cjs files", () => {
-    const js = tracked.filter((f) => /\.[mc]?jsx?$/.test(f) && !GENERATED.includes(f));
+    const js = tracked.filter((f) => /\.[mc]?jsx?$/.test(f) && !GENERATED.includes(f) && !LINT_CONFIG.includes(f));
     expect(js).toEqual([]);
   });
 
