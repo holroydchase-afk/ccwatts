@@ -23,34 +23,34 @@
    4/8/12/16/24/32; corners 4/12/pill; 48px tap targets. The accent marks only what you can tap. */
 @font-face{font-family:"Atkinson Hyperlegible Next";src:url(data:font/woff2;base64,__FONT__) format("woff2");font-weight:200 800;font-style:normal;font-display:swap}
 :root{
-  --bg:#F7F7F4; --surface:#FFFFFF; --ink:#1E1B17; --muted:#5C564E; --line:#E3DED4; --fill:#EFECE5;
-  --accent:#AD371D; --accent-ink:#FFFFFF; --accent-soft:#F2EAE5; --tab-line:#928E87;
-  --danger:#B3261E; --sample:#8a5a12;
+  --bg:#F7F7F4;--surface:#FFFFFF;--ink:#1E1B17;--muted:#5C564E;--line:#E3DED4;--fill:#EFECE5;
+  --accent:#AD371D;--accent-ink:#FFFFFF;--accent-soft:#F2EAE5;--tab-line:#928E87;
+  --danger:#B3261E;--sample:#8a5a12;
   /* Data colours: ink family and ochre/brown, never the accent, green or red. */
-  --c1:#3E3830; --c2:#B7862C; --c3:#8A6E55; --c4:#968B7C; --hatch:rgba(255,255,255,.6);
+  --c1:#3E3830;--c2:#B7862C;--c3:#8A6E55;--c4:#968B7C;--hatch:rgba(255,255,255,.6);
   --sans:"Atkinson Hyperlegible Next",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
-  --pg:#FFFFFF; --hb:#fff; --hi:#14161A; --hm:#5B6068; --hl:#E4E6E2; --ha:#0B7A4B; --sc:rgba(0,0,0,.45);
+  --pg:#FFFFFF;--hb:#fff;--hi:#14161A;--hm:#5B6068;--hl:#E4E6E2;--ha:#0B7A4B;--sc:rgba(0,0,0,.45);
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#131210; --surface:#24221E; --ink:#F1EEE8; --muted:#B2ACA2; --line:#383530; --fill:#33302B;
-  --accent:#FF8A65; --accent-ink:#000000; --accent-soft:#3D281F; --tab-line:#77736D;
-  --danger:#FF453A; --sample:#E0B56A;
-  --c1:#E6DFD3; --c2:#D9A441; --c3:#B08F72; --c4:#7D7469; --hatch:rgba(19,18,16,.6);
-  --pg:#131210; --hb:#131210; --hi:#F2F0EA; --hm:#A8A49A; --hl:#2C2A26; --ha:#4CC38A; --sc:rgba(0,0,0,.6); color-scheme:dark}}
+  --bg:#131210;--surface:#24221E;--ink:#F1EEE8;--muted:#B2ACA2;--line:#383530;--fill:#33302B;
+  --accent:#FF8A65;--accent-ink:#000000;--accent-soft:#3D281F;--tab-line:#77736D;
+  --danger:#FF453A;--sample:#E0B56A;
+  --c1:#E6DFD3;--c2:#D9A441;--c3:#B08F72;--c4:#7D7469;--hatch:rgba(19,18,16,.6);
+  --pg:#131210;--hb:#131210;--hi:#F2F0EA;--hm:#A8A49A;--hl:#2C2A26;--ha:#4CC38A;--sc:rgba(0,0,0,.6);color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#131210; --surface:#24221E; --ink:#F1EEE8; --muted:#B2ACA2; --line:#383530; --fill:#33302B;
-  --accent:#FF8A65; --accent-ink:#000000; --accent-soft:#3D281F; --tab-line:#77736D;
-  --danger:#FF453A; --sample:#E0B56A;
-  --c1:#E6DFD3; --c2:#D9A441; --c3:#B08F72; --c4:#7D7469; --hatch:rgba(19,18,16,.6);
-  --pg:#131210; --hb:#131210; --hi:#F2F0EA; --hm:#A8A49A; --hl:#2C2A26; --ha:#4CC38A; --sc:rgba(0,0,0,.6); color-scheme:dark}
+  --bg:#131210;--surface:#24221E;--ink:#F1EEE8;--muted:#B2ACA2;--line:#383530;--fill:#33302B;
+  --accent:#FF8A65;--accent-ink:#000000;--accent-soft:#3D281F;--tab-line:#77736D;
+  --danger:#FF453A;--sample:#E0B56A;
+  --c1:#E6DFD3;--c2:#D9A441;--c3:#B08F72;--c4:#7D7469;--hatch:rgba(19,18,16,.6);
+  --pg:#131210;--hb:#131210;--hi:#F2F0EA;--hm:#A8A49A;--hl:#2C2A26;--ha:#4CC38A;--sc:rgba(0,0,0,.6);color-scheme:dark}
 /* High contrast (section 3): muted to 7:1, line to 4.5:1, accent mixed 30% toward ink.
    Dark (#108): surface #24221E and fill #33302B step lighter than bg by tone, not shadow; HC dark muted
    #C6C0B6 keeps 7:1 on both (8.78 on surface, 7.27 on fill; QA-R1). */
-@media (prefers-contrast:more){:root{--muted:#534D46; --line:#75716A; --accent:#822F1B; --accent-soft:#EFE9E5}}
-@media (prefers-contrast:more) and (prefers-color-scheme:dark){:root:not([data-theme="light"]){--muted:#C6C0B6; --line:#807D78; --accent:#FBA88C; --accent-soft:#3D2D26}}
-@media (prefers-contrast:more){:root[data-theme="dark"]{--muted:#C6C0B6; --line:#807D78; --accent:#FBA88C; --accent-soft:#3D2D26}}
+@media (prefers-contrast:more){:root{--muted:#534D46;--line:#75716A;--accent:#822F1B;--accent-soft:#EFE9E5}}
+@media (prefers-contrast:more) and (prefers-color-scheme:dark){:root:not([data-theme="light"]){--muted:#C6C0B6;--line:#807D78;--accent:#FBA88C;--accent-soft:#3D2D26}}
+@media (prefers-contrast:more){:root[data-theme="dark"]{--muted:#C6C0B6;--line:#807D78;--accent:#FBA88C;--accent-soft:#3D2D26}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:22px;font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
@@ -272,15 +272,18 @@ footer{border-top:1px solid var(--line);padding-top:24px;display:flex;flex-direc
 footer .appearance{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--ink)}
 footer p{max-width:65ch}
 /* Site header + "About this demo" drawer (SPEC-SITE-HEADER): playground only (html.pg, set by app.ts).
-   The portfolio's look, not Paper: --h* colours, 15px, 44px targets. The page and tabs paint white (--pg). */
-.pg body{padding-top:52px;background:var(--pg)}
-.pg .tabs{top:52px;background:var(--pg)}
-.pg [role=tabpanel]{scroll-margin-top:101px}
+   The portfolio's look, not Paper: --h* colours, 15px, 44px targets. The page and tabs paint white (--pg).
+   Only html.hd (no ?embed=1, SITEHDR-17) has the header and its 52px. */
+.pg body,.pg .tabs{background:var(--pg)}
+.hd body{padding-top:52px}
+.hd .tabs{top:52px}
+.hd [role=tabpanel]{scroll-margin-top:101px}
 /* The views fill the window under the header, so the sticky tab row can always come to rest at the
-   header's edge when the page is scrolled (SITEHDR-6) instead of stopping mid-page. 8px of slack. */
-.pg .views{min-height:calc(100vh - 44px)}
-.pg [role=tabpanel] h2{scroll-margin-top:109px}
-.pg .drives{scroll-margin-top:116px}
+   header's edge (SITEHDR-6), or the frame's top when embedded (SITEHDR-17), instead of stopping mid-page. */
+.pg .views{min-height:100vh}
+.hd .views{min-height:calc(100vh - 44px)}
+.hd [role=tabpanel] h2{scroll-margin-top:109px}
+.hd .drives{scroll-margin-top:116px}
 #site-bar{position:fixed;top:0;left:0;right:0;z-index:5;height:52px;display:flex;align-items:center;gap:8px;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));background:var(--hb);color:var(--hi);border-bottom:1px solid var(--hl);font:500 15px/20px var(--sans)}
 #site-bar nav{display:flex;gap:8px}
 #site-bar a,#demo-drawer a{display:inline-flex;align-items:center;min-height:44px;padding:0 6px;border-radius:6px;color:var(--hm);text-decoration:none;white-space:nowrap}

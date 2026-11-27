@@ -786,8 +786,8 @@ function go(hash: string, replace = false) {
 
 /** The tabs are sticky: once the page is scrolled past where they start, go back there for the new view. */
 function toViewTop() {
-  // In the playground the fixed site header (52px) sits over the top of the page (SITEHDR-6).
-  const start = $("privacy").getBoundingClientRect().bottom + window.scrollY - (payload.mode === "playground" ? 52 : 0);
+  // In the playground the fixed site header (52px) sits over the top of the page (SITEHDR-6), unless embedded (SITEHDR-17).
+  const start = $("privacy").getBoundingClientRect().bottom + window.scrollY - (document.documentElement.classList.contains("hd") ? 52 : 0);
   if (window.scrollY > start) window.scrollTo({ top: start });
 }
 
@@ -894,6 +894,9 @@ function wireSiteBar() {
     }
   });
   document.documentElement.classList.add("pg");
+  // SITEHDR-17: the portfolio frames the demo with ?embed=1, so no header and no 52px offset (html.hd).
+  if (new URLSearchParams(location.search).get("embed") === "1") return;
+  document.documentElement.classList.add("hd");
   $("site-bar").hidden = false;
   // UX-R2: the header shows "ccwatts demo", so the page's own brand line steps aside (its pill is already hidden here).
   $("page-top").hidden = true;
