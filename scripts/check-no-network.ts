@@ -985,6 +985,78 @@ for (const colorScheme of ["light", "dark"] as const) {
   }
 }
 
+// SITEHDR-17 (SPEC-SITE-HEADER, issue #127 follow-up): the portfolio iframes the playground with ?embed=1.
+// Embedded, there's no site header, no "About this demo" toggle and no 52px offset anywhere; light is still
+// white and nothing goes over the network. Each embed measurement is compared with a normal visit's.
+{
+  const base = pathToFileURL(page_).href;
+  /** Where the #pace h2 and the tabs sit: on a direct #pace load, and after picking Pace from the bottom of Overview. */
+  const paceSpots = async (page: Pw) => {
+    const spot = () => page.evaluate(() => {
+      const h2 = document.querySelector("#pace h2")?.getBoundingClientRect();
+      const tabs = document.querySelector("#tabs")!.getBoundingClientRect();
+      return h2 ? { h2: h2.top, tabsTop: tabs.top, tabsBottom: tabs.bottom } : null;
+    });
+    await page.waitForTimeout(300);
+    const load = await spot();
+    await page.getByRole("tab", { name: "Overview", exact: true }).click();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(200);
+    await page.getByRole("tab", { name: "Pace", exact: true }).click();
+    await page.waitForTimeout(300);
+    return { load, picked: await spot() };
+  };
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+    for (const query of ["?embed=1", "?from=portfolio&embed=1"]) {
+      if (query !== "?embed=1" && viewport.width !== 390) continue;
+      const at = `at ${viewport.width}px ${query}`;
+      const page = await browser.newPage({ viewport, colorScheme: "light" });
+      page.on("request", (r) => { if (!/^(file|data|blob):/.test(r.url())) problems.push(`SITEHDR-17: network request ${r.url()} ${at}`); });
+      page.on("pageerror", (e) => problems.push(`SITEHDR-17 page error: ${e} ${at}`));
+      await page.goto(base + query);
+      // No header and no info toggle.
+      if (await page.locator("#site-bar").isVisible()) problems.push(`SITEHDR-17: #site-bar visible in embed mode ${at}`);
+      if (await page.getByRole("button", { name: "About this demo", exact: true }).isVisible()) problems.push(`SITEHDR-17: "About this demo" toggle visible in embed mode ${at}`);
+      // No 52px offset; the page is still white.
+      const css = await page.evaluate(() => ({
+        pad: getComputedStyle(document.body).paddingTop,
+        tabsTop: getComputedStyle(document.querySelector("#tabs")!).top,
+        body: getComputedStyle(document.body).backgroundColor,
+        tabs: getComputedStyle(document.querySelector("#tabs")!).backgroundColor,
+      }));
+      if (css.pad !== "0px") problems.push(`SITEHDR-17: body padding-top ${css.pad} in embed mode, want 0px ${at}`);
+      if (css.tabsTop !== "0px") problems.push(`SITEHDR-17: sticky .tabs top ${css.tabsTop} in embed mode, want 0px ${at}`);
+      if (css.body !== "rgb(255, 255, 255)" || css.tabs !== "rgb(255, 255, 255)") problems.push(`SITEHDR-17: embed light body ${css.body} / tabs ${css.tabs}, want rgb(255, 255, 255) ${at}`);
+      if (query === "?embed=1") {
+        // Scrolled to the bottom, the stuck tabs sit at the very top of the frame.
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        await page.waitForTimeout(200);
+        const stuck = await page.evaluate(() => document.querySelector("#tabs")!.getBoundingClientRect().top);
+        if (Math.abs(stuck) > 0.5) problems.push(`SITEHDR-17: scrolled, the tabs sit at ${stuck}px, want 0 ${at}`);
+        // Deep links and toViewTop: #pace's h2 and the tabs land 52px higher than on a normal visit (no header to clear).
+        const normalPage = await browser.newPage({ viewport, colorScheme: "light" });
+        await normalPage.goto(base + "#pace");
+        const normal = await paceSpots(normalPage);
+        await normalPage.close();
+        const embedPage = await browser.newPage({ viewport, colorScheme: "light" }); // a fresh load, not a same-page hash change
+        embedPage.on("request", (r) => { if (!/^(file|data|blob):/.test(r.url())) problems.push(`SITEHDR-17: network request ${r.url()} ${at}#pace`); });
+        await embedPage.goto(base + query + "#pace");
+        const embed = await paceSpots(embedPage);
+        await embedPage.close();
+        for (const how of ["load", "picked"] as const) {
+          const n = normal[how], e = embed[how];
+          const what = how === "load" ? "opening #pace directly" : "picking Pace from the bottom of Overview";
+          if (!n || !e) { problems.push(`SITEHDR-17: no #pace h2 after ${what} (normal ${!!n}, embed ${!!e}) ${at}`); continue; }
+          if (Math.abs(e.tabsTop - (n.tabsTop - 52)) > 0.5) problems.push(`SITEHDR-17: after ${what}, the tabs sit at ${e.tabsTop.toFixed(1)}px, want ${(n.tabsTop - 52).toFixed(1)} (a normal visit's ${n.tabsTop.toFixed(1)} minus the 52px header) ${at}`);
+          if (e.h2 < e.tabsBottom - 0.5) problems.push(`SITEHDR-17: after ${what}, the h2 (${e.h2.toFixed(1)}) is under the tabs (bottom ${e.tabsBottom.toFixed(1)}) ${at}`);
+          if (Math.abs(e.h2 - (n.h2 - 52)) > 4) problems.push(`SITEHDR-17: after ${what}, the h2 top is ${e.h2.toFixed(1)}px, want ~${(n.h2 - 52).toFixed(1)} (a normal visit's ${n.h2.toFixed(1)} minus the 52px header) ${at}`);
+        }
+      }
+      await page.close();
+    }
+  }
+}
+
 // Generic checks from the showcase kit (unfinished text, broken images, tiny text, plus light and
 // dark mode), on the same browser. Everything above is specific to this page.
 for (const p of await showcaseCheck({

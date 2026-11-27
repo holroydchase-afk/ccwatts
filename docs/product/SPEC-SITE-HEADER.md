@@ -52,6 +52,9 @@ Part B (drop if Chase says no; it replaces SITEHDR-10):
 - SITEHDR-15 (auto): The close button, Esc and a scrim tap each close the dialog and return focus to `#demo-toggle`. On open, focus is inside the dialog.
 - SITEHDR-16 (auto): With `prefers-reduced-motion: reduce`, the dialog shows and hides with no transition or animation (computed duration 0).
 
+Embed mode (issue #127 follow-up: the portfolio's case study iframes the playground with `?embed=1` and hides `#site-bar` with its own CSS, which would leave a 52px gap):
+- SITEHDR-17 (auto): When the playground URL's query string has `embed=1`, the page shows no `#site-bar` and no "About this demo" toggle, and has no 52px offset: body padding-top 0, `.tabs` stick at top 0, and deep links and `toViewTop` use no 52px offset (a tab picked from far down puts the panel's h2 right under the tabs). Light still paints white, and the page still makes zero network requests. A visit without `embed=1` is unchanged (SITEHDR-1..16), and so is the dashboard (SITEHDR-8).
+
 ## Design system
 - DS-1 and DS-9 pin the light `--bg` at #F7F7F4 (`HEARTH_PAPER.light.bg`, and the `tokens()` probe). Don't redefine `--bg` for the playground. Paint the playground's page and tabs with `--surface` (#FFFFFF), which is already a Paper token. Contrast only gets better on white, so DS-1 needs no change.
 - The header follows the portfolio's design, not Paper: 44px targets, a bold link, and a green accent next to the page's terracotta. DS-0, DS-3 and DS-5 already exempt `#demo-bar` on the same grounds (a shared studio component). Add `#site-bar` and the Part B dialog to that exemption, with a comment pointing here.
