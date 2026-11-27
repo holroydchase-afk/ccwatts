@@ -64,7 +64,7 @@ describe("SITEHDR Part B: info button and drawer (static)", () => {
     expect(titleId, "aria-labelledby").not.toBe("");
     const title = element(dialog, titleId);
     expect(title, `title #${titleId} inside the dialog`).not.toBe("");
-    expect(title.replace(/<[^>]+>/g, "").trim()).not.toBe("");
+    expect(title.replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim()).not.toBe("");
   });
 
   it("SITEHDR-14 the dialog holds the Demo pill, both copy lines, #demo-back, #demo-code and Case study", () => {
