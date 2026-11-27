@@ -8,5 +8,10 @@ export default defineConfig({
   },
   test: {
     include: ["packages/*/test/**/*.test.ts"],
+    coverage: {
+      // `npm run coverage` fails below this floor (CI runs it). Only core is measured in-process: the CLI and
+      // web run as a subprocess or in a browser, so their numbers read low. README states the same number.
+      thresholds: { "packages/core/src/**": { lines: 99 } },
+    },
   },
 });

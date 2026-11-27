@@ -1,4 +1,16 @@
 #!/bin/sh
-# Blocks a commit that stages a home path, email, token, key or .env file (scripts/check-private.ts).
+# Runs before every commit; any failing step refuses the commit (fix it, or `git commit --no-verify` in an emergency).
 # Installed by `npm install` (package.json "prepare" sets core.hooksPath to .githooks).
-exec npx --no-install tsx scripts/check-private.ts --staged
+#   1. scripts/check-private.ts --staged: blocks a home path, email, token, key or .env file.
+#   2. eslint on the staged .ts/.tsx files only (skipped when none are staged).
+#   3. npm run typecheck.
+set -e
+
+npx --no-install tsx scripts/check-private.ts --staged
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx')
+if [ -n "$staged" ]; then
+  printf '%s\n' "$staged" | tr '\n' '\0' | xargs -0 npx --no-install eslint --no-warn-ignored --
+fi
+
+npm run typecheck --silent

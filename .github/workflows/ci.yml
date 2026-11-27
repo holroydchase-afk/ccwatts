@@ -39,6 +39,9 @@ jobs:
       - run: npm run build
       - run: npm run typecheck
       - run: npm test
+      - name: packages/core line coverage stays at or above the floor in vitest.config.ts
+        if: matrix.node == 22
+        run: npm run coverage
       - name: Plugin bundle is up to date
         run: git diff --exit-code plugins/ccwatts/bin/ccwatts.js plugins/ccwatts/bin/mcp.js || (echo "::error::Run npm run build and commit plugins/ccwatts/bin/ccwatts.js and plugins/ccwatts/bin/mcp.js" && exit 1)
 

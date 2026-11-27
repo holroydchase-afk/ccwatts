@@ -168,6 +168,8 @@ TypeScript monorepo: `packages/core` holds the pure parsing, energy model and re
 
 If you clone it to contribute, `npm install` turns on a pre-commit hook (`.githooks/pre-commit`) that refuses a commit containing a home path, an email address, a token or key, or a `.env` file. `npm test` and CI run the same check (`scripts/check-private.ts`) over the whole repo.
 
+Tests: `packages/core` line coverage is at least 99%, checked by `npm run coverage` in CI (the CLI and web page run as a subprocess or in a browser, so only core is measured in-process).
+
 The repo's `.claude/settings.json` also has a Stop hook (`scripts/save-session-counts.ts`) for the maintainer's cloud sessions: after each turn it saves a counts-only copy of the session log to `/mnt/project-files/ccwatts-usage/`. On your machine that folder doesn't exist, so it writes nothing and makes no network calls; set `CCWATTS_SAVE_DIR` if you want the copies yourself.
 
 ## Status
