@@ -15,7 +15,7 @@ blockers: []
 Live status for whoever picks up the build next (human or Claude). Updated every push. Keep this file under 8 KB: dated history goes to `docs/history/HANDOFF-archive.md` (Done log, old decisions, planning-ID map), and `git log` has the rest.
 
 ## Nov 27: engineering standard (intakes #134 lint, #136 gitleaks, #137 dev-loop gaps)
-- **Done (config only):** studio ESLint gate (`eslint.config.mjs`, `eslint.studio-local.mjs` ignoring the generated plugin bundles, `npm run lint`, `.github/workflows/lint.yml`), warn-only: 29 warnings, 0 errors. `security.yml` (gitleaks over full history, dependency review on PRs, `npm audit --omit=dev` at high), `codeql.yml` (javascript-typescript and actions), all actions SHA-pinned. `.nvmrc` 22.
+- **Done (config only):** studio ESLint gate (`eslint.config.mjs`, `eslint.studio-local.mjs` ignoring the generated plugin bundles, `npm run lint`, `.github/workflows/lint.yml`), warn-only: 29 warnings, 0 errors. `security.yml` (gitleaks over full history and `npm audit --omit=dev` at high; dependency review removed because the dependency graph is off, add it back once it is on), `codeql.yml` (javascript-typescript and actions), all actions SHA-pinned. `.nvmrc` 22.
 - **Next:** clear the 29 warnings in small PRs, then set the repository variable `STUDIO_LINT_STRICT=1`. Then formatter and pre-commit (#135), CHANGELOG.
 - **Verify on the PR:** the new workflows run for the first time there; `dependency-review` needs the dependency graph on (public repo default).
 

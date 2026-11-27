@@ -1,6 +1,7 @@
 name: security
 # Secret scan over the full git history (a key committed once and deleted later still fails),
-# and a dependency review on PRs. Add a .gitleaks.toml for a real false positive. The repo's own
+# and an npm audit of production dependencies. (Dependency review needs the repo's dependency graph
+# turned on in Settings, Code security; add the job back when it is.) Add a .gitleaks.toml for a real false positive. The repo's own
 # check-private (in CI) covers personal data; this adds keys and known-bad dependencies.
 on:
   push:
@@ -27,16 +28,6 @@ jobs:
           echo "${SHA256}  gitleaks.tgz" | sha256sum -c -
           tar xzf gitleaks.tgz gitleaks && rm gitleaks.tgz
           ./gitleaks git . --redact --no-banner --exit-code 1
-  dependencies:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
-        with:
-          fail-on-severity: high
   audit:
     runs-on: ubuntu-latest
     steps:
