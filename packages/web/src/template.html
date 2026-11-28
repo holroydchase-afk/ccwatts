@@ -23,31 +23,34 @@
    4/8/12/16/24/32; corners 4/12/pill; 48px tap targets. The accent marks only what you can tap. */
 @font-face{font-family:"Atkinson Hyperlegible Next";src:url(data:font/woff2;base64,__FONT__) format("woff2");font-weight:200 800;font-style:normal;font-display:swap}
 :root{
-  --bg:#F7F7F4; --surface:#FFFFFF; --ink:#1E1B17; --muted:#5C564E; --line:#E3DED4; --fill:#EFECE5;
-  --accent:#AD371D; --accent-ink:#FFFFFF; --accent-soft:#F2EAE5; --tab-line:#928E87;
-  --danger:#B3261E; --sample:#8a5a12;
+  --bg:#F7F7F4;--surface:#FFFFFF;--ink:#1E1B17;--muted:#5C564E;--line:#E3DED4;--fill:#EFECE5;
+  --accent:#AD371D;--accent-ink:#FFFFFF;--accent-soft:#F2EAE5;--tab-line:#928E87;
+  --danger:#B3261E;--sample:#8a5a12;
   /* Data colours: ink family and ochre/brown, never the accent, green or red. */
-  --c1:#3E3830; --c2:#B7862C; --c3:#8A6E55; --c4:#968B7C; --hatch:rgba(255,255,255,.6);
+  --c1:#3E3830;--c2:#B7862C;--c3:#8A6E55;--c4:#968B7C;--hatch:rgba(255,255,255,.6);
   --sans:"Atkinson Hyperlegible Next",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --pg:#FFFFFF;--hb:#fff;--hi:#14161A;--hm:#5B6068;--hl:#E4E6E2;--ha:#0B7A4B;--sc:rgba(0,0,0,.45);
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#131210; --surface:#24221E; --ink:#F1EEE8; --muted:#B2ACA2; --line:#383530; --fill:#33302B;
-  --accent:#FF8A65; --accent-ink:#000000; --accent-soft:#3D281F; --tab-line:#77736D;
-  --danger:#FF453A; --sample:#E0B56A;
-  --c1:#E6DFD3; --c2:#D9A441; --c3:#B08F72; --c4:#7D7469; --hatch:rgba(19,18,16,.6); color-scheme:dark}}
+  --bg:#131210;--surface:#24221E;--ink:#F1EEE8;--muted:#B2ACA2;--line:#383530;--fill:#33302B;
+  --accent:#FF8A65;--accent-ink:#000000;--accent-soft:#3D281F;--tab-line:#77736D;
+  --danger:#FF453A;--sample:#E0B56A;
+  --c1:#E6DFD3;--c2:#D9A441;--c3:#B08F72;--c4:#7D7469;--hatch:rgba(19,18,16,.6);
+  --pg:#131210;--hb:#131210;--hi:#F2F0EA;--hm:#A8A49A;--hl:#2C2A26;--ha:#4CC38A;--sc:rgba(0,0,0,.6);color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#131210; --surface:#24221E; --ink:#F1EEE8; --muted:#B2ACA2; --line:#383530; --fill:#33302B;
-  --accent:#FF8A65; --accent-ink:#000000; --accent-soft:#3D281F; --tab-line:#77736D;
-  --danger:#FF453A; --sample:#E0B56A;
-  --c1:#E6DFD3; --c2:#D9A441; --c3:#B08F72; --c4:#7D7469; --hatch:rgba(19,18,16,.6); color-scheme:dark}
+  --bg:#131210;--surface:#24221E;--ink:#F1EEE8;--muted:#B2ACA2;--line:#383530;--fill:#33302B;
+  --accent:#FF8A65;--accent-ink:#000000;--accent-soft:#3D281F;--tab-line:#77736D;
+  --danger:#FF453A;--sample:#E0B56A;
+  --c1:#E6DFD3;--c2:#D9A441;--c3:#B08F72;--c4:#7D7469;--hatch:rgba(19,18,16,.6);
+  --pg:#131210;--hb:#131210;--hi:#F2F0EA;--hm:#A8A49A;--hl:#2C2A26;--ha:#4CC38A;--sc:rgba(0,0,0,.6);color-scheme:dark}
 /* High contrast (section 3): muted to 7:1, line to 4.5:1, accent mixed 30% toward ink.
    Dark (#108): surface #24221E and fill #33302B step lighter than bg by tone, not shadow; HC dark muted
    #C6C0B6 keeps 7:1 on both (8.78 on surface, 7.27 on fill; QA-R1). */
-@media (prefers-contrast:more){:root{--muted:#534D46; --line:#75716A; --accent:#822F1B; --accent-soft:#EFE9E5}}
-@media (prefers-contrast:more) and (prefers-color-scheme:dark){:root:not([data-theme="light"]){--muted:#C6C0B6; --line:#807D78; --accent:#FBA88C; --accent-soft:#3D2D26}}
-@media (prefers-contrast:more){:root[data-theme="dark"]{--muted:#C6C0B6; --line:#807D78; --accent:#FBA88C; --accent-soft:#3D2D26}}
+@media (prefers-contrast:more){:root{--muted:#534D46;--line:#75716A;--accent:#822F1B;--accent-soft:#EFE9E5}}
+@media (prefers-contrast:more) and (prefers-color-scheme:dark){:root:not([data-theme="light"]){--muted:#C6C0B6;--line:#807D78;--accent:#FBA88C;--accent-soft:#3D2D26}}
+@media (prefers-contrast:more){:root[data-theme="dark"]{--muted:#C6C0B6;--line:#807D78;--accent:#FBA88C;--accent-soft:#3D2D26}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:22px;font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
@@ -55,6 +58,8 @@ main :where(h1,h2,h3,p,ul,ol,pre,figure,table,caption){margin:0;padding:0}
 main :where(button,input,select,textarea){margin:0}
 b,strong,th{font-weight:600}
 .wrap{max-width:960px;margin:0 auto;padding-top:24px;padding-bottom:32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:24px;position:relative}
+/* The tabs, the views they switch and the footer: one column, same rhythm as the page. */
+.views{display:flex;flex-direction:column;gap:24px;min-width:0}
 a{color:var(--accent);text-underline-offset:3px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;min-height:32px}
@@ -266,58 +271,75 @@ footer{border-top:1px solid var(--line);padding-top:24px;display:flex;flex-direc
 #footer-version{color:var(--muted)}
 footer .appearance{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--ink)}
 footer p{max-width:65ch}
-/* Studio demo bar (DEMO-BAR, pm-tools docs/DEMO-BANNER.md): playground only, in the page's own tokens. */
-.demo-bar{--demo-bg:var(--surface);--demo-fg:var(--ink);--demo-muted:var(--muted);--demo-line:var(--line);--demo-badge-bg:transparent;--demo-badge-fg:var(--ink);--demo-font:var(--sans);
-  background:var(--demo-bg);color:var(--demo-fg);border-bottom:1px solid var(--demo-line);font-family:var(--demo-font);font-size:14px;line-height:1.4}
-.demo-bar__row{display:flex;width:100%;box-sizing:border-box;align-items:stretch;max-width:960px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px))}
-.demo-bar__home{flex:none;display:inline-flex;align-items:center;min-height:44px;padding-right:12px;border-right:1px solid var(--demo-line);color:inherit;font-weight:600;text-decoration:none;white-space:nowrap}
-.demo-bar__home:hover{text-decoration:underline;text-underline-offset:3px}
-.demo-bar__name{flex:none;display:inline-flex;align-items:center;padding-left:8px;font-weight:600;white-space:nowrap}
-.demo-bar__toggle{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:44px;margin:0;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 8px;border:0;border-radius:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
-.demo-bar__toggle:hover .demo-bar__more{text-decoration:underline;text-underline-offset:3px}
-.demo-bar a:focus-visible,.demo-bar .demo-bar__toggle:focus-visible{outline:2px solid var(--demo-fg);outline-offset:-4px;border-radius:2px}
-.demo-bar__badge{flex:none;padding:2px 8px;border-radius:999px;border:1px solid var(--demo-fg);background:var(--demo-badge-bg);color:var(--demo-badge-fg);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.3}
-.demo-bar__sum{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--demo-muted)}
-.demo-bar__long{display:none}
-@media (min-width:600px){.demo-bar__long{display:inline}}
-@media (max-width:359px){.demo-bar__sum{display:none}}
-.demo-bar__more{flex:none;margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-weight:600}
-.demo-bar__chev{width:10px;height:10px;transition:transform .15s}
-.demo-bar__toggle[aria-expanded="true"] .demo-bar__chev{transform:rotate(180deg)}
-@media (prefers-reduced-motion:reduce){.demo-bar__chev{transition:none}}
-.demo-bar__panel{max-width:960px;margin:0 auto;padding:4px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
-.demo-bar__panel p{margin:0 0 8px;max-width:70ch;font-size:16px;line-height:1.5;text-wrap:pretty}
-.demo-bar__actions{display:flex;flex-wrap:wrap;gap:0 20px;align-items:center}
-.demo-bar__actions a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-weight:600;text-underline-offset:3px}
+/* Site header + "About this demo" drawer (SPEC-SITE-HEADER): playground only (html.pg, set by app.ts).
+   The portfolio's look, not Paper: --h* colours, 15px, 44px targets. The page and tabs paint white (--pg).
+   Only html.hd (no ?embed=1, SITEHDR-17) has the header and its 52px. */
+.pg body,.pg .tabs{background:var(--pg)}
+.hd body{padding-top:52px}
+.hd .tabs{top:52px}
+.hd [role=tabpanel]{scroll-margin-top:101px}
+/* The views fill the window under the header, so the sticky tab row can always come to rest at the
+   header's edge (SITEHDR-6), or the frame's top when embedded (SITEHDR-17), instead of stopping mid-page. */
+.pg .views{min-height:100vh}
+.hd .views{min-height:calc(100vh - 44px)}
+.hd [role=tabpanel] h2{scroll-margin-top:109px}
+.hd .drives{scroll-margin-top:116px}
+#site-bar{position:fixed;top:0;left:0;right:0;z-index:5;height:52px;display:flex;align-items:center;gap:8px;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));background:var(--hb);color:var(--hi);border-bottom:1px solid var(--hl);font:500 15px/20px var(--sans)}
+#site-bar nav{display:flex;gap:8px}
+#site-bar a,#demo-drawer a{display:inline-flex;align-items:center;min-height:44px;padding:0 6px;border-radius:6px;color:var(--hm);text-decoration:none;white-space:nowrap}
+#site-bar a:hover,#demo-drawer a:hover{color:var(--hi)}
+#site-bar :focus-visible,#demo-drawer :focus-visible{outline:2px solid var(--ha);outline-offset:0}
+#site-bar .nm{gap:6px;color:var(--hi);font-weight:700}
+#site-bar .nm i{font-style:normal;color:var(--ha)}
+#site-bar .lb{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--hm)}
+#site-bar .cs,#demo-drawer .cs{color:var(--ha);font-weight:700}
+.ib{flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:0;padding:0;border:0;border-radius:999px;background:transparent;color:var(--hm);cursor:pointer}
+.ib:hover{color:var(--hi)}
+.ib svg{width:20px;height:20px}
+@media (max-width:559px){#site-bar nav,#site-bar .cs{display:none}}
+#demo-scrim{position:fixed;inset:0;z-index:6;background:var(--sc)}
+.dr-open{overflow:hidden}
+#demo-drawer{position:fixed;z-index:7;left:0;right:0;bottom:0;max-height:85vh;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;padding:16px max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:var(--hb);color:var(--hi);border-top:1px solid var(--hl);border-radius:12px 12px 0 0;font:400 16px/24px var(--sans)}
+@media (min-width:700px){#demo-drawer{left:auto;top:0;width:360px;max-height:none;border:0;border-left:1px solid var(--hl);border-radius:0;padding:16px 24px}}
+#demo-drawer .dh{display:flex;align-items:center;justify-content:space-between}
+#demo-drawer .tag{padding:2px 10px;border:1px solid var(--hl);border-radius:999px;font-size:13px;font-weight:700;color:var(--hm)}
+#demo-drawer h2{margin:0;font-size:20px;line-height:26px;font-weight:600}
+#demo-drawer p{margin:0}
+#demo-drawer .dl{display:flex;flex-direction:column}
+@media (prefers-reduced-motion:no-preference){#demo-drawer{animation:dr-up .2s ease-out}}
+@media (prefers-reduced-motion:no-preference) and (min-width:700px){#demo-drawer{animation-name:dr-in}}
+@keyframes dr-up{from{transform:translateY(100%)}}
+@keyframes dr-in{from{transform:translateX(100%)}}
 @media (max-width:719px){.range-scale{display:none}}
 @media (max-width:599px){
   /* On a phone the long lede and the privacy detail step aside so the tabs start above the fold;
      a one-sentence lede still says what the tool does (EF-CC-2). */
   .lede,.privacy-more{display:none}
   .lede-short{display:block}
-  .wrap{gap:16px;padding-top:16px}
+  .wrap,.views{gap:16px}
+  .wrap{padding-top:16px}
 }
 </style>
 </head>
 <body>
-<section class="demo-bar" id="demo-bar" aria-label="Demo" hidden>
-  <div class="demo-bar__row">
-    <a class="demo-bar__home" id="demo-home" href="#">← Portfolio</a>
-    <span class="demo-bar__name" id="demo-name">ccwatts</span>
-    <button type="button" class="demo-bar__toggle" id="demo-toggle" aria-expanded="false" aria-controls="demo-panel" aria-label="Demo details">
-      <span class="demo-bar__badge">Demo</span>
-      <span class="demo-bar__sum"><span id="demo-sum-sample">Sample data</span><span id="demo-sum-files" hidden>Your files<span class="demo-bar__long"> · read in this browser only</span></span></span>
-      <span class="demo-bar__more">Details<svg class="demo-bar__chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
-    </button>
-  </div>
-  <div class="demo-bar__panel" id="demo-panel" hidden>
-    <p id="demo-copy-sample">This is the real ccwatts, running on made-up sample data. Nothing you do is saved or sent anywhere; reload to start over.</p>
-    <p id="demo-copy-files" hidden>This is the real ccwatts, now showing the files you picked. They were read in this browser and never uploaded; nothing is saved, so reload to start over.</p>
-    <div class="demo-bar__actions"><a id="demo-back" href="#">← Chase Holroyd's portfolio</a><a id="demo-code" href="#" rel="noopener noreferrer">Code on GitHub</a></div>
-  </div>
-</section>
+<!-- SPEC-SITE-HEADER: the portfolio's site header, playground only (app.ts unhides it and sets the hrefs from PORTFOLIO_URL). -->
+<header id="site-bar" hidden>
+  <a class="nm" id="sb-home" href="#" aria-label="Chase Holroyd, back to the portfolio"><i aria-hidden="true">←</i> Chase Holroyd</a>
+  <nav aria-label="Site"><a id="sb-building" href="#">Building</a><a id="sb-agents" href="#">Agents</a></nav>
+  <span class="lb">ccwatts demo</span>
+  <button type="button" class="ib" id="demo-toggle" aria-label="About this demo" aria-expanded="false" aria-controls="demo-drawer"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="6.2" r="1.1" fill="currentColor"/></svg></button>
+  <a class="cs" id="sb-case" href="#">Case study</a>
+</header>
+<div id="demo-scrim" hidden></div>
+<div id="demo-drawer" role="dialog" aria-modal="true" aria-labelledby="demo-title" hidden>
+  <div class="dh"><span class="tag">Demo</span><button type="button" class="ib" id="demo-close" aria-label="Close"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
+  <h2 id="demo-title">About this demo</h2>
+  <p id="demo-copy-sample">This is the real ccwatts, running on made-up sample data. Nothing you do is saved or sent anywhere; reload to start over.</p>
+  <p id="demo-copy-files" hidden>This is the real ccwatts, now showing the files you picked. They were read in this browser and never uploaded; nothing is saved, so reload to start over.</p>
+  <div class="dl"><a id="demo-back" href="#">← Chase Holroyd's portfolio</a><a id="demo-code" href="#" rel="noopener noreferrer">Code on GitHub</a><a class="cs" id="demo-case" href="#">Case study</a></div>
+</div>
 <main class="wrap">
-  <!-- In the playground the demo bar carries the name (UX-R2), so this header steps aside; the dashboard keeps it. -->
+  <!-- In the playground the site header carries the name (UX-R2), so this header steps aside; the dashboard keeps it. -->
   <header class="top" id="page-top">
     <div class="brand">ccwatts</div>
     <span class="pill" id="source-pill">Loading</span>
@@ -331,6 +353,7 @@ footer p{max-width:65ch}
 
   <div class="privacy" id="privacy"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><div><b>Your logs never leave this browser.</b><span class="privacy-more"> No network requests; it reads token counts only.</span></div></div>
 
+  <div class="views">
   <!-- Tabs sit at the top of the page, not the bottom: a deliberate deviation from STUDIO-CORE section 6 (tab bar) because this is a scrolling web page, not a phone app (Chase, Nov 21). -->
   <div class="tabs" id="tabs" role="tablist" aria-label="Views">
     <button type="button" role="tab" id="tab-overview" aria-controls="p-overview" aria-selected="true" tabindex="0" data-hash="">Overview</button>
@@ -556,6 +579,7 @@ Leave out everything else, especially message content. Save the lines as ccwatts
       <button type="button" data-theme-pick="system" aria-pressed="true">System</button>
     </div></div>
   </footer>
+  </div>
 </main>
 <script id="ccwatts-data" type="application/json">{"mode":"playground","generatedAt":null,"rows":[]}</script>
 <script id="ccwatts-sample" type="application/json">__SAMPLE__</script>

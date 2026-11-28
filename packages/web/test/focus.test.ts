@@ -61,6 +61,9 @@ afterAll(async () => {
   rmSync(scratch, { recursive: true, force: true });
 });
 
+/** Studio chrome outside the page itself (SPEC-SITE-HEADER): the site header and its "About this demo"
+ * dialog. #demo-bar is kept so a stray strip is still excluded rather than miscounted. */
+const CHROME = '#demo-bar, #site-bar, [role="dialog"], dialog';
 const problems: string[] = [];
 async function open(viewport: { width: number; height: number }, hash = "", at = url): Promise<Page> {
   const page = await browser!.newPage({ viewport, colorScheme: "light" });
@@ -87,20 +90,20 @@ async function fullyInView(page: Page, loc: Locator): Promise<string> {
   const ok = box.x >= 0 && box.y >= 0 && box.x + box.width <= vp.width + 0.5 && box.y + box.height <= vp.height + 0.5;
   return ok ? "inside" : `box ${Math.round(box.x)},${Math.round(box.y)} ${Math.round(box.width)}x${Math.round(box.height)} outside ${vp.width}x${vp.height}`;
 }
-/** Ids (or text) of visible controls with a filled accent background, outside the demo bar. */
+/** Ids (or text) of visible controls with a filled accent background, outside the studio chrome. */
 const filledControls = (page: Page) =>
-  page.evaluate(() => {
+  page.evaluate((chrome) => {
     const probe = document.createElement("div");
     probe.style.background = "var(--accent)";
     document.body.append(probe);
     const accent = getComputedStyle(probe).backgroundColor;
     probe.remove();
     return [...document.querySelectorAll<HTMLElement>("a, button, label.btn, [role=button], input[type=submit], input[type=button]")]
-      .filter((el) => !el.closest("#demo-bar") && el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true }))
+      .filter((el) => !el.closest(chrome) && el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true }))
       .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 1 && r.height > 1; })
       .filter((el) => getComputedStyle(el).backgroundColor === accent)
       .map((el) => el.id || (el.textContent ?? "").replace(/\s+/g, " ").trim());
-  });
+  }, CHROME);
 const tabNames = (page: Page) => page.getByRole("tab").evaluateAll((ts) => ts.map((t) => (t.textContent ?? "").replace(/\s+/g, " ").trim()));
 
 // ---------------------------------------------------------------------------------------------
@@ -195,10 +198,10 @@ withBrowser("M4.8.1 playground, sample data (browser)", () => {
       const page = await open(vp);
       // The smallest visible element (outside the studio demo bar) whose text names Claude Code,
       // electricity and logs together, and that sits above the tabs or inside Overview.
-      const found = await page.evaluate(() => {
+      const found = await page.evaluate((chrome) => {
         const tabsTop = document.querySelector("#tabs")!.getBoundingClientRect().top;
         const hits = [...document.querySelectorAll<HTMLElement>("body *")]
-          .filter((el) => !el.closest("#demo-bar") && !["SCRIPT", "STYLE", "TEMPLATE"].includes(el.tagName))
+          .filter((el) => !el.closest(chrome) && !["SCRIPT", "STYLE", "TEMPLATE"].includes(el.tagName))
           // One sentence must carry all three words (innerText splits blocks onto new lines), so the
           // Overview panel's "Electricity" row + "Claude Code" note + "logs" button don't add up to a pass.
           .filter((el) => (el.innerText ?? "").split(/(?<=[.!?])\s+|\n+/).some((t) => /Claude Code/.test(t) && /electricity/i.test(t) && /logs/.test(t)))
@@ -277,25 +280,26 @@ withBrowser("M4.8.1 playground, sample data (browser)", () => {
   for (const vp of [PHONE, LAPTOP]) {
     const at = `${vp.width}x${vp.height}`;
 
-    it(`FOCUS-8 UX-R2 no standalone "ccwatts" brand line above the h1; the name shows in the demo bar instead (${at})`, async () => {
+    it(`FOCUS-8 UX-R2 no standalone "ccwatts" brand line above the h1; the name shows in the site header instead (${at})`, async () => {
       const page = await open(vp);
       const h1 = page.getByRole("heading", { level: 1 });
       const h1Top = (await h1.boundingBox())?.y ?? NaN;
       // Visible elements outside the demo bar whose whole text is just the name, sitting above the h1.
-      const brandLines = await page.evaluate((top) =>
+      const brandLines = await page.evaluate(({ top, chrome }) =>
         [...document.querySelectorAll<HTMLElement>("body *")]
-          .filter((el) => !el.closest("#demo-bar") && !["SCRIPT", "STYLE", "TEMPLATE", "TITLE"].includes(el.tagName))
+          .filter((el) => !el.closest(chrome) && !["SCRIPT", "STYLE", "TEMPLATE", "TITLE"].includes(el.tagName))
           .filter((el) => (el.innerText ?? "").trim().toLowerCase() === "ccwatts")
           .filter((el) => el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true }))
           .filter((el, _i, all) => !all.some((o) => o !== el && el.contains(o))) // innermost only
           .map((el) => ({ tag: el.tagName.toLowerCase(), cls: el.className, r: el.getBoundingClientRect() }))
           .filter(({ r }) => r.width > 1 && r.height > 1 && r.bottom <= top + 0.5)
-          .map(({ tag, cls, r }) => `<${tag} class="${cls}"> at y ${Math.round(r.y)}`), h1Top);
+          .map(({ tag, cls, r }) => `<${tag} class="${cls}"> at y ${Math.round(r.y)}`), { top: h1Top, chrome: CHROME });
       expect(brandLines, `standalone brand line(s) above the h1 (h1 top ${Math.round(h1Top)})`).toEqual([]);
-      const inBar = page.locator("#demo-bar").getByText(/\bccwatts\b/i);
+      // SPEC-SITE-HEADER: the strip is gone; the site header's "ccwatts demo" label carries the name.
+      const inBar = page.locator("#site-bar").getByText(/\bccwatts\b/i);
       const shown = (await inBar.count()) > 0 && (await inBar.first().isVisible());
-      expect(shown, 'the demo bar shows no visible "ccwatts"').toBe(true);
-      expect(await fullyInView(page, inBar.first()), '"ccwatts" in the demo bar position').toBe("inside");
+      expect(shown, 'the site header shows no visible "ccwatts"').toBe(true);
+      expect(await fullyInView(page, inBar.first()), '"ccwatts" in the site header position').toBe("inside");
       await page.close();
     });
 
@@ -335,15 +339,15 @@ withBrowser("M4.8.1 playground, sample data (browser)", () => {
     expect(await ev.count(), `Overview has no line "${compare}"`).toBe(1);
     expect(await fullyInView(page, ev), "EV line position").toBe("inside");
     // EF-CC-2 (FOCUS-6): the one-sentence phone lede naming Claude Code and its logs, above the tabs.
-    const lede = await page.evaluate(() => {
+    const lede = await page.evaluate((chrome) => {
       const tabsTop = document.querySelector("#tabs")!.getBoundingClientRect().top;
       return [...document.querySelectorAll<HTMLElement>("body *")]
-        .filter((el) => !el.closest("#demo-bar") && !["SCRIPT", "STYLE", "TEMPLATE"].includes(el.tagName))
+        .filter((el) => !el.closest(chrome) && !["SCRIPT", "STYLE", "TEMPLATE"].includes(el.tagName))
         .filter((el) => (el.innerText ?? "").split(/(?<=[.!?])\s+|\n+/).some((t) => /Claude Code/.test(t) && /electricity/i.test(t) && /logs/.test(t)))
         .filter((el) => el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true }))
         .map((el) => el.getBoundingClientRect())
         .some((r) => r.width > 1 && r.height > 1 && r.top >= 0 && r.bottom <= tabsTop + 0.5);
-    });
+    }, CHROME);
     expect(lede, "no visible Claude Code + electricity + logs sentence above the tabs").toBe(true);
     await page.close();
   });
@@ -376,10 +380,11 @@ withBrowser("M4.8.1 ccwatts dashboard (browser)", () => {
       await page.close();
     });
 
-    // Dashboard has no demo bar, so the name must still show in the page header (above the tabs).
-    it(`FOCUS-8 UX-R2 dashboard (no demo bar) still shows "ccwatts" in the header above the tabs (${at})`, async () => {
+    // Dashboard has no demo bar and no site header (SITEHDR-8), so the name must still show in the page header (above the tabs).
+    it(`FOCUS-8 UX-R2 dashboard (no demo bar, no site header) still shows "ccwatts" in the header above the tabs (${at})`, async () => {
       const page = await open(vp, "", dashUrl);
       expect(await page.locator("#demo-bar").isVisible(), "dashboard shows the demo bar").toBe(false);
+      expect(await page.locator("#site-bar").isVisible(), "dashboard shows the site header").toBe(false);
       const tabsTop = (await page.locator("#tabs").boundingBox())!.y;
       const name = page.getByText(/\bccwatts\b/i);
       const visibleAbove = await name.evaluateAll((els, top) =>

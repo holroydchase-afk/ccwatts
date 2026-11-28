@@ -63,7 +63,29 @@ const csp = [
   "form-action 'none'",
 ].join("; ");
 
-const html = readFileSync(here("src/template.html"), "utf8")
+/**
+ * The page is one file a visitor downloads, so ship it without the notes and indentation the source
+ * keeps for reading: stylesheet comments, and the leading spaces on each line (the newline itself
+ * stays, so inline text still has its space). Content where whitespace shows (<pre>, <textarea>) and
+ * the <script> blocks are left byte for byte. Saves about 5 KB against scripts/check-live.ts MAX_BYTES.
+ */
+function shrink(src: string): string {
+  const keep = /<(pre|textarea)\b[\s\S]*?<\/\1[^>]*>|<script\b[\s\S]*?<\/script[^>]*>/gi;
+  const thin = (part: string) =>
+    part
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, (s) => s.replace(/\/\*[\s\S]*?\*\//g, ""))
+      .replace(/\n[ \t]+/g, "\n")
+      .replace(/\n{2,}/g, "\n");
+  let out = "";
+  let at = 0;
+  for (let m = keep.exec(src); m; m = keep.exec(src)) {
+    out += thin(src.slice(at, m.index)) + m[0];
+    at = m.index + m[0].length;
+  }
+  return out + thin(src.slice(at));
+}
+
+const html = shrink(readFileSync(here("src/template.html"), "utf8"))
   .replace("__CSP__", () => csp)
   .replace("__FONT__", () => font)
   .replaceAll("__PLAYGROUND_URL__", () => PLAYGROUND_URL)

@@ -19,7 +19,10 @@ import { launch } from "../../../tools/showcase-check/check.ts";
 //  - DS-2: @font-face "Atkinson Hyperlegible Next", src url(data:font/woff2;base64,...) holding the bytes of
 //    src/fonts/AtkinsonHyperlegibleNext-latin.woff2. Note the CSP is default-src 'none' today: a data:
 //    font also needs `font-src data:` or document.fonts never loads it.
-//  - DS-3..DS-5: the studio demo bar (#demo-bar, pm-tools DEMO-BANNER standard) is exempt.
+//  - DS-3..DS-5: shared studio chrome is exempt: the site header (#site-bar) and its "About this demo"
+//    dialog (the element #demo-toggle controls), per docs/product/SPEC-SITE-HEADER.md "Design system"
+//    (they follow the portfolio's design: 44px targets, a bold link, a green accent). #demo-bar (the
+//    retired pm-tools DEMO-BANNER strip) stays listed so a leftover strip is still excluded.
 //  - DS-6: data marks = shapes in svg.chart / [role=tabpanel] svg[role=img], plus the HTML swatches
 //    and bars that stand for data (.legend i, .rank .bar span, .range-dot).
 //  - DS-7: tabs are exactly Overview, Electricity, Share, Method, Pace (M4.8.1, FOCUS-5). Overview
@@ -391,7 +394,9 @@ async function panelOf(page: Page, name: string) {
 /** In-page helpers, as a string so no bundler helper (tsx's __name) leaks into the page. */
 const HELPERS = `
 window.__ds = (() => {
-  const exempt = (el) => !!el.closest("#demo-bar");
+  // SPEC-SITE-HEADER "Design system": #site-bar and the dialog #demo-toggle controls are studio chrome.
+  const chromeDialog = () => { const id = document.querySelector("#site-bar #demo-toggle")?.getAttribute("aria-controls"); return id ? document.getElementById(id) : null; };
+  const exempt = (el) => !!el.closest("#demo-bar, #site-bar") || !!chromeDialog()?.contains(el);
   const clipped = (el) => {
     for (let a = el; a && a !== document.body; a = a.parentElement) {
       const cs = getComputedStyle(a); const r = a.getBoundingClientRect();
@@ -617,7 +622,7 @@ withBrowser("QA-R3 eachView must visit the Your logs view (harness self-check)",
 
 withBrowser("DS-3 type: 17px floor, weights 400/500/600, no caps or italics", () => {
   for (const [width, height] of [[390, 844], [1280, 800]] as const) {
-    it(`DS-3 at ${width}px no visible text in any tab is under 17px (demo bar exempt)`, async () => {
+    it(`DS-3 at ${width}px no visible text in any tab is under 17px (site header and its dialog exempt)`, async () => {
       const page = await open({ width, height });
       const small = await eachView(page, async () =>
         (await page.evaluate("window.__ds.textOwners()") as { where: string; text: string; px: number }[])

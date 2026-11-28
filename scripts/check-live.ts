@@ -8,6 +8,7 @@
 // Behind a proxy, HTTPS_PROXY is passed to the browser. Set PLAYWRIGHT_MODULE / CHROMIUM_PATH if needed.
 import { readFileSync } from "node:fs";
 import { loadChromium } from "../tools/showcase-check/check.ts";
+import { PORTFOLIO_URL } from "../packages/core/src/meta.ts";
 
 const chromium = await loadChromium();
 const url = process.argv[2] ?? "https://chaseholroyd.com/ccwatts/";
@@ -36,7 +37,15 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 
   const bytes = (await resp?.body())?.length ?? 0;
   const seen = await page.evaluate(() => ({
     big: document.querySelector("#hero-big")?.textContent?.trim() ?? "",
-    sample: /sample data/i.test(document.body.innerText),
+    // SPEC-SITE-HEADER Part B removed the strip's "Sample data"; the Overview's "a sample month" labels it now.
+    sample: /\bsample (data|month)\b/i.test(document.body.innerText),
+    // SITEHDR-1/2/12: the site header with its way back and the "About this demo" button.
+    header: (() => {
+      const bar = document.querySelector("#site-bar");
+      const back = bar?.querySelector('a[aria-label="Chase Holroyd, back to the portfolio"]');
+      const toggle = bar?.querySelector('button[aria-label="About this demo"]');
+      return { bar: !!bar && bar.getBoundingClientRect().height > 0, back: back?.getAttribute("href") ?? null, toggle: !!toggle && toggle.getBoundingClientRect().width > 0, strip: !!document.querySelector("#demo-bar") };
+    })(),
     footer: document.querySelector("footer")?.textContent?.replace(/\s+/g, " ") ?? "",
     sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
   }));
@@ -47,6 +56,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 
   if (seen.sideways) problems.push(`${at}: sideways scroll`);
   if (!/kWh|Wh/.test(seen.big)) problems.push(`${at}: no headline number`);
   if (!seen.sample) problems.push(`${at}: sample data isn't labeled`);
+  if (!seen.header.bar) problems.push(`${at}: SITEHDR-1: no visible #site-bar (not deployed yet?)`);
+  const home = `${new URL(PORTFOLIO_URL).origin}/`;
+  if (seen.header.back !== home) problems.push(`${at}: SITEHDR-2: header back link goes to ${seen.header.back}, want ${home}`);
+  if (!seen.header.toggle) problems.push(`${at}: SITEHDR-12: no visible "About this demo" button in the header`);
+  if (seen.header.strip) problems.push(`${at}: SITEHDR-12: the old #demo-bar strip is still on the page`);
   if (!seen.footer.includes(`v${cliVersion}`)) problems.push(`${at}: footer doesn't show v${cliVersion} (not deployed yet?)`);
   if (ms > SLOW_MS) problems.push(`${at}: loaded in ${ms} ms (limit ${SLOW_MS})`);
   if (bytes > MAX_BYTES) problems.push(`${at}: page is ${bytes} bytes (limit ${MAX_BYTES})`);
