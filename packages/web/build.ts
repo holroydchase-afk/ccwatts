@@ -70,10 +70,10 @@ const csp = [
  * the <script> blocks are left byte for byte. Saves about 5 KB against scripts/check-live.ts MAX_BYTES.
  */
 function shrink(src: string): string {
-  const keep = /<(pre|textarea)\b[\s\S]*?<\/\1\s*>|<script\b[\s\S]*?<\/script\s*>/gi;
+  const keep = /<(pre|textarea)\b[\s\S]*?<\/\1[^>]*>|<script\b[\s\S]*?<\/script[^>]*>/gi;
   const thin = (part: string) =>
     part
-      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, (s) => s.replace(/\/\*[\s\S]*?\*\//g, ""))
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, (s) => s.replace(/\/\*[\s\S]*?\*\//g, ""))
       .replace(/\n[ \t]+/g, "\n")
       .replace(/\n{2,}/g, "\n");
   let out = "";
