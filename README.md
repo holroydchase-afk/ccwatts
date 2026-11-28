@@ -164,9 +164,13 @@ claude mcp add ccwatts -- node /path/to/ccwatts/packages/cli/dist/index.js mcp
 
 ## How it's built
 
+The code, tests and docs are written with Claude Code. The maintainer directs the work and approves every release. Tests and CI run on every pull request; the current state is in [HANDOFF.md](HANDOFF.md).
+
 TypeScript monorepo: `packages/core` holds the pure parsing, energy model and receipt code, shared by `packages/cli` (terminal) and `packages/web` (one static HTML page). `plugins/ccwatts` wraps the same CLI as a Claude Code plugin, and `ccwatts mcp` serves the same numbers to Claude Code as MCP tools. Log parsing sits behind a small adapter interface, so other agent CLIs can be added later without touching the energy model. The product reasoning is written down: [VISION.md](docs/internal/VISION.md) (problems and answers), [ANCHORS.md](docs/internal/ANCHORS.md) (decisions and what was cut), [PLAN.md](docs/internal/PLAN.md) (build plan) and [IDEAS.md](docs/internal/IDEAS.md) (ideas and lessons).
 
 If you clone it to contribute, `npm install` turns on a pre-commit hook (`.githooks/pre-commit`) that refuses a commit containing a home path, an email address, a token or key, or a `.env` file. `npm test` and CI run the same check (`scripts/check-private.ts`) over the whole repo.
+
+Tests: `packages/core` line coverage is at least 99%, checked by `npm run coverage` in CI (the CLI and web page run as a subprocess or in a browser, so only core is measured in-process).
 
 The repo's `.claude/settings.json` also has a Stop hook (`scripts/save-session-counts.ts`) for the maintainer's cloud sessions: after each turn it saves a counts-only copy of the session log to `/mnt/project-files/ccwatts-usage/`. On your machine that folder doesn't exist, so it writes nothing and makes no network calls; set `CCWATTS_SAVE_DIR` if you want the copies yourself.
 
@@ -181,7 +185,3 @@ Code: MIT ([LICENSE](LICENSE)). Methodology and parameters (`METHODOLOGY.md`, `m
 Built by [Chase Holroyd](https://chaseholroyd.com), with Claude Code.
 
 ccwatts is an independent project and is not affiliated with or endorsed by Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.
-
-## How this is built
-
-Built with Claude Code (AI-assisted code, tests and docs). The maintainer directs the work and decides what ships. Tests and CI run on every pull request; the current state is in HANDOFF.md.

@@ -13,5 +13,6 @@ What we can truthfully say about ccwatts today, each with its proof. Owned by th
 | Sanity-checked against Google's 0.24 Wh prompt, Microsoft's 0.34 Wh query and Hausfather's 170 kWh. | unit tests in `packages/core` | 2026-10-21 |
 | A generated eval scorecard shows every reference check, with assumed inputs labeled. | `docs/EVALS.md`, `npm run evals`, `packages/core/test/evals.test.ts` | 2026-11-18 |
 | Claude Code plugin with `/ccwatts`, a status line and a local MCP server. | `plugins/ccwatts`, `claude plugin validate`, MCP tests | 2026-10-28 |
+| Code, tests and docs are written with Claude Code; the maintainer directs the work and approves every release; tests and CI run on every pull request. | `Co-Authored-By: Claude` commit trailers; `.github/workflows/agents-check.yml` (every PR names the agents that ran); `.github/workflows/ci.yml` (`pull_request: {}`, no path filter: build, typecheck, tests, `npm run coverage`); CLAUDE.md "Who does what" (npm, plugin and Pages releases wait for the maintainer's go) | 2026-11-27 |
 
 **Not claimable yet:** carbon or water figures (ANCHORS D13: kWh only); "measured" (it's an estimate; say "I estimated"); any user count or friend-beta result (the beta hasn't run); `npx ccwatts pace` or `npx -y ccwatts mcp` from npm until 0.1.2 is published.

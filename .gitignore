@@ -17,3 +17,4 @@ coverage/
 ccwatts-receipt.*
 .ccwatts/
 packages/cli/LICENSE
+packages/cli/THIRD_PARTY_NOTICES.md
